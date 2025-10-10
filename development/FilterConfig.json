@@ -1,0 +1,57 @@
+[
+    [
+        {
+            "type": "image",
+            "file": "1.1.png",
+            "duration_seconds": 0.5,
+            "fade_in_percentage_of_image_duration": 35,
+            "fade_out_percentage_of_image_duration": 35
+        },
+        {
+            "type": "image",
+            "file": "1.2.png",
+            "duration_seconds": 0.5,
+            "fade_in_percentage_of_image_duration": 35,
+            "fade_out_percentage_of_image_duration": 35
+        },
+        {
+            "type": "freeze",
+            "duration_seconds": 1
+        },
+        {
+            "type": "image",
+            "file": "2.1.png",
+            "duration_seconds": 0.5,
+            "fade_in_percentage_of_image_duration": 35,
+            "fade_out_percentage_of_image_duration": 35
+        },
+        {
+            "type": "image",
+            "file": "2.2.png",
+            "duration_seconds": 0.5,
+            "fade_in_percentage_of_image_duration": 35,
+            "fade_out_percentage_of_image_duration": 35
+        },
+        {
+            "type": "image",
+            "file": "2.3.png",
+            "duration_seconds": 0.5,
+            "fade_in_percentage_of_image_duration": 35,
+            "fade_out_percentage_of_image_duration": 35
+        },
+        {
+            "type": "image",
+            "file": "1.2.png",
+            "duration_seconds": 0.5,
+            "fade_in_percentage_of_image_duration": 35,
+            "fade_out_percentage_of_image_duration": 35
+        },
+        {
+            "type": "image",
+            "file": "1.1.png",
+            "duration_seconds": 0.5,
+            "fade_in_percentage_of_image_duration": 35,
+            "fade_out_percentage_of_image_duration": 35
+        }
+    ]
+]
