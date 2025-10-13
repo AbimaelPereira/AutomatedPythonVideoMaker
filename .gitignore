@@ -2,10 +2,7 @@
 __pycache__/
 
 .env
-# tudo dentro de output
 /output/*
 /temp_files
-/temp
-/utils
 /audios_vozes_ptbr
 /videos_default/*

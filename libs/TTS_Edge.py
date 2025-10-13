@@ -19,9 +19,8 @@ def ms_to_srt_time(ms: float) -> str:
 class EdgeTTS:
     def __init__(self, params=None):
         defaults = {
-            "temp_dir": os.getenv("TEMP_DIR", "./temp_files"),
             "text_narration_filename": os.getenv("TEXT_NARRATION_FILE", "texto.txt"),
-            "voice_id": os.getenv("EDGE_TTS_VOICE", "pt-BR-ThalitaNeural"),
+            "voice_id": os.getenv("EDGE_TTS_VOICE", "pt-BR-AntonioNeural"),
             "audio_format": "mp3",
             "output_basename": "narration",
             "text": None,
@@ -32,9 +31,7 @@ class EdgeTTS:
         for k, v in defaults.items():
             setattr(self, k, v)
 
-        self.temp_dir = Path(str(self.temp_dir))
-        self.temp_dir.mkdir(parents=True, exist_ok=True)
-        self.text_file_path = self.temp_dir / self.text_narration_filename
+        self.text_file_path = self.text_narration_filename
 
         if self.text is None and self.text_file_path.exists():
             self.text = self.text_file_path.read_text(encoding="utf-8").strip()
@@ -43,7 +40,7 @@ class EdgeTTS:
         if not self.text:
             raise ValueError("Nenhum texto disponível para síntese.")
 
-        output_path = self.temp_dir / f"{self.output_basename}.{self.audio_format}"
+        output_path = f"{self.output_basename}.{self.audio_format}"
 
         communicate = edge_tts.Communicate(
             self.text,
@@ -76,7 +73,7 @@ class EdgeTTS:
         if not word_boundaries:
             raise ValueError("Nenhum boundary de palavra disponível para gerar SRT.")
 
-        srt_path = self.temp_dir / f"{self.output_basename}.srt"
+        srt_path = f"{self.output_basename}.srt"
         index = 1
 
         with open(srt_path, "w", encoding="utf-8") as f:
