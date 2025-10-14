@@ -3,6 +3,7 @@ __pycache__/
 
 .env
 /output/*
-/temp_files
+/temp_files/*
 /audios_vozes_ptbr
 /videos_default/*
+/tokens/*

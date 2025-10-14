@@ -1,7 +1,7 @@
 import os
 import json
 import time
-from moviepy.editor import CompositeVideoClip, AudioFileClip, ImageClip
+from moviepy.editor import CompositeVideoClip, AudioFileClip, ImageClip, CompositeAudioClip
 
 from libs.Config import Config
 from libs.TTS_Edge import EdgeTTS
@@ -17,47 +17,85 @@ def process_video(cfg: Config, video_config: dict, output_folder: str):
     Args:
         cfg: Objeto de configuração
         video_config: Dicionário com as configurações do vídeo
-        output_folder: Pasta onde o vídeo será salvo
+        output_folder: Pasta base onde o vídeo será salvo
     """
     print(f"\n🎬 Gerando vídeo: {video_config['title'][:50]}...")
     print(f"📐 Proporção: {video_config.get('output_ratio', '9:16')}")
 
-    # --- 1. Configurar diretório de vídeos de fundo ---
+    # --- 1. Criar pasta do projeto usando o slug ---
+    slug = video_config.get("slug", "video_sem_slug")
+    project_folder = os.path.join(output_folder, slug)
+    os.makedirs(project_folder, exist_ok=True)
+    print(f"📁 Pasta do projeto: {project_folder}")
+
+    # --- 2. Configurar diretório de vídeos de fundo ---
     cfg.set_item("background_videos_dir", video_config["background_videos_dir"])
     cfg.set_item("output_ratio", video_config.get("output_ratio", "9:16"))
 
-    # --- 2. Gerar áudio e legenda com Edge TTS ---
+    # --- 3. Gerar áudio e legenda com Edge TTS ---
     edge_tts_config = video_config.get("edge_tts", {})
     voice_id = edge_tts_config.get("voice_id", "pt-BR-AntonioNeural")
     
     print(f"🗣️  Gerando áudio com voz: {voice_id}")
+    
+    # Mudar diretório temporariamente para gerar arquivos na pasta correta
+    original_dir = os.getcwd()
+    os.chdir(project_folder)
+    
     tts = EdgeTTS({
         "text": video_config["narration_text"],
         "voice_id": voice_id,
-        "output_basename": f"{video_config['slug']}"
+        "output_basename": "narration"
     })
     tts_result = tts.generate_audio_and_subtitles()
     
-    cfg.set_item("audio_narration_file", tts_result["audio_file"])
-    cfg.set_item("subtitle_narration_file", tts_result["subtitle_file"])
+    # Voltar para o diretório original
+    os.chdir(original_dir)
+    
+    # Ajustar caminhos para absolutos
+    audio_path = os.path.join(project_folder, tts_result["audio_file"])
+    subtitle_path = os.path.join(project_folder, tts_result["subtitle_file"])
+    
+    cfg.set_item("audio_narration_file", audio_path)
+    cfg.set_item("subtitle_narration_file", subtitle_path)
+    
+    print(f"🎵 Áudio salvo: {audio_path}")
+    print(f"📝 Legenda salva: {subtitle_path}")
 
-    # --- 3. Carregar áudio e definir duração do vídeo ---
+    # --- 4. Carregar áudio de narração e definir duração do vídeo ---
     audio_narration = AudioFileClip(cfg.audio_narration_file)
     cfg.set_item("max_total_video_duration", audio_narration.duration)
     print(f"⏱️  Duração do áudio: {audio_narration.duration:.2f}s")
 
-    # verica se background_music_file
+    # --- 5. Verificar e processar música de fundo (opcional) ---
     has_bg_music = "background_music_file" in video_config and video_config["background_music_file"]
+    bg_music_clip = None
+    
     if has_bg_music:
-        if not os.path.exists(video_config["background_music_file"]):
-            print(f"⚠️  Arquivo de música de fundo não encontrado: {video_config['background_music_file']}")
-            print("⏭️  Pulando música de fundo...")
+        bg_music_path = video_config["background_music_file"]
+        if not os.path.exists(bg_music_path):
+            print(f"⚠️  Arquivo de música de fundo não encontrado: {bg_music_path}")
+            print("⏭️  Gerando vídeo sem música de fundo...")
             has_bg_music = False
         else:
-            cfg.set_item("background_music_file", video_config["background_music_file"])
-            print(f"🎵 Música de fundo: {cfg.background_music_file}")
+            print(f"🎵 Carregando música de fundo: {bg_music_path}")
+            bg_music_clip = AudioFileClip(bg_music_path)
+            
+            # Ajustar duração da música de fundo para a duração da narração
+            if bg_music_clip.duration < cfg.max_total_video_duration:
+                # Loop da música se for muito curta
+                n_loops = int(cfg.max_total_video_duration // bg_music_clip.duration) + 1
+                print(f"🔁 Repetindo música de fundo {n_loops}x para cobrir toda a duração")
+                bg_music_clip = CompositeAudioClip([bg_music_clip] * n_loops)
+            
+            # Cortar música para a duração exata
+            bg_music_clip = bg_music_clip.subclip(0, cfg.max_total_video_duration)
+            
+            # Reduzir volume para 30%
+            bg_music_clip = bg_music_clip.volumex(0.3)
+            print(f"🔊 Volume da música de fundo ajustado para 30%")
 
-    # --- 4. Gerar vídeo de fundo ---
+    # --- 6. Gerar vídeo de fundo ---
     print("🎥 Gerando vídeo de fundo...")
     cfg.set_item("enable_crossfade", False)
     bg = BackgroundVideo(cfg.config)
@@ -66,24 +104,33 @@ def process_video(cfg: Config, video_config: dict, output_folder: str):
     if not final_video:
         raise RuntimeError("Nenhum vídeo de fundo foi gerado.")
     
-    final_video = final_video.set_audio(audio_narration)
+    # --- 7. Mixar áudios (narração + música de fundo se houver) ---
+    if has_bg_music and bg_music_clip:
+        print("🎚️  Mixando narração com música de fundo...")
+        final_audio = CompositeAudioClip([bg_music_clip, audio_narration])
+        final_video = final_video.set_audio(final_audio)
+    else:
+        final_video = final_video.set_audio(audio_narration)
+    
     final_video = final_video.resize(cfg.resolution_output)
 
-    # --- 5. Verificar se há headline e gerar se necessário ---
+    # --- 8. Verificar se há headline e gerar se necessário ---
     has_headline = "headline" in video_config and video_config["headline"]
     
     if has_headline:
         print("📰 Gerando headline...")
         headline_config = video_config["headline"]
         
-        # output_path slug.png
+        headline_path = os.path.join(project_folder, "headline.png")
+        
         headline = Headline({
-            "output_path": f"{video_config['slug']}.png",
+            "output_path": headline_path,
             "title": headline_config.get("title", ""),
             "subtitle": headline_config.get("subtitle", ""),
             "video_width": cfg.width
         })
         headline_data = headline.generate()
+        print(f"🖼️  Headline salva: {headline_path}")
         
         headline_clip = (
             ImageClip(headline_data["path"])
@@ -94,13 +141,13 @@ def process_video(cfg: Config, video_config: dict, output_folder: str):
         print("ℹ️  Sem headline - gerando apenas com legendas")
         headline_clip = None
 
-    # --- 6. Gerar legendas ---
+    # --- 9. Gerar legendas ---
     print("📝 Gerando legendas...")
     sub = Subtitle(cfg.config)
     subtitle_clips = sub.generate()
     subtitle_clips = subtitle_clips.set_duration(cfg.max_total_video_duration)
 
-    # --- 7. Montar o bloco (headline + legendas ou apenas legendas) ---
+    # --- 10. Montar o bloco (headline + legendas ou apenas legendas) ---
     GAP = 200
     
     if has_headline:
@@ -118,22 +165,17 @@ def process_video(cfg: Config, video_config: dict, output_folder: str):
         subtitle_clips = subtitle_clips.resize(width=int(cfg.width * 0.8))
         block = subtitle_clips
 
-    # --- 8. Composição final ---
+    # --- 11. Composição final ---
     print("🎨 Montando composição final...")
     final = CompositeVideoClip([
         final_video,
         block.set_position(("center", int(final_video.h * 0.3 - block.h / 2)))
     ])
 
-    # --- 9. Renderização ---
-    os.makedirs(output_folder, exist_ok=True)
-    
-    safe_title = video_config["title"][:50].replace(" ", "_").replace(":", "").replace("🚀", "").replace("🤖", "").lower()
-    safe_title = "".join(c for c in safe_title if c.isalnum() or c == "_")
-    
+    # --- 12. Renderização ---
     output_file = os.path.join(
-        output_folder, 
-        f"{safe_title}_{cfg.output_ratio.replace(':', '_')}.mp4"
+        project_folder, 
+        f"{slug}_{cfg.output_ratio.replace(':', '_')}.mp4"
     )
 
     print(f"💾 Renderizando vídeo: {output_file}")
@@ -143,7 +185,7 @@ def process_video(cfg: Config, video_config: dict, output_folder: str):
         audio_codec="aac",
         fps=25,
         threads=5,
-        temp_audiofile="temp-audio.m4a",
+        temp_audiofile=os.path.join(project_folder, "temp-audio.m4a"),
         remove_temp=True,
         bitrate="3000k",
         preset="superfast",
@@ -151,15 +193,28 @@ def process_video(cfg: Config, video_config: dict, output_folder: str):
 
     print(f"✅ Vídeo salvo com sucesso!")
     
-    # Salvar metadados do vídeo (description, hashtags)
-    metadata_file = output_file.replace(".mp4", "_metadata.txt")
+    # --- 13. Salvar metadados do vídeo ---
+    metadata_file = os.path.join(project_folder, "metadata.txt")
     with open(metadata_file, "w", encoding="utf-8") as f:
+        f.write(f"SLUG: {slug}\n\n")
         f.write(f"TÍTULO:\n{video_config['title']}\n\n")
         f.write(f"DESCRIÇÃO:\n{video_config['description']}\n\n")
+        f.write(f"NARRAÇÃO:\n{video_config['narration_text']}\n\n")
+        if has_headline:
+            f.write(f"HEADLINE TÍTULO:\n{headline_config.get('title', '')}\n\n")
+            f.write(f"HEADLINE SUBTÍTULO:\n{headline_config.get('subtitle', '')}\n\n")
+        if has_bg_music:
+            f.write(f"MÚSICA DE FUNDO:\n{video_config.get('background_music_file', 'N/A')}\n\n")
         if "hashtags" in video_config:
             f.write(f"HASHTAGS:\n{video_config['hashtags']}\n")
     
     print(f"📄 Metadados salvos: {metadata_file}")
+    
+    # --- 14. Salvar JSON original do vídeo ---
+    json_backup = os.path.join(project_folder, "config.json")
+    with open(json_backup, "w", encoding="utf-8") as f:
+        json.dump(video_config, f, indent=2, ensure_ascii=False)
+    print(f"💾 Configuração salva: {json_backup}")
 
 
 def main():
@@ -171,7 +226,7 @@ def main():
     start_time = time.time()
     
     # Caminho do arquivo JSON
-    json_file = "videos_config.json"
+    json_file = "temp_files/videos_config.json"
     
     if not os.path.exists(json_file):
         print(f"❌ Erro: Arquivo {json_file} não encontrado!")
