@@ -8,6 +8,7 @@ from libs.TTS_Edge import EdgeTTS
 from libs.BackgroundVideo import BackgroundVideo
 from libs.Subtitle import Subtitle
 from libs.Headline import Headline
+from libs.YouTube import YouTube
 
 
 def process_video(cfg: Config, video_config: dict, output_folder: str):
@@ -193,28 +194,45 @@ def process_video(cfg: Config, video_config: dict, output_folder: str):
 
     print(f"✅ Vídeo salvo com sucesso!")
     
-    # --- 13. Salvar metadados do vídeo ---
-    metadata_file = os.path.join(project_folder, "metadata.txt")
-    with open(metadata_file, "w", encoding="utf-8") as f:
-        f.write(f"SLUG: {slug}\n\n")
-        f.write(f"TÍTULO:\n{video_config['title']}\n\n")
-        f.write(f"DESCRIÇÃO:\n{video_config['description']}\n\n")
-        f.write(f"NARRAÇÃO:\n{video_config['narration_text']}\n\n")
-        if has_headline:
-            f.write(f"HEADLINE TÍTULO:\n{headline_config.get('title', '')}\n\n")
-            f.write(f"HEADLINE SUBTÍTULO:\n{headline_config.get('subtitle', '')}\n\n")
-        if has_bg_music:
-            f.write(f"MÚSICA DE FUNDO:\n{video_config.get('background_music_file', 'N/A')}\n\n")
-        if "hashtags" in video_config:
-            f.write(f"HASHTAGS:\n{video_config['hashtags']}\n")
-    
-    print(f"📄 Metadados salvos: {metadata_file}")
-    
-    # --- 14. Salvar JSON original do vídeo ---
-    json_backup = os.path.join(project_folder, "config.json")
-    with open(json_backup, "w", encoding="utf-8") as f:
-        json.dump(video_config, f, indent=2, ensure_ascii=False)
-    print(f"💾 Configuração salva: {json_backup}")
+    # --- 13. Fazer upload Youtube ---
+    # instance do YouTube
+    if video_config.get("youtube", False):
+        yt_config = video_config.get("youtube", {})
+        
+        print("🚀 Iniciando upload para o YouTube...")
+
+        # title + title_hashtags concatenar strings
+        title = video_config["title"] + " " + video_config.get("title_hashtags", "") + " " + video_config.get("title_hashtags", "")
+
+        description = ""
+        description += video_config["description"] + "\n\n"
+        description += video_config.get("hashtags", "") + "\n\n"
+        description += video_config.get("narration_text", "") + "\n\n"
+
+        tags = video_config.get("hashtags", "").split(" ")
+
+        publish_at = yt_config.get("publish_at", None)
+
+        yt = YouTube({
+            # "client_secrets_file": cfg.client_secrets_file,
+            "token_file_name": yt_config.get("token_file_name", "youtube_token.json"),
+            "video_path": output_file,
+            "title": title.strip(),
+            "description": description.strip(),
+            "tags": tags            
+        })
+
+        # if publish_at:
+        #     yt.set_item("privacy_status", "private")
+        #     yt.set_item("publish_at", publish_at)
+        #     print(f"⏰ Vídeo agendado para publicação em: {publish_at}")
+        # else:
+        #     yt.set_item("privacy_status", "public")
+
+        video_id = yt.upload()
+        print(f"🔗 Link do vídeo no YouTube: https://youtu.be/{video_id}")
+
+    print(f"🏁 Processo concluído para o vídeo: {video_config['title'][:50]}")
 
 
 def main():

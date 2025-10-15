@@ -4,12 +4,13 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 from google.oauth2.credentials import Credentials
+from google.auth.transport.requests import Request
 from dotenv import load_dotenv
 
 load_dotenv()
 
 class YouTube:
-    def __init__(self):
+    def __init__(self, params=None):
         def to_bool(value):
             return str(value).lower() in ("true", "1", "yes", "on")
 
@@ -29,6 +30,8 @@ class YouTube:
             "privacy_status": os.getenv("VIDEO_PRIVACY", "private"),  # private | unlisted | public
             "publish_at": os.getenv("VIDEO_PUBLISH_AT"),  # formato: YYYY-MM-DD HH:MM:SS
         }
+        if params:
+            defaults.update(params)
 
         self.config = defaults
         for k, v in defaults.items():
