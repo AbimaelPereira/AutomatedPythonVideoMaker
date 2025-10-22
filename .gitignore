@@ -14,5 +14,8 @@ __pycache__/
 /videos_default/*
 !/videos_default/.gitkeep
 
+/bg_music/*
+!/bg_music/.gitkeep
+
 /tokens/*
 !/tokens/.gitkeep

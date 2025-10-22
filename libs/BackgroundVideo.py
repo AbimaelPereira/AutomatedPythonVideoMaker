@@ -15,7 +15,7 @@ class BackgroundVideo:
             "resolution_output": (1080, 1920),
             "available_resolutions": {"9:16": (1080, 1920), "16:9": (1920, 1080)},
             "output_ratio": "9:16",
-            "max_clip_duration": 5,
+            "max_clip_duration": 4,
             "max_total_video_duration": None,
             "crossfade_duration": 0.8,
             "enable_crossfade": True,  # <-- nova flag

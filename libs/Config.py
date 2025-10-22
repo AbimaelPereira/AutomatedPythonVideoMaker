@@ -25,7 +25,7 @@ class Config:
             "max_total_video_duration": None,
             "temp_dir": os.getenv("TEMP_DIR", "./temp"),
             "max_clips": int(os.getenv("MAX_CLIPS", 0)) or None,
-            "shuffle_clips": to_bool(os.getenv("SHUFFLE_CLIPS", False))
+            "shuffle_clips": to_bool(os.getenv("SHUFFLE_CLIPS", True))
         }
 
         if defaults["output_ratio"] in defaults["available_resolutions"]:

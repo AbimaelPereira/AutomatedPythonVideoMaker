@@ -1,5 +1,7 @@
 import os
 import json
+import random
+import shutil
 import time
 from moviepy.editor import CompositeVideoClip, AudioFileClip, ImageClip, CompositeAudioClip
 
@@ -46,7 +48,7 @@ def process_video(cfg: Config, video_config: dict, output_folder: str):
     tts = EdgeTTS({
         "text": video_config["narration_text"],
         "voice_id": voice_id,
-        "output_basename": "narration"
+        "output_basename": slug,
     })
     tts_result = tts.generate_audio_and_subtitles()
     
@@ -69,17 +71,31 @@ def process_video(cfg: Config, video_config: dict, output_folder: str):
     print(f"⏱️  Duração do áudio: {audio_narration.duration:.2f}s")
 
     # --- 5. Verificar e processar música de fundo (opcional) ---
-    has_bg_music = "background_music_file" in video_config and video_config["background_music_file"]
+    has_bg_music = "background_music_dir" in video_config and video_config["background_music_dir"]
     bg_music_clip = None
     
     if has_bg_music:
-        bg_music_path = video_config["background_music_file"]
-        if not os.path.exists(bg_music_path):
-            print(f"⚠️  Arquivo de música de fundo não encontrado: {bg_music_path}")
-            print("⏭️  Gerando vídeo sem música de fundo...")
+        # pasta de musicas
+        bg_music_dir = video_config["background_music_dir"]
+        if not os.path.exists(bg_music_dir):
+            print(f"⚠️  Diretório de música de fundo não encontrado: {bg_music_dir}")
+            print("ℹ️  Continuando sem música de fundo.")
             has_bg_music = False
         else:
-            print(f"🎵 Carregando música de fundo: {bg_music_path}")
+            print(f"🎵 Selecionando música de fundo da pasta: {bg_music_dir}")
+
+            # escolher uma música aleatória da pasta
+            music_files = [f for f in os.listdir(bg_music_dir) if f.lower().endswith(('.mp3', '.wav', '.m4a', '.aac'))]
+            if not music_files:
+                print(f"⚠️  Nenhum arquivo de música encontrado em: {bg_music_dir}")
+                print("ℹ️  Continuando sem música de fundo.")
+                has_bg_music = False
+            else:
+                selected_music = random.choice(music_files)
+                bg_music_path = os.path.join(bg_music_dir, selected_music)
+                print(f"🎶 Música selecionada: {selected_music}")
+                
+                # Carregar música de fundo
             bg_music_clip = AudioFileClip(bg_music_path)
             
             # Ajustar duração da música de fundo para a duração da narração
@@ -91,10 +107,10 @@ def process_video(cfg: Config, video_config: dict, output_folder: str):
             
             # Cortar música para a duração exata
             bg_music_clip = bg_music_clip.subclip(0, cfg.max_total_video_duration)
-            
-            # Reduzir volume para 30%
-            bg_music_clip = bg_music_clip.volumex(0.3)
-            print(f"🔊 Volume da música de fundo ajustado para 30%")
+
+            # Reduzir volume para 35%
+            bg_music_clip = bg_music_clip.volumex(0.35)
+            print(f"🔊 Volume da música de fundo ajustado para 35%")
 
     # --- 6. Gerar vídeo de fundo ---
     print("🎥 Gerando vídeo de fundo...")
@@ -113,7 +129,7 @@ def process_video(cfg: Config, video_config: dict, output_folder: str):
     else:
         final_video = final_video.set_audio(audio_narration)
     
-    final_video = final_video.resize(cfg.resolution_output)
+    final_video = final_video.resize(cfg.resolution_output).set_duration(cfg.max_total_video_duration)
 
     # --- 8. Verificar se há headline e gerar se necessário ---
     has_headline = "headline" in video_config and video_config["headline"]
@@ -184,55 +200,98 @@ def process_video(cfg: Config, video_config: dict, output_folder: str):
         output_file,
         codec="libx264",
         audio_codec="aac",
-        fps=25,
+        fps=24,
         threads=5,
         temp_audiofile=os.path.join(project_folder, "temp-audio.m4a"),
         remove_temp=True,
-        bitrate="3000k",
-        preset="superfast",
+        bitrate="2000k",
+        preset="superfast", # opções: ultrafast, superfast, veryfast, faster, fast, medium, slow, slower, veryslow
     )
 
     print(f"✅ Vídeo salvo com sucesso!")
     
     # --- 13. Fazer upload Youtube ---
-    # instance do YouTube
-    if video_config.get("youtube", False):
-        yt_config = video_config.get("youtube", {})
-        
-        print("🚀 Iniciando upload para o YouTube...")
+    if video_config.get("youtube"):
+        try:
+            yt_config = video_config.get("youtube", {})
+            
+            print("\n🚀 Iniciando upload para o YouTube...")
 
-        # title + title_hashtags concatenar strings
-        title = video_config["title"] + " " + video_config.get("title_hashtags", "") + " " + video_config.get("title_hashtags", "")
+            # Montar título
+            title = video_config["title"][:100]  # YouTube limita a 100 caracteres
+            
+            # Montar descrição
+            description_parts = []
+            if video_config.get("description"):
+                description_parts.append(video_config["description"])
+            if video_config.get("narration_text"):
+                description_parts.append("\n\n" + video_config["narration_text"])
+            if video_config.get("hashtags"):
+                description_parts.append("\n\n" + video_config["hashtags"])
+            description = "".join(description_parts).strip()[:5000]  # YouTube limita a 5000 caracteres
 
-        description = ""
-        description += video_config["description"] + "\n\n"
-        description += video_config.get("hashtags", "") + "\n\n"
-        description += video_config.get("narration_text", "") + "\n\n"
+            # Processar tags (YouTube permite até 500 caracteres no total)
+            tags = []
+            if video_config.get("hashtags"):
+                # Remove # e divide por espaço
+                tags = [tag.replace("#", "").strip() 
+                       for tag in video_config["hashtags"].split() 
+                       if tag.strip()]
+                # Limita a 500 caracteres no total
+                tags_str = ",".join(tags)
+                if len(tags_str) > 500:
+                    tags = tags_str[:500].split(",")[:-1]  # Remove última tag incompleta
 
-        tags = video_config.get("hashtags", "").split(" ")
+            # Configurar privacidade e agendamento
+            privacy_status = "private"
+            publish_at = None
+            
+            if yt_config.get("publish_at"):
+                privacy_status = "private"
+                publish_at = yt_config["publish_at"]
+                print(f"⏰ Vídeo será agendado para: {publish_at}")
+            elif yt_config.get("privacy_status"):
+                privacy_status = yt_config["privacy_status"]
+            
+            # Criar instância do YouTube
+            yt = YouTube({
+                "token_file_name": yt_config.get("token_file_name", "youtube_token.json"),
+                "video_path": output_file,
+                "title": title,
+                "description": description,
+                "tags": tags,
+                "privacy_status": privacy_status,
+                "category_id": yt_config.get("category_id", "22"),  # 22 = People & Blogs
+                "publish_at": publish_at,
+                "pinned_comment": yt_config.get("pinned_comment", False)
+            })
+            
+            # Configurar agendamento se fornecido
+            if publish_at:
+                yt.set_item("publish_at", publish_at)
+            
+            # Fazer upload
+            print(f"📹 Título: {title}")
+            print(f"🏷️  Tags: {', '.join(tags[:5])}{'...' if len(tags) > 5 else ''}")
+            print(f"🔒 Privacidade: {privacy_status}")
+            print(f"🕒 Agendamento: {publish_at}")
+            
+            video_id = yt.upload()
+            print(f"✅ Upload concluído com sucesso!")
+            print(f"🔗 Link do vídeo: https://youtu.be/{video_id}")
 
-        publish_at = yt_config.get("publish_at", None)
 
-        yt = YouTube({
-            # "client_secrets_file": cfg.client_secrets_file,
-            "token_file_name": yt_config.get("token_file_name", "youtube_token.json"),
-            "video_path": output_file,
-            "title": title.strip(),
-            "description": description.strip(),
-            "tags": tags            
-        })
+            # remover a pasta do projeto após o upload
+            shutil.rmtree(project_folder)
+            print(f"🗑️  Pasta do projeto removida: {project_folder}")
+            
+        except Exception as e:
+            print(f"\n❌ ERRO no upload para YouTube: {e}")
+            import traceback
+            traceback.print_exc()
+            print("⚠️  O vídeo foi gerado, mas o upload falhou.")
 
-        # if publish_at:
-        #     yt.set_item("privacy_status", "private")
-        #     yt.set_item("publish_at", publish_at)
-        #     print(f"⏰ Vídeo agendado para publicação em: {publish_at}")
-        # else:
-        #     yt.set_item("privacy_status", "public")
-
-        video_id = yt.upload()
-        print(f"🔗 Link do vídeo no YouTube: https://youtu.be/{video_id}")
-
-    print(f"🏁 Processo concluído para o vídeo: {video_config['title'][:50]}")
+    print(f"\n🏁 Processo concluído para o vídeo: {video_config['title'][:50]}")
 
 
 def main():
@@ -244,7 +303,10 @@ def main():
     start_time = time.time()
     
     # Caminho do arquivo JSON
-    json_file = "temp_files/videos_config.json"
+    # json_file = "temp_files/videos_config.json"
+
+    #pedir ao usuario para informar o caminho do arquivo json, autocompleta
+    json_file = input("📂 Informe o caminho do arquivo JSON de configuração (ex: videos_config.json): ").strip()
     
     if not os.path.exists(json_file):
         print(f"❌ Erro: Arquivo {json_file} não encontrado!")
