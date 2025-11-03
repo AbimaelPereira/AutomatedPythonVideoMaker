@@ -8,9 +8,6 @@ __pycache__/
 /output/*
 !/output/.gitkeep
 
-/temp_files/*
-!/temp_files/.gitkeep
-
 /videos_default/*
 !/videos_default/.gitkeep
 

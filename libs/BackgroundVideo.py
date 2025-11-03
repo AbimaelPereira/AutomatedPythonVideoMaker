@@ -75,6 +75,8 @@ class BackgroundVideo:
 
         if self.shuffle_clips:
             random.shuffle(video_files)
+            random.shuffle(video_files)
+            random.shuffle(video_files)
         if self.max_clips:
             video_files = video_files[:self.max_clips]
 

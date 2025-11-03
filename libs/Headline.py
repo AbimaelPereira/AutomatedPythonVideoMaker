@@ -123,3 +123,22 @@ class Headline:
             "width": image.width,
             "height": image.height
         }
+
+if __name__ == "__main__":
+    # generate headline with subtitle
+    # subtitle deve conter uma parte em negrito
+    headline = Headline({
+        "background_color": (0, 48, 88),
+        "subtitle_color": (255, 255, 255),
+        "title": "Lorem Ipsuma as?",
+        "title_color": (255, 255, 255),
+        "margin_top_percent": 0,
+        "subtitle": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
+        "output_path": "headline_example.png",
+        "padding": 10,
+        "align": "left",
+        "gap": 0,
+        "video_width": 800
+    })
+    result = headline.generate()
+    print(f"Headline image saved at: {result['path']} (Width: {result['width']}, Height: {result['height']})")

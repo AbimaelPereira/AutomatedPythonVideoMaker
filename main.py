@@ -109,7 +109,7 @@ def process_video(cfg: Config, video_config: dict, output_folder: str):
             bg_music_clip = bg_music_clip.subclip(0, cfg.max_total_video_duration)
 
             # Reduzir volume para 35%
-            bg_music_clip = bg_music_clip.volumex(0.35)
+            bg_music_clip = bg_music_clip.volumex(0.25)
             print(f"🔊 Volume da música de fundo ajustado para 35%")
 
     # --- 6. Gerar vídeo de fundo ---
@@ -144,7 +144,8 @@ def process_video(cfg: Config, video_config: dict, output_folder: str):
             "output_path": headline_path,
             "title": headline_config.get("title", ""),
             "subtitle": headline_config.get("subtitle", ""),
-            "video_width": cfg.width
+            # "video_width": cfg.width
+            "video_width": 700,
         })
         headline_data = headline.generate()
         print(f"🖼️  Headline salva: {headline_path}")
@@ -204,7 +205,7 @@ def process_video(cfg: Config, video_config: dict, output_folder: str):
         threads=5,
         temp_audiofile=os.path.join(project_folder, "temp-audio.m4a"),
         remove_temp=True,
-        bitrate="2000k",
+        bitrate="4000k",
         preset="superfast", # opções: ultrafast, superfast, veryfast, faster, fast, medium, slow, slower, veryslow
     )
 
@@ -331,7 +332,15 @@ def main():
     # Processar cada vídeo
     success_count = 0
     error_count = 0
-    
+
+    # reordenar a lista de vídeos com base no campo youtube.publish_at, do mais próximo para o mais distante
+    def get_publish_at(video):
+        yt_config = video.get("youtube", {})
+        publish_at = yt_config.get("publish_at")
+        return publish_at
+
+    videos_config.sort(key=get_publish_at)
+
     for index, video_config in enumerate(videos_config, 1):
         try:
             print(f"\n{'='*60}")

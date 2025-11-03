@@ -184,3 +184,9 @@ class YouTube:
         """Altera qualquer configuração dinamicamente."""
         self.config[key] = value
         setattr(self, key, value)
+
+if __name__ == "__main__":
+    # genera token para novo canal
+    FILE_JSON_SAVE = "vida_de_oracao.json"
+    yt = YouTube(params={"token_file_name": FILE_JSON_SAVE})
+    yt.generate_token()
