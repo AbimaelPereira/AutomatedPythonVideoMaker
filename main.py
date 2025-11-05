@@ -3,17 +3,15 @@ import json
 import random
 import shutil
 import time
-from moviepy.editor import CompositeVideoClip, AudioFileClip, ImageClip, CompositeAudioClip
+# env
+from dotenv import load_dotenv
+load_dotenv()
 
-from libs.Config import Config
-from libs.TTS_Edge import EdgeTTS
-from libs.BackgroundVideo import BackgroundVideo
-from libs.Subtitle import Subtitle
-from libs.Headline import Headline
 from libs.YouTube import YouTube
+from libs.VideosTemplates.TemplateDefault import TemplateDefault
 
 
-def process_video(cfg: Config, video_config: dict, output_folder: str):
+def _process_video(cfg: False, video_config: dict, output_folder: str):
     """
     Processa um único vídeo com base na configuração fornecida.
     
@@ -161,7 +159,11 @@ def process_video(cfg: Config, video_config: dict, output_folder: str):
 
     # --- 9. Gerar legendas ---
     print("📝 Gerando legendas...")
-    sub = Subtitle(cfg.config)
+    sub = Subtitle({
+        **cfg.config, ## assim passa todas as configs do cfg
+        "font_size": 90,
+        "stroke_width": 3,
+    })
     subtitle_clips = sub.generate()
     subtitle_clips = subtitle_clips.set_duration(cfg.max_total_video_duration)
 
@@ -302,12 +304,11 @@ def main():
     print("="*60)
     
     start_time = time.time()
-    
-    # Caminho do arquivo JSON
-    # json_file = "temp_files/videos_config.json"
 
-    #pedir ao usuario para informar o caminho do arquivo json, autocompleta
-    json_file = input("📂 Informe o caminho do arquivo JSON de configuração (ex: videos_config.json): ").strip()
+    if os.getenv("DEBUG") == "1":
+        json_file = os.getenv("DEFAULT_JSON_DEBUG", "json_teste.json")
+    else:
+        json_file = input("📂 Informe o caminho do arquivo JSON de configuração (ex: videos_config.json): ").strip()
     
     if not os.path.exists(json_file):
         print(f"❌ Erro: Arquivo {json_file} não encontrado!")
@@ -323,7 +324,7 @@ def main():
         print("❌ Erro: O JSON deve conter uma lista de vídeos!")
         return
     
-    print(f"✅ {len(videos_config)} vídeo(s) encontrado(s)")
+    print(f"\n\n✅ {len(videos_config)} vídeo(s) encontrado(s)")
     
     # Criar pasta de saída principal
     output_base = "output"
@@ -333,13 +334,14 @@ def main():
     success_count = 0
     error_count = 0
 
-    # reordenar a lista de vídeos com base no campo youtube.publish_at, do mais próximo para o mais distante
-    def get_publish_at(video):
-        yt_config = video.get("youtube", {})
-        publish_at = yt_config.get("publish_at")
-        return publish_at
+    # Ordenar vídeos por data de publicação se houver vídeos com configuração do YouTube
+    if any("youtube" in video and video["youtube"] for video in videos_config):
+        def has_publish_at(video):
+            yt_config = video.get("youtube", {})
+            publish_at = yt_config.get("publish_at")
+            return publish_at is not None and publish_at != False
 
-    videos_config.sort(key=get_publish_at)
+        videos_config.sort(key=lambda video: (not has_publish_at(video), video["youtube"].get("publish_at")))
 
     for index, video_config in enumerate(videos_config, 1):
         try:
@@ -347,29 +349,43 @@ def main():
             print(f"📹 VÍDEO {index}/{len(videos_config)}")
             print(f"{'='*60}")
             
-            # Validar campos obrigatórios
-            required_fields = ["slug", "title", "description", "narration_text", "background_videos_dir"]
-            missing_fields = [f for f in required_fields if f not in video_config]
-            
-            if missing_fields:
-                print(f"⚠️  Campos obrigatórios ausentes: {', '.join(missing_fields)}")
-                print("⏭️  Pulando para o próximo vídeo...")
+            template = video_config.get("template", False)
+            # remove template of video_config to avoid issues
+            if "template" in video_config:
+                del video_config["template"]
+
+            # montar o objeto de configuração com templates e importações necessárias
+            template_class = None
+
+            if template == False:
                 error_count += 1
+                print("❌ Erro: Template não especificado ou inválido. Pulando vídeo.")
                 continue
-            
-            # Verificar se diretório de vídeos existe
-            if not os.path.exists(video_config["background_videos_dir"]):
-                print(f"⚠️  Diretório não encontrado: {video_config['background_videos_dir']}")
-                print("⏭️  Pulando para o próximo vídeo...")
+            elif template == "default":
+                template_class = TemplateDefault(video_config)
+
+            if not template_class:
                 error_count += 1
+                print(f"❌ Erro: Template '{template}' não reconhecido. Pulando vídeo.")
                 continue
-            
-            # Criar configuração
-            cfg = Config()
-            
-            # Processar vídeo
-            process_video(cfg, video_config, output_base)
-            success_count += 1
+
+            error_configs = template_class.validate_configs()
+            if len(error_configs) > 0:
+                error_count += 1
+                print(f"\n\n❌ Erro: Configurações inválidas para o template '{template}'. Pulando vídeo.")
+
+                print(f"\n{'='*60}")
+                for err in error_configs:
+                    print(f" - {err}")
+                print(f"\n{'='*60}")
+                continue
+
+            video_processed = template_class.process()
+            if video_processed:
+                success_count += 1
+            else:
+                error_count += 1
+                print(f"\n❌ ERRO ao processar vídeo {index}")
             
         except Exception as e:
             print(f"\n❌ ERRO ao processar vídeo {index}: {e}")

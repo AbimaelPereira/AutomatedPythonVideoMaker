@@ -1,16 +1,23 @@
 [
   {
+    "template": "default",
     "slug": "video-teste",
-    "title": "🚨 Video de Teste",
-    "title_hashtags": "#geopolitica #trump #doutrinamonroe #americas #shorts",
-    "hashtags": "#geopolitica #trump #doutrinamonroe #americas #shorts",
-    "description": "🚨 TRUMP E A NOVA DOUTRINA MONROE NAS AMÉRICAS 🌎\n\nDescubra como Donald Trump está ressuscitando a Doutrina Monroe, buscando reafirmar a influência dos EUA nas Américas. Entenda as táticas por trás do combate ao narcotráfico, a disputa por commodities cruciais com Rússia e China, e o impacto geopolítico para o Brasil e outros países da região. Uma análise profunda sobre as ações americanas na Venezuela, Colômbia, Guiana e Argentina, e como isso pode redefinir o equilíbrio de poder global.\n\nSeu cachorro pode estar sofrendo agora e você nem imagina. Todo dia milhares de pets morrem por algo que os donos ignoram. Olha só. Aquele potinho de água parado há 2 dias? Tá cheio de bactérias mortais. A ração exposta ao sol? Perde nutrientes e cria fungos. E o pior, aquele carinho depois de comer chocolate? Pode ser o último. Veterinários dizem que 7 em cada 10 problemas graves vinham de cuidados básicos errados. A boa notícia é que é fácil evitar. Troca água 2x ao dia, guarda ração bem fechada e nunca dá comida de humano. Salva esse vídeo e marca quem tem pet.\n\n🔔 ENGAJE COM A GENTE:\n• 👍 Deixe seu like se gostou\n• 💬 Comente sua opinião\n• 🔔 Ative o sininho para não perder nenhum vídeo\n• ➡️ Compartilhe com amigos\n\nPalavras-chave: Trump, Doutrina Monroe, Geopolítica, Américas, EUA, Brasil, Rússia, China, Venezuela, Colômbia, Guiana, Argentina, commodities, petróleo, minerais críticos, narcotráfico, relações internacionais, política externa, conflito, influência, segurança nacional.\n\n#shorts #geopolitica #trump #doutrinamonroe #americas #eua #brasil #noticias #analise #internacional\n\nFONTES:\n- https://www.cnnbrasil.com.br/internacional/trump-age-para-retomar-influencia-dos-eua-nas-americas-diz-alberto-pfeifer/",
-    "narration_text": "Teste pois o teste foi testado",
-    "background_videos_dir": "videos_default/IA/CATASTROFES",
-    "background_music_dir": false,
+    "content": {
+      "title": "🚨 Video de Teste",
+      "title_hashtags": "#geopolitica #trump #doutrinamonroe #americas #shorts",
+      "hashtags": "#geopolitica #trump #doutrinamonroe #americas #shorts",
+      "description": "🚨 TRUMP E A NOVA DOUTRINA MONROE NAS AMÉRICAS 🌎 ...",
+    },
     "headline": false,
-    "edge_tts": {
-      "voice_id": "pt-BR-AntonioNeural"
+    "background": {
+      "videos_dir": "videos_default/IA/CATASTROFES",
+      "music_dir": false
+    },
+    "tts": {
+      "narration_text": "reciprocidade reciprocidade reciprocidade",
+      "edge_tts": {
+        "voice_id": "pt-BR-FranciscaNeural"
+      }
     },
     "output_ratio": "9:16",
     "youtube": false

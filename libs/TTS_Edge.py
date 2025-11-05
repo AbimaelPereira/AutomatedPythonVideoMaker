@@ -28,6 +28,7 @@ class EdgeTTS:
             "silence_thresh": -40,
             "min_silence_len": 400,
             "keep_silence": 275,
+            "rate": "+0%"
         }
         if params:
             defaults.update(params)
@@ -45,7 +46,7 @@ class EdgeTTS:
         communicate = edge_tts.Communicate(
             self.text,
             self.voice_id,
-            rate="+10%",
+            rate=self.rate,
             boundary="WordBoundary"
         )
 
