@@ -48,7 +48,8 @@ class TemplateDefault:
         default_video_config = {
             "output_folder": "output",
             "project_folder": False,  # será criado depois
-            "audio_path": False,
+            "audio_narration": False,
+            "max_total_video_duration": False,
             "subtitles_path": False,
         }
 
@@ -103,10 +104,9 @@ class TemplateDefault:
                 os.chdir(original_dir)
 
                 # set into video_config
-                self.video_config['audio_path'] = os.path.join(self.video_config.project_folder, tts_result['audio_file'])
-                self.video_config['subtitles_path'] = os.path.join(self.video_config.project_folder, tts_result['subtitle_file'])
+                self.video_config.audio_narration = AudioFileClip(os.path.join(self.video_config.project_folder, tts_result['audio_file']))
+                self.video_config.max_total_video_duration = self.video_config.audio_narration.duration
+                self.video_config.subtitles_path = os.path.join(self.video_config.project_folder, tts_result['subtitle_file'])
+                print(f"⏱️  Duração: {self.video_config.max_total_video_duration :.2f}s")
 
         
-
-
-        # background

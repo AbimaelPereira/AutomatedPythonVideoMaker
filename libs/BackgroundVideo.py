@@ -18,11 +18,11 @@ class BackgroundVideo:
             "max_clip_duration": 4,
             "max_total_video_duration": None,
             "crossfade_duration": 0.8,
-            "enable_crossfade": True,  # <-- nova flag
+            "enable_crossfade": False,  # <-- nova flag
             "max_clips": None,
             "shuffle_clips": True,
             "valid_extensions": ["mp4", "mkv", "avi", "mov", "flv", "webm"],
-            "loop_background": False,
+            "loop_background": True,
         }
         if params:
             defaults.update(params)
@@ -74,8 +74,6 @@ class BackgroundVideo:
             return None
 
         if self.shuffle_clips:
-            random.shuffle(video_files)
-            random.shuffle(video_files)
             random.shuffle(video_files)
         if self.max_clips:
             video_files = video_files[:self.max_clips]
@@ -130,5 +128,9 @@ class BackgroundVideo:
             final_video = self.apply_crossfade_transition(clips)
         else:
             final_video = concatenate_videoclips(clips, method='compose')
+
+        if self.max_total_video_duration:
+            final_video = final_video.subclip(0, self.max_total_video_duration)
+        
         return final_video
 
