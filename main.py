@@ -1,300 +1,90 @@
 import os
 import json
-import random
-import shutil
 import time
-# env
 from dotenv import load_dotenv
+
+# Carregar variáveis de ambiente
 load_dotenv()
 
-from libs.YouTube import YouTube
+# Importar templates disponíveis
 from libs.VideosTemplates.TemplateDefault import TemplateDefault
 
+# Dicionário de templates disponíveis
+AVAILABLE_TEMPLATES = {
+    "default": TemplateDefault,
+    # Adicione outros templates aqui conforme necessário
+    # "advanced": TemplateAdvanced,
+    # "minimal": TemplateMinimal,
+}
 
-def _process_video(cfg: False, video_config: dict, output_folder: str):
+
+def get_template_class(template_name):
     """
-    Processa um único vídeo com base na configuração fornecida.
+    Retorna a classe do template baseado no nome.
     
     Args:
-        cfg: Objeto de configuração
-        video_config: Dicionário com as configurações do vídeo
-        output_folder: Pasta base onde o vídeo será salvo
+        template_name: Nome do template (ex: "default", "advanced")
+    
+    Returns:
+        Classe do template ou None se não encontrado
     """
-    print(f"\n🎬 Gerando vídeo: {video_config['title'][:50]}...")
-    print(f"📐 Proporção: {video_config.get('output_ratio', '9:16')}")
+    return AVAILABLE_TEMPLATES.get(template_name)
 
-    # --- 1. Criar pasta do projeto usando o slug ---
-    slug = video_config.get("slug", "video_sem_slug")
-    project_folder = os.path.join(output_folder, slug)
-    os.makedirs(project_folder, exist_ok=True)
-    print(f"📁 Pasta do projeto: {project_folder}")
 
-    # --- 2. Configurar diretório de vídeos de fundo ---
-    cfg.set_item("background_videos_dir", video_config["background_videos_dir"])
-    cfg.set_item("output_ratio", video_config.get("output_ratio", "9:16"))
-
-    # --- 3. Gerar áudio e legenda com Edge TTS ---
-    edge_tts_config = video_config.get("edge_tts", {})
-    voice_id = edge_tts_config.get("voice_id", "pt-BR-AntonioNeural")
+def process_video(video_config, index, total):
+    """
+    Processa um único vídeo usando o template especificado.
     
-    print(f"🗣️  Gerando áudio com voz: {voice_id}")
+    Args:
+        video_config: Dicionário com as configurações do vídeo
+        index: Índice do vídeo atual
+        total: Total de vídeos a processar
     
-    # Mudar diretório temporariamente para gerar arquivos na pasta correta
-    original_dir = os.getcwd()
-    os.chdir(project_folder)
+    Returns:
+        True se sucesso, False se erro
+    """
+    print(f"\n{'='*60}")
+    print(f"🎬 VÍDEO {index}/{total}")
+    print(f"{'='*60}")
     
-    tts = EdgeTTS({
-        "text": video_config["narration_text"],
-        "voice_id": voice_id,
-        "output_basename": slug,
-    })
-    tts_result = tts.generate_audio_and_subtitles()
+    # Obter template
+    template_name = video_config.get("template", False)
     
-    # Voltar para o diretório original
-    os.chdir(original_dir)
+    if not template_name:
+        print("❌ Erro: Template não especificado. Pulando vídeo.")
+        return False
     
-    # Ajustar caminhos para absolutos
-    audio_path = os.path.join(project_folder, tts_result["audio_file"])
-    subtitle_path = os.path.join(project_folder, tts_result["subtitle_file"])
+    # Buscar classe do template
+    template_class = get_template_class(template_name)
     
-    cfg.set_item("audio_narration_file", audio_path)
-    cfg.set_item("subtitle_narration_file", subtitle_path)
+    if not template_class:
+        print(f"❌ Erro: Template '{template_name}' não reconhecido.")
+        print(f"📋 Templates disponíveis: {', '.join(AVAILABLE_TEMPLATES.keys())}")
+        return False
     
-    print(f"🎵 Áudio salvo: {audio_path}")
-    print(f"📝 Legenda salva: {subtitle_path}")
-
-    # --- 4. Carregar áudio de narração e definir duração do vídeo ---
-    audio_narration = AudioFileClip(cfg.audio_narration_file)
-    cfg.set_item("max_total_video_duration", audio_narration.duration)
-    print(f"⏱️  Duração do áudio: {audio_narration.duration:.2f}s")
-
-    # --- 5. Verificar e processar música de fundo (opcional) ---
-    has_bg_music = "background_music_dir" in video_config and video_config["background_music_dir"]
-    bg_music_clip = None
+    # Remover o campo 'template' do config para evitar conflitos
+    video_config_clean = {k: v for k, v in video_config.items() if k != "template"}
     
-    if has_bg_music:
-        # pasta de musicas
-        bg_music_dir = video_config["background_music_dir"]
-        if not os.path.exists(bg_music_dir):
-            print(f"⚠️  Diretório de música de fundo não encontrado: {bg_music_dir}")
-            print("ℹ️  Continuando sem música de fundo.")
-            has_bg_music = False
-        else:
-            print(f"🎵 Selecionando música de fundo da pasta: {bg_music_dir}")
-
-            # escolher uma música aleatória da pasta
-            music_files = [f for f in os.listdir(bg_music_dir) if f.lower().endswith(('.mp3', '.wav', '.m4a', '.aac'))]
-            if not music_files:
-                print(f"⚠️  Nenhum arquivo de música encontrado em: {bg_music_dir}")
-                print("ℹ️  Continuando sem música de fundo.")
-                has_bg_music = False
-            else:
-                selected_music = random.choice(music_files)
-                bg_music_path = os.path.join(bg_music_dir, selected_music)
-                print(f"🎶 Música selecionada: {selected_music}")
-                
-                # Carregar música de fundo
-            bg_music_clip = AudioFileClip(bg_music_path)
-            
-            # Ajustar duração da música de fundo para a duração da narração
-            if bg_music_clip.duration < cfg.max_total_video_duration:
-                # Loop da música se for muito curta
-                n_loops = int(cfg.max_total_video_duration // bg_music_clip.duration) + 1
-                print(f"🔁 Repetindo música de fundo {n_loops}x para cobrir toda a duração")
-                bg_music_clip = CompositeAudioClip([bg_music_clip] * n_loops)
-            
-            # Cortar música para a duração exata
-            bg_music_clip = bg_music_clip.subclip(0, cfg.max_total_video_duration)
-
-            # Reduzir volume para 35%
-            bg_music_clip = bg_music_clip.volumex(0.25)
-            print(f"🔊 Volume da música de fundo ajustado para 35%")
-
-    # --- 6. Gerar vídeo de fundo ---
-    print("🎥 Gerando vídeo de fundo...")
-    cfg.set_item("enable_crossfade", False)
-    bg = BackgroundVideo(cfg.config)
-    final_video = bg.generate_background_video()
+    # Criar instância do template
+    template = template_class(video_config_clean)
     
-    if not final_video:
-        raise RuntimeError("Nenhum vídeo de fundo foi gerado.")
+    # Validar configurações
+    print(f"🔍 Validando configurações do template '{template_name}'...")
+    errors = template.validate_configs()
     
-    # --- 7. Mixar áudios (narração + música de fundo se houver) ---
-    if has_bg_music and bg_music_clip:
-        print("🎚️  Mixando narração com música de fundo...")
-        final_audio = CompositeAudioClip([bg_music_clip, audio_narration])
-        final_video = final_video.set_audio(final_audio)
-    else:
-        final_video = final_video.set_audio(audio_narration)
+    if errors:
+        print(f"\n❌ Erro: Configurações inválidas para o template '{template_name}'.")
+        print(f"\n{'='*60}")
+        print("📋 Erros encontrados:")
+        for error in errors:
+            print(f"  ❌ {error}")
+        print(f"{'='*60}")
+        return False
     
-    final_video = final_video.resize(cfg.resolution_output).set_duration(cfg.max_total_video_duration)
-
-    # --- 8. Verificar se há headline e gerar se necessário ---
-    has_headline = "headline" in video_config and video_config["headline"]
+    print("✅ Configurações validadas com sucesso!")
     
-    if has_headline:
-        print("📰 Gerando headline...")
-        headline_config = video_config["headline"]
-        
-        headline_path = os.path.join(project_folder, "headline.png")
-        
-        headline = Headline({
-            "output_path": headline_path,
-            "title": headline_config.get("title", ""),
-            "subtitle": headline_config.get("subtitle", ""),
-            # "video_width": cfg.width
-            "video_width": 700,
-        })
-        headline_data = headline.generate()
-        print(f"🖼️  Headline salva: {headline_path}")
-        
-        headline_clip = (
-            ImageClip(headline_data["path"])
-            .set_duration(cfg.max_total_video_duration)
-            .set_opacity(cfg.manchete_opacity)
-        )
-    else:
-        print("ℹ️  Sem headline - gerando apenas com legendas")
-        headline_clip = None
-
-    # --- 9. Gerar legendas ---
-    print("📝 Gerando legendas...")
-    sub = Subtitle({
-        **cfg.config, ## assim passa todas as configs do cfg
-        "font_size": 90,
-        "stroke_width": 3,
-    })
-    subtitle_clips = sub.generate()
-    subtitle_clips = subtitle_clips.set_duration(cfg.max_total_video_duration)
-
-    # --- 10. Montar o bloco (headline + legendas ou apenas legendas) ---
-    GAP = 200
-    
-    if has_headline:
-        # Com headline: redimensiona legendas para a largura da headline
-        subtitle_clips = subtitle_clips.resize(width=headline_clip.w)
-        
-        block = CompositeVideoClip([
-            headline_clip,
-            subtitle_clips.set_position(("center", headline_clip.h + GAP))
-        ], size=(headline_clip.w, headline_clip.h + subtitle_clips.h + GAP))
-        
-        block = block.resize(width=int(cfg.width * 0.8))
-    else:
-        # Sem headline: legendas sozinhas
-        subtitle_clips = subtitle_clips.resize(width=int(cfg.width * 0.8))
-        block = subtitle_clips
-
-    # --- 11. Composição final ---
-    print("🎨 Montando composição final...")
-    final = CompositeVideoClip([
-        final_video,
-        block.set_position(("center", int(final_video.h * 0.3 - block.h / 2)))
-    ])
-
-    # --- 12. Renderização ---
-    output_file = os.path.join(
-        project_folder, 
-        f"{slug}_{cfg.output_ratio.replace(':', '_')}.mp4"
-    )
-
-    print(f"💾 Renderizando vídeo: {output_file}")
-    final.write_videofile(
-        output_file,
-        codec="libx264",
-        audio_codec="aac",
-        fps=24,
-        threads=5,
-        temp_audiofile=os.path.join(project_folder, "temp-audio.m4a"),
-        remove_temp=True,
-        bitrate="4000k",
-        preset="superfast", # opções: ultrafast, superfast, veryfast, faster, fast, medium, slow, slower, veryslow
-    )
-
-    print(f"✅ Vídeo salvo com sucesso!")
-    
-    # --- 13. Fazer upload Youtube ---
-    if video_config.get("youtube"):
-        try:
-            yt_config = video_config.get("youtube", {})
-            
-            print("\n🚀 Iniciando upload para o YouTube...")
-
-            # Montar título
-            title = video_config["title"][:100]  # YouTube limita a 100 caracteres
-            
-            # Montar descrição
-            description_parts = []
-            if video_config.get("description"):
-                description_parts.append(video_config["description"])
-            if video_config.get("narration_text"):
-                description_parts.append("\n\n" + video_config["narration_text"])
-            if video_config.get("hashtags"):
-                description_parts.append("\n\n" + video_config["hashtags"])
-            description = "".join(description_parts).strip()[:5000]  # YouTube limita a 5000 caracteres
-
-            # Processar tags (YouTube permite até 500 caracteres no total)
-            tags = []
-            if video_config.get("hashtags"):
-                # Remove # e divide por espaço
-                tags = [tag.replace("#", "").strip() 
-                       for tag in video_config["hashtags"].split() 
-                       if tag.strip()]
-                # Limita a 500 caracteres no total
-                tags_str = ",".join(tags)
-                if len(tags_str) > 500:
-                    tags = tags_str[:500].split(",")[:-1]  # Remove última tag incompleta
-
-            # Configurar privacidade e agendamento
-            privacy_status = "private"
-            publish_at = None
-            
-            if yt_config.get("publish_at"):
-                privacy_status = "private"
-                publish_at = yt_config["publish_at"]
-                print(f"⏰ Vídeo será agendado para: {publish_at}")
-            elif yt_config.get("privacy_status"):
-                privacy_status = yt_config["privacy_status"]
-            
-            # Criar instância do YouTube
-            yt = YouTube({
-                "token_file_name": yt_config.get("token_file_name", "youtube_token.json"),
-                "video_path": output_file,
-                "title": title,
-                "description": description,
-                "tags": tags,
-                "privacy_status": privacy_status,
-                "category_id": yt_config.get("category_id", "22"),  # 22 = People & Blogs
-                "publish_at": publish_at,
-                "pinned_comment": yt_config.get("pinned_comment", False)
-            })
-            
-            # Configurar agendamento se fornecido
-            if publish_at:
-                yt.set_item("publish_at", publish_at)
-            
-            # Fazer upload
-            print(f"📹 Título: {title}")
-            print(f"🏷️  Tags: {', '.join(tags[:5])}{'...' if len(tags) > 5 else ''}")
-            print(f"🔒 Privacidade: {privacy_status}")
-            print(f"🕒 Agendamento: {publish_at}")
-            
-            video_id = yt.upload()
-            print(f"✅ Upload concluído com sucesso!")
-            print(f"🔗 Link do vídeo: https://youtu.be/{video_id}")
-
-
-            # remover a pasta do projeto após o upload
-            shutil.rmtree(project_folder)
-            print(f"🗑️  Pasta do projeto removida: {project_folder}")
-            
-        except Exception as e:
-            print(f"\n❌ ERRO no upload para YouTube: {e}")
-            import traceback
-            traceback.print_exc()
-            print("⚠️  O vídeo foi gerado, mas o upload falhou.")
-
-    print(f"\n🏁 Processo concluído para o vídeo: {video_config['title'][:50]}")
+    # Processar vídeo
+    return template.process()
 
 
 def main():
@@ -304,91 +94,111 @@ def main():
     print("="*60)
     
     start_time = time.time()
-
+    
+    # Determinar arquivo JSON
     if os.getenv("DEBUG") == "1":
         json_file = os.getenv("DEFAULT_JSON_DEBUG", "json_teste.json")
+        print(f"🔧 Modo DEBUG ativado")
     else:
-        json_file = input("📂 Informe o caminho do arquivo JSON de configuração (ex: videos_config.json): ").strip()
+        json_file = input("\n📂 Informe o caminho do arquivo JSON de configuração: ").strip()
+        if not json_file:
+            json_file = "json_teste.json"  # Padrão
+
+    # print listar pastas e arquivos no diretório atual
+    print(f"\n📁 Diretório atual: {os.getcwd()}")
+    print(f"📂 Conteúdo do diretório atual: {os.listdir(os.getcwd())}")
+
+    print(f"\n📁 Arquivo JSON selecionado: {json_file}")
     
+    # Verificar se arquivo existe
     if not os.path.exists(json_file):
-        print(f"❌ Erro: Arquivo {json_file} não encontrado!")
-        print("💡 Crie um arquivo 'videos_config.json' com suas configurações.")
+        print(f"\n❌ Erro: Arquivo '{json_file}' não encontrado!")
+        print("💡 Crie um arquivo JSON com suas configurações.")
+        print("\n📋 Exemplo de estrutura:")
+        print("""
+[
+  {
+    "template": "default",
+    "slug": "meu-video",
+    "content": {
+      "title": "Título do Vídeo",
+      "description": "Descrição...",
+      "hashtags": "#tag1 #tag2"
+    },
+    "background": {
+      "videos_dir": "caminho/para/videos",
+      "music_dir": false
+    },
+    "tts": {
+      "narration_text": "Texto da narração...",
+      "edge_tts": {
+        "voice_id": "pt-BR-FranciscaNeural"
+      }
+    },
+    "output_ratio": "9:16",
+    "headline": false,
+    "youtube": false
+  }
+]
+        """)
         return
     
     # Carregar configurações
     print(f"\n📂 Carregando configurações de: {json_file}")
-    with open(json_file, "r", encoding="utf-8") as f:
-        videos_config = json.load(f)
-    
-    if not isinstance(videos_config, list):
-        print("❌ Erro: O JSON deve conter uma lista de vídeos!")
+    try:
+        with open(json_file, "r", encoding="utf-8") as f:
+            videos_config = json.load(f)
+    except json.JSONDecodeError as e:
+        print(f"\n❌ Erro ao ler JSON: {e}")
+        return
+    except Exception as e:
+        print(f"\n❌ Erro ao abrir arquivo: {e}")
         return
     
-    print(f"\n\n✅ {len(videos_config)} vídeo(s) encontrado(s)")
+    # Validar estrutura do JSON
+    if not isinstance(videos_config, list):
+        print("\n❌ Erro: O JSON deve conter uma lista de vídeos!")
+        return
+    
+    if len(videos_config) == 0:
+        print("\n⚠️ Nenhum vídeo encontrado no arquivo JSON.")
+        return
+    
+    print(f"✅ {len(videos_config)} vídeo(s) encontrado(s)")
     
     # Criar pasta de saída principal
-    output_base = "output"
-    os.makedirs(output_base, exist_ok=True)
+    os.makedirs("output", exist_ok=True)
+    
+    # Ordenar vídeos por data de publicação (se houver)
+    videos_with_schedule = [v for v in videos_config 
+                           if v.get("youtube") and v["youtube"].get("publish_at")]
+    
+    if videos_with_schedule:
+        print("\n📅 Ordenando vídeos por data de agendamento...")
+        videos_config.sort(
+            key=lambda v: (
+                not (v.get("youtube") and v["youtube"].get("publish_at")),
+                v.get("youtube", {}).get("publish_at", "")
+            )
+        )
     
     # Processar cada vídeo
     success_count = 0
     error_count = 0
-
-    # Ordenar vídeos por data de publicação se houver vídeos com configuração do YouTube
-    if any("youtube" in video and video["youtube"] for video in videos_config):
-        def has_publish_at(video):
-            yt_config = video.get("youtube", {})
-            publish_at = yt_config.get("publish_at")
-            return publish_at is not None and publish_at != False
-
-        videos_config.sort(key=lambda video: (not has_publish_at(video), video["youtube"].get("publish_at")))
-
+    
     for index, video_config in enumerate(videos_config, 1):
         try:
-            print(f"\n{'='*60}")
-            print(f"📹 VÍDEO {index}/{len(videos_config)}")
-            print(f"{'='*60}")
-            
-            template = video_config.get("template", False)
-            # remove template of video_config to avoid issues
-            if "template" in video_config:
-                del video_config["template"]
-
-            # montar o objeto de configuração com templates e importações necessárias
-            template_class = None
-
-            if template == False:
-                error_count += 1
-                print("❌ Erro: Template não especificado ou inválido. Pulando vídeo.")
-                continue
-            elif template == "default":
-                template_class = TemplateDefault(video_config)
-
-            if not template_class:
-                error_count += 1
-                print(f"❌ Erro: Template '{template}' não reconhecido. Pulando vídeo.")
-                continue
-
-            error_configs = template_class.validate_configs()
-            if len(error_configs) > 0:
-                error_count += 1
-                print(f"\n\n❌ Erro: Configurações inválidas para o template '{template}'. Pulando vídeo.")
-
-                print(f"\n{'='*60}")
-                for err in error_configs:
-                    print(f" - {err}")
-                print(f"\n{'='*60}")
-                continue
-
-            video_processed = template_class.process()
-            if video_processed:
+            if process_video(video_config, index, len(videos_config)):
                 success_count += 1
+                print(f"\n✅ Vídeo {index} processado com sucesso!")
             else:
                 error_count += 1
-                print(f"\n❌ ERRO ao processar vídeo {index}")
-            
+                print(f"\n❌ Erro ao processar vídeo {index}")
+        except KeyboardInterrupt:
+            print("\n\n⚠️ Processamento interrompido pelo usuário.")
+            break
         except Exception as e:
-            print(f"\n❌ ERRO ao processar vídeo {index}: {e}")
+            print(f"\n❌ ERRO INESPERADO ao processar vídeo {index}: {e}")
             import traceback
             traceback.print_exc()
             error_count += 1
@@ -403,9 +213,20 @@ def main():
     print("="*60)
     print(f"✅ Vídeos gerados com sucesso: {success_count}")
     print(f"❌ Vídeos com erro: {error_count}")
-    print(f"⏱️  Tempo total: {elapsed_time:.2f}s ({elapsed_time/60:.1f} minutos)")
+    print(f"⏱️ Tempo total: {elapsed_time:.2f}s ({elapsed_time/60:.1f} minutos)")
+    
+    if success_count > 0:
+        print(f"📁 Vídeos salvos em: ./output/")
+    
     print("="*60)
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("\n\n👋 Programa encerrado pelo usuário.")
+    except Exception as e:
+        print(f"\n❌ ERRO FATAL: {e}")
+        import traceback
+        traceback.print_exc()

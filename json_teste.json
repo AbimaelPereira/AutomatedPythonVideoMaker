@@ -8,10 +8,13 @@
       "hashtags": "#geopolitica #trump #doutrinamonroe #americas #shorts",
       "description": "🚨 TRUMP E A NOVA DOUTRINA MONROE NAS AMÉRICAS 🌎 ..."
     },
-    "headline": false,
+    "headline": {
+      "title": "🚨 Video de Teste",
+      "subtitle": "Subtítulo do vídeo de teste"
+    },
     "background": {
       "videos_dir": "videos_default/IA/CATASTROFES",
-      "music_dir": false
+      "music_dir": "bg_music/geopolitica"
     },
     "tts": {
       "narration_text": "reciprocidade reciprocidade reciprocidade",
