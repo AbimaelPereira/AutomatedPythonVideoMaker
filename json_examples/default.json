@@ -23,6 +23,10 @@
       }
     },
     "output_ratio": "9:16",
-    "youtube": false
+    "youtube": {
+      "token_file_name": "nome_canal.json",
+      "privacy_status": "private",
+      "publish_at": "2025-11-11 19:00:00"
+    }
   }
 ]

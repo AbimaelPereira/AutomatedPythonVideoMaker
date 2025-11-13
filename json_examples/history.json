@@ -1,0 +1,28 @@
+[
+  {
+    "template": "history",
+    "slug": "video-teste",
+    "content": {
+      "title": "🚨 Video de Teste",
+      "title_hashtags": "#geopolitica #trump #doutrinamonroe #americas #shorts",
+      "hashtags": "#geopolitica #trump #doutrinamonroe #americas #shorts",
+      "description": "🚨 TRUMP E A NOVA DOUTRINA MONROE NAS AMÉRICAS 🌎 ..."
+    },
+    "background": {
+      "music_dir": "bg_music/geopolitica"
+    },
+    "tts": {
+      "edge_tts": {
+        "voice_id": "pt-BR-FranciscaNeural"
+      }
+    },
+    "scenes": [
+        {
+            "narration_text": "reciprocidade reciprocidade reciprocidade",
+            "video_hash": "hash_do_video_1"
+        }
+    ],
+    "output_ratio": "9:16",
+    "youtube": false
+  }
+]

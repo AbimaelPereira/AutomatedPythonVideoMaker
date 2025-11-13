@@ -1,7 +1,5 @@
 import os
-import shutil
 from libs.TemplateMaster import TemplateMaster
-from libs.YouTube import YouTube
 from moviepy.editor import CompositeVideoClip, CompositeAudioClip
 
 
@@ -142,7 +140,7 @@ class TemplateDefault:
             # 6. Renderização
             output_file = os.path.join(
                 output_folder,
-                f"{slug}_{self.video_config['output_ratio'].replace(':', '_')}.mp4"
+                f"{slug}.mp4"
             )
             
             print(f"💾 Renderizando vídeo: {output_file}")
@@ -162,16 +160,19 @@ class TemplateDefault:
             
             # 7. Upload para YouTube (opcional)
             if self.video_config.get("youtube"):
+                print("\n📤 Preparando upload para YouTube...")
+                
                 video_id = self.tm.upload_to_youtube({
                     "video_path": output_file,
                     "content": self.video_config.get("content", {}),
                     "youtube": self.video_config["youtube"],
                     "tts": self.video_config.get("tts", {}),
-                    "remove_project_folder": True  # Remove pasta após upload bem-sucedido
+                    "remove_project_folder": self.video_config["youtube"].get("remove_project_folder", False)
                 })
                 
                 if not video_id:
-                    print("⚠️  Upload falhou, mas o vídeo foi salvo localmente.")
+                    print("⚠️ Upload falhou, mas o vídeo foi salvo localmente.")
+                    return False
             
             return True
             
@@ -180,82 +181,3 @@ class TemplateDefault:
             import traceback
             traceback.print_exc()
             return False
-    
-    def _upload_to_youtube(self, video_path, project_folder):
-        """
-        Faz upload do vídeo para o YouTube.
-        
-        Args:
-            video_path: Caminho do arquivo de vídeo
-            project_folder: Pasta do projeto (será removida após upload)
-        """
-        try:
-            yt_config = self.video_config["youtube"]
-            
-            print("\n🚀 Iniciando upload para o YouTube...")
-            
-            # Montar título
-            title = self.video_config["content"]["title"][:100]
-            
-            # Montar descrição
-            description_parts = []
-            if self.video_config["content"].get("description"):
-                description_parts.append(self.video_config["content"]["description"])
-            if self.video_config["tts"].get("narration_text"):
-                description_parts.append("\n\n" + self.video_config["tts"]["narration_text"])
-            if self.video_config["content"].get("hashtags"):
-                description_parts.append("\n\n" + self.video_config["content"]["hashtags"])
-            description = "".join(description_parts).strip()[:5000]
-            
-            # Processar tags
-            tags = []
-            if self.video_config["content"].get("hashtags"):
-                tags = [tag.replace("#", "").strip() 
-                       for tag in self.video_config["content"]["hashtags"].split() 
-                       if tag.strip()]
-                tags_str = ",".join(tags)
-                if len(tags_str) > 500:
-                    tags = tags_str[:500].split(",")[:-1]
-            
-            # Configurar privacidade e agendamento
-            privacy_status = "private"
-            publish_at = None
-            
-            if yt_config.get("publish_at"):
-                privacy_status = "private"
-                publish_at = yt_config["publish_at"]
-                print(f"⏰ Vídeo será agendado para: {publish_at}")
-            elif yt_config.get("privacy_status"):
-                privacy_status = yt_config["privacy_status"]
-            
-            # Criar instância do YouTube
-            yt = YouTube({
-                "token_file_name": yt_config.get("token_file_name", "youtube_token.json"),
-                "video_path": video_path,
-                "title": title,
-                "description": description,
-                "tags": tags,
-                "privacy_status": privacy_status,
-                "category_id": yt_config.get("category_id", "22"),
-                "publish_at": publish_at,
-                "pinned_comment": yt_config.get("pinned_comment", False)
-            })
-            
-            # Fazer upload
-            print(f"🎬 Título: {title}")
-            print(f"🏷️ Tags: {', '.join(tags[:5])}{'...' if len(tags) > 5 else ''}")
-            print(f"🔒 Privacidade: {privacy_status}")
-            
-            video_id = yt.upload()
-            print(f"✅ Upload concluído com sucesso!")
-            print(f"🔗 Link do vídeo: https://youtu.be/{video_id}")
-            
-            # Remover pasta do projeto após upload
-            shutil.rmtree(project_folder)
-            print(f"🗑️ Pasta do projeto removida: {project_folder}")
-            
-        except Exception as e:
-            print(f"\n❌ ERRO no upload para YouTube: {e}")
-            import traceback
-            traceback.print_exc()
-            print("⚠️ O vídeo foi gerado, mas o upload falhou.")
