@@ -16,23 +16,43 @@
             "title": "🌹 O ÓLEO QUE APAGA CICATRIZES 🤫",
             "title_hashtags": "#oleoderosamosqueta #cicatrizacao #antiidade #shorts",
             "hashtags": "#beleza #cuidadoscomapele #amazon #shorts",
-            "description": "Descubra o poder do Óleo de Rosa Mosqueta! Ele ajuda na cicatrização, uniformiza o tom da pele e combate o envelhecimento precoce. Aproveite a promoção de hoje com 34% de desconto na Amazon!",
-            "gif": "gifs/pele_perfeita.gif"
+            "description": "Descubra o poder do Óleo de Rosa Mosqueta! Ele ajuda na cicatrização, uniformiza o tom da pele e combate o envelhecimento precoce. Aproveite a promoção de hoje com 34% de desconto na Amazon!"
         },
         "tts": {
-            "narration_text": "Pouca gente sabe, mas o óleo de rosa mosqueta é o segredo das peles perfeitas. Ele ajuda na cicatrização, clareia manchas e reduz rugas. E o melhor: está com 34% de desconto hoje na Amazon. O link tá aqui no primeiro comentário, corre antes que acabe!",
             "edge_tts": {
                 "voice_id": "pt-BR-MacerioMultilingualNeural"
             }
         },
         "background": {
-            "music_dir": "bg_music/promocoes"
+            "color": "#FFDE59"
         },
+        "scenes": [
+            {
+                "use_scene_from_library": "oferta_todo_dia"
+            },
+            {
+                "narration_text": "Fone de Ouvido Bluetooth Marca Tal com Cancelamento de Ruído.",
+                "visual": "http://example.com/fone_ouvido.jpg",
+                "sound_effect": "price_drop.mp3",
+                "subtitle": true
+            },
+            {
+                "narration_text": "De R$ 129,90 por apenas R$ 32,90!",
+                "visual": "input.gif",
+                "sound_effect": "price_drop.mp3",
+                "subtitle": true
+            },
+            {
+                "use_scene_from_library": "link_na_descricao"
+            },
+            {
+                "use_scene_from_library": "oferta_todo_dia"
+            },
+            {
+                "use_scene_from_library": "cta_oferta_todo_dia"
+            }
+        ],
         "output_ratio": "9:16",
-        "youtube": {
-            "token_file_name": "produtos.json",
-            "privacy_status": "public",
-            "publish_at": "2025-11-14 10:00:00"
-        }
+        "youtube": false
     }
 ]

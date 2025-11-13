@@ -1,5 +1,5 @@
 from moviepy.editor import ColorClip, CompositeVideoClip, VideoFileClip
-from development.Filters import Filters
+from development.Filters.Filters import Filters
 
 # Resolução final esperada (vertical)
 RESOLUTION = (720, 1280)

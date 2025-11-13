@@ -318,3 +318,20 @@ class TemplateMaster:
             import traceback
             traceback.print_exc()
             return None
+
+    def generate_background_color(self, color_hex="#000000"):
+        """
+        Gera uma imagem de fundo com a cor sólida especificada.
+        """
+        from PIL import Image
+
+        output_path = os.path.join(self.output_folder, "background_color.png")
+
+        # Criar imagem sólida
+        img = Image.new('RGB', (self.width, self.height), color_hex)
+        img.save(output_path)
+
+        # Retornar como ImageClip
+        background_clip = ImageClip(output_path).set_duration(1)  # duração temporária de 1 segundo
+
+        return background_clip

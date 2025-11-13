@@ -1,0 +1,26 @@
+{
+    "oferta_todo_dia": {
+        "narration_file": "oferta_todo_dia.mp3",
+        "subtitle_file": "oferta_todo_dia.srt",
+        "narration_text": "Oferta Todo dia!",
+        "sound_effect": "input.mp3",
+        "visual": "oferta_todo_dia.gif",
+        "subtitle": true
+    },
+    "link_na_descricao": {
+        "narration_file": "link_na_descricao.mp3",
+        "subtitle_file": "link_na_descricao.srt",
+        "narration_text": "Link na descrição!",
+        "sound_effect": "input.mp3",
+        "visual": "link_na_descricao.gif",
+        "subtitle": true
+    },
+    "cta_oferta_todo_dia": {
+        "narration_file": "cta_oferta_todo_dia.mp3",
+        "subtitle_file": "cta_oferta_todo_dia.srt",
+        "narration_text": "Se inscreve, curte, comenta pra não perder mais dinheiro!",
+        "sound_effect": "input.mp3",
+        "visual": "cta_oferta_todo_dia.gif",
+        "subtitle": true
+    }
+}
