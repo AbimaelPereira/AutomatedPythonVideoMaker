@@ -32,14 +32,14 @@
             },
             {
                 "narration_text": "Fone de Ouvido Bluetooth Marca Tal com Cancelamento de Ruído.",
-                "visual": "http://example.com/fone_ouvido.jpg",
-                "sound_effect": "price_drop.mp3",
+                "visual": "https://m.media-amazon.com/images/I/51D64LTowQL._AC_UF1000,1000_QL80_.jpg",
+                "sound_effect": "input.mp3",
                 "subtitle": true
             },
             {
                 "narration_text": "De R$ 129,90 por apenas R$ 32,90!",
-                "visual": "input.gif",
-                "sound_effect": "price_drop.mp3",
+                "visual": false,
+                "sound_effect": "input.mp3",
                 "subtitle": true
             },
             {

@@ -16,3 +16,6 @@ __pycache__/
 
 /tokens/*
 !/tokens/.gitkeep
+
+/temp_downloads/*
+!/temp_downloads/.gitkeep

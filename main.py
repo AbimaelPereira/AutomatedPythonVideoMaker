@@ -8,10 +8,12 @@ load_dotenv()
 
 # Importar templates disponíveis
 from libs.VideosTemplates.TemplateDefault import TemplateDefault
+from libs.VideosTemplates.TemplateProduct import TemplateProduct
 
 # Dicionário de templates disponíveis
 AVAILABLE_TEMPLATES = {
     "default": TemplateDefault,
+    "product": TemplateProduct,
     # Adicione outros templates aqui conforme necessário
     # "advanced": TemplateAdvanced,
     # "minimal": TemplateMinimal,
@@ -104,10 +106,6 @@ def main():
         if not json_file:
             json_file = "json_teste.json"  # Padrão
 
-    # print listar pastas e arquivos no diretório atual
-    print(f"\n📁 Diretório atual: {os.getcwd()}")
-    print(f"📂 Conteúdo do diretório atual: {os.listdir(os.getcwd())}")
-
     print(f"\n📁 Arquivo JSON selecionado: {json_file}")
     
     # Verificar se arquivo existe
@@ -181,6 +179,22 @@ def main():
                 v.get("youtube", {}).get("publish_at", "")
             )
         )
+
+    # obter todos os slugs
+    existing_slugs = set()
+    for video in videos_config:
+        slug = video.get("slug")
+        if slug:
+            existing_slugs.add(slug)
+
+    # verificar se existe a pasta de saída para cada slug, se sim, pular o vídeo
+    for video in videos_config:
+        slug = video.get("slug")
+        if slug:
+            output_path = os.path.join("output", slug)
+            if os.path.exists(output_path):
+                print(f"\n⚠️ A pasta de saída para o vídeo '{slug}' já existe. Pulando processamento deste vídeo.")
+                videos_config.remove(video)
     
     # Processar cada vídeo
     success_count = 0

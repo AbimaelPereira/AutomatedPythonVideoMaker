@@ -7,6 +7,7 @@ from libs.BackgroundVideo import BackgroundVideo
 from libs.TTS_Edge import EdgeTTS
 from libs.Headline import Headline
 from libs.YouTube import YouTube
+from libs.VisualClip import VisualClip
 
 from moviepy.editor import CompositeVideoClip, AudioFileClip, ImageClip, CompositeAudioClip, concatenate_audioclips
 
@@ -77,23 +78,55 @@ class TemplateMaster:
         audio_path = os.path.join(self.output_folder, tts_result["audio_file"])
         subtitle_path = os.path.join(self.output_folder, tts_result["subtitle_file"])
 
-        # carregar audio da narração
-        audio_narration = AudioFileClip(audio_path)
-
-        # gerar legendas
-        sub = Subtitle({
-            "subtitle_narration_file": subtitle_path,
-            "font_size": 90,
-            "stroke_width": 3,
-            "resolution_output": self.resolution_output,
-        })
-
-        subtitle_clips = sub.generate().set_duration(audio_narration.duration)
+        audio_narration = self.load_audio_clip(audio_path)
+        subtitle_clips = self.load_subtitle_clip(subtitle_path).set_duration(audio_narration.duration)
         
         return {
             "audio_narration": audio_narration,
             "subtitle_clips": subtitle_clips
         }
+
+    def load_audio_clip(self, audio_file):
+        """
+        Carrega o arquivo de narração de áudio.
+        Retorna um AudioFileClip.
+        """
+        if not os.path.exists(audio_file):
+            raise FileNotFoundError(f"Arquivo de narração não encontrado: {audio_file}")
+        
+        audio_narration = AudioFileClip(audio_file)
+        return audio_narration
+
+    def load_subtitle_clip(self, subtitle_file):
+        """
+        Carrega o arquivo de legendas.
+        Retorna um CompositeVideoClip com as legendas.
+        """
+        if not os.path.exists(subtitle_file):
+            raise FileNotFoundError(f"Arquivo de legendas não encontrado: {subtitle_file}")
+        
+        sub = Subtitle({
+            "subtitle_narration_file": subtitle_file,
+            "font_size": 90,
+            "stroke_width": 3,
+            "resolution_output": self.resolution_output,
+        })
+
+        subtitle_clips = sub.generate()
+        return subtitle_clips
+
+    def load_visual_clip(self, visual_file):
+        """
+        Carrega o arquivo visual (imagem, gif ou vídeo).
+        Retorna um VideoClip.
+        """        
+        visual = VisualClip({
+            "visual_file": visual_file,
+            "resolution_output": self.resolution_output,
+        })
+
+        visual_clip = visual.generate_visual_clip()
+        return visual_clip
 
     def background_videos(self, params=None):
         params_default = {
@@ -304,12 +337,12 @@ class TemplateMaster:
                     print(f"⚠️ Não foi possível fixar comentário: {e}")
             
             # Remover pasta do projeto após upload (se solicitado)
-            if remove_folder and self.output_folder:
-                try:
-                    shutil.rmtree(self.output_folder)
-                    print(f"🗑️ Pasta do projeto removida: {self.output_folder}")
-                except Exception as e:
-                    print(f"⚠️ Não foi possível remover pasta: {e}")
+            # if remove_folder and self.output_folder:
+            #     try:
+            shutil.rmtree(self.output_folder)
+            print(f"🗑️ Pasta do projeto removida: {self.output_folder}")
+                # except Exception as e:
+                #     print(f"⚠️ Não foi possível remover pasta: {e}")
             
             return video_id
             
