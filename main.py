@@ -179,22 +179,6 @@ def main():
                 v.get("youtube", {}).get("publish_at", "")
             )
         )
-
-    # obter todos os slugs
-    existing_slugs = set()
-    for video in videos_config:
-        slug = video.get("slug")
-        if slug:
-            existing_slugs.add(slug)
-
-    # verificar se existe a pasta de saída para cada slug, se sim, pular o vídeo
-    for video in videos_config:
-        slug = video.get("slug")
-        if slug:
-            output_path = os.path.join("output", slug)
-            if os.path.exists(output_path):
-                print(f"\n⚠️ A pasta de saída para o vídeo '{slug}' já existe. Pulando processamento deste vídeo.")
-                videos_config.remove(video)
     
     # Processar cada vídeo
     success_count = 0
@@ -205,6 +189,13 @@ def main():
             if process_video(video_config, index, len(videos_config)):
                 success_count += 1
                 print(f"\n✅ Vídeo {index} processado com sucesso!")
+
+
+                # # remover do json o vídeo processado
+                # videos_config.pop(0)
+                # with open(json_file, "w", encoding="utf-8") as f:
+                #     json.dump(videos_config, f, indent=2, ensure_ascii=False)
+
             else:
                 error_count += 1
                 print(f"\n❌ Erro ao processar vídeo {index}")

@@ -17,5 +17,8 @@ __pycache__/
 /tokens/*
 !/tokens/.gitkeep
 
-/temp_downloads/*
-!/temp_downloads/.gitkeep
+/assets/temp/*
+!/assets/temp/.gitkeep
+
+/assets/gifs/*
+!/assets/gifs/.gitkeep

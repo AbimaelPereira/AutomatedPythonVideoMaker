@@ -158,10 +158,11 @@ class TemplateDefault:
             
             print("✅ Vídeo salvo com sucesso!")
             
-            # 7. Upload para YouTube (opcional)
             if self.video_config.get("youtube"):
                 print("\n📤 Preparando upload para YouTube...")
                 
+                # Aqui mantemos o padrão, deixando o TemplateMaster construir a descrição
+                # baseada no content + narração, já que não temos dados de produto.
                 video_id = self.tm.upload_to_youtube({
                     "video_path": output_file,
                     "content": self.video_config.get("content", {}),
@@ -172,7 +173,6 @@ class TemplateDefault:
                 
                 if not video_id:
                     print("⚠️ Upload falhou, mas o vídeo foi salvo localmente.")
-                    return False
             
             return True
             

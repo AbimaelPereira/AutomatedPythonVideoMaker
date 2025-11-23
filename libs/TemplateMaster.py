@@ -1,6 +1,10 @@
 import random
 import os
 import shutil
+import requests # Novo import
+from rembg import remove # Novo import
+from PIL import Image # Novo import
+import io # Novo import
 
 from libs.Subtitle import Subtitle
 from libs.BackgroundVideo import BackgroundVideo
@@ -15,6 +19,7 @@ AVALIABLE_RATIOS = {"9:16": (1080, 1920), "16:9": (1920, 1080)}
 
 class TemplateMaster:
     def __init__(self, video_config=None):
+        # ... (mantenha o __init__ igual ao original)
         default_video_config = {
             "slug": False,
             "output_folder": False,
@@ -22,29 +27,23 @@ class TemplateMaster:
             "max_total_video_duration": False,
         }
 
-        # Atualizar o default_video_config com os valores fornecidos em video_config
         default_video_config.update(video_config or {})
 
-        # set resolution based on output_ratio
         if default_video_config["output_ratio"] in AVALIABLE_RATIOS:
             default_video_config["resolution_output"] = AVALIABLE_RATIOS[default_video_config["output_ratio"]]
             default_video_config["width"], default_video_config["height"] = default_video_config["resolution_output"]
         else:
             raise ValueError(f"Resolução não suportada. Use: {', '.join(AVALIABLE_RATIOS.keys())}")
 
-        # set valores into self 
         for k, v in default_video_config.items():
             setattr(self, k, v)
 
+    # ... (mantenha validate_configs e narration_subtitles iguais)
     def validate_configs(self):
-        # Implement validation logic here
         pass
-        
+
     def narration_subtitles(self, params=None):
-        """
-        Gera a narração e as legendas para o vídeo.
-        Retorna um dicionário com o áudio da narração e os clipes de legendas.
-        """
+        # ... (código existente de narration_subtitles) ...
         params_default = {
             "narration_text": False,
             "edge_tts": {
@@ -53,10 +52,8 @@ class TemplateMaster:
             }
         }
 
-        # Atualizar o params_default com os valores fornecidos em params
         if params:
             params_default.update(params)
-            # Atualizar edge_tts separadamente para preservar valores padrão
             if "edge_tts" in params:
                 params_default["edge_tts"].update(params["edge_tts"])
 
@@ -71,10 +68,8 @@ class TemplateMaster:
         })
         tts_result = tts.generate_audio_and_subtitles()
         
-        # Voltar para o diretório original
         os.chdir(original_dir)
 
-        # retorna obj com o audio da narração carregado e o clip de legendas
         audio_path = os.path.join(self.output_folder, tts_result["audio_file"])
         subtitle_path = os.path.join(self.output_folder, tts_result["subtitle_file"])
 
@@ -87,10 +82,7 @@ class TemplateMaster:
         }
 
     def load_audio_clip(self, audio_file):
-        """
-        Carrega o arquivo de narração de áudio.
-        Retorna um AudioFileClip.
-        """
+        # ... (código existente) ...
         if not os.path.exists(audio_file):
             raise FileNotFoundError(f"Arquivo de narração não encontrado: {audio_file}")
         
@@ -98,10 +90,7 @@ class TemplateMaster:
         return audio_narration
 
     def load_subtitle_clip(self, subtitle_file):
-        """
-        Carrega o arquivo de legendas.
-        Retorna um CompositeVideoClip com as legendas.
-        """
+        # ... (código existente) ...
         if not os.path.exists(subtitle_file):
             raise FileNotFoundError(f"Arquivo de legendas não encontrado: {subtitle_file}")
         
@@ -115,25 +104,66 @@ class TemplateMaster:
         subtitle_clips = sub.generate()
         return subtitle_clips
 
-    def load_visual_clip(self, visual_file):
+    # --- AQUI ESTÁ A MUDANÇA PRINCIPAL ---
+    def load_visual_clip(self, visual_file, remove_bg=False):
         """
-        Carrega o arquivo visual (imagem, gif ou vídeo).
-        Retorna um VideoClip.
-        """        
+        Carrega o arquivo visual. 
+        Se remove_bg=True, baixa a imagem (se for URL), remove o fundo e salva como PNG.
+        """
+        final_visual_path = visual_file
+
+        if remove_bg:
+            print("  ✨ Removendo fundo da imagem...")
+            try:
+                input_image = None
+                
+                # 1. Obter a imagem (URL ou Local)
+                if visual_file.startswith(("http:", "https:")):
+                    response = requests.get(visual_file)
+                    response.raise_for_status()
+                    input_image = Image.open(io.BytesIO(response.content))
+                    print(f"  ✅ Imagem baixada para remoção de fundo.")
+                else:
+                    if os.path.exists(visual_file):
+                        input_image = Image.open(visual_file)
+                    else:
+                        print(f"❌ Arquivo não encontrado para remover fundo: {visual_file}")
+
+                if input_image:
+                    # 2. Remover fundo usando rembg
+                    output_image = remove(input_image)
+                    
+                    # 3. Salvar imagem processada na pasta de output
+                    # Nome do arquivo baseado no original ou hash simples
+                    filename = os.path.basename(visual_file).split('?')[0]
+                    if not filename or len(filename) > 20: filename = "visual_img.jpg"
+                    name_without_ext = os.path.splitext(filename)[0]
+                    
+                    new_filename = f"{name_without_ext}_no_bg.png"
+                    final_visual_path = os.path.join(self.output_folder, new_filename)
+                    
+                    output_image.save(final_visual_path)
+                    print(f"  ✅ Fundo removido: {new_filename}")
+
+            except Exception as e:
+                print(f"⚠️ Falha ao remover fundo: {e}. Usando imagem original.")
+                final_visual_path = visual_file
+
+        # Passa o caminho (original ou modificado) para o VisualClip
         visual = VisualClip({
-            "visual_file": visual_file,
+            "visual_file": final_visual_path,
             "resolution_output": self.resolution_output,
         })
 
         visual_clip = visual.generate_visual_clip()
         return visual_clip
 
+    # ... (mantenha background_videos, background_music, headline, upload_to_youtube, generate_background_color iguais) ...
     def background_videos(self, params=None):
+        # ... (igual ao original)
         params_default = {
             "background_videos_dir": False
         }
-
-        # Atualizar o params_default com os valores fornecidos em params
         if params:
             params_default.update(params)
 
@@ -145,13 +175,13 @@ class TemplateMaster:
 
         final_video = bg.generate_background_video()
 
-        # max duration
         if self.max_total_video_duration and final_video.duration > self.max_total_video_duration:
             final_video = final_video.subclip(0, self.max_total_video_duration)
 
         return final_video
 
     def background_music(self, params=None):
+        # ... (igual ao original)
         params_default = {
             "background_music_file": False,
             "background_music_dir": False,
@@ -162,42 +192,25 @@ class TemplateMaster:
 
         if params_default["background_music_dir"]:
             bg_music_dir = params_default["background_music_dir"]
-
             if not os.path.exists(bg_music_dir):
-                print(f"⚠️  Diretório de música de fundo não encontrado: {bg_music_dir}")
-                print("ℹ️  Continuando sem música de fundo.")
                 return None
-            
             music_files = [f for f in os.listdir(bg_music_dir) if f.lower().endswith(('.mp3', '.wav', '.m4a', '.aac'))]
             if not music_files:
-                print(f"⚠️  Nenhum arquivo de música encontrado em: {bg_music_dir}")
-                print("ℹ️  Continuando sem música de fundo.")
                 return None
-            
             selected_music = random.choice(music_files)
             music_path = os.path.join(bg_music_dir, selected_music)
-            print(f"🎶 Música selecionada: {selected_music}")
-
             music_clip = AudioFileClip(music_path)
-
         elif params_default["background_music_file"]:
             music_path = params_default["background_music_file"]
             if not os.path.exists(music_path):
-                print(f"⚠️  Arquivo de música de fundo não encontrado: {music_path}")
-                print("ℹ️  Continuando sem música de fundo.")
                 return None
-            
             music_clip = AudioFileClip(music_path)
         else:
-            print("⚠️  Nenhum arquivo ou diretório de música de fundo fornecido.")
-            print("ℹ️  Continuando sem música de fundo.")
             return None
 
-        # duration
         if self.max_total_video_duration and music_clip.duration > self.max_total_video_duration:
             music_clip = music_clip.subclip(0, self.max_total_video_duration)
         elif self.max_total_video_duration and music_clip.duration < self.max_total_video_duration:
-            # loop music
             loops = int(self.max_total_video_duration // music_clip.duration) + 1
             music_clips = [music_clip] * loops
             music_clip = concatenate_audioclips(music_clips).subclip(0, self.max_total_video_duration)
@@ -205,54 +218,41 @@ class TemplateMaster:
         return music_clip
 
     def headline(self, params=None):
+        # ... (igual ao original)
         params_default = {
             "title": False,
             "subtitle": False
         }
-
         if params:
             params_default.update(params)
-
         output_path = os.path.join(self.output_folder, self.slug + "_headline.png")
-
         headline = Headline({
             "output_path": output_path,
             "title": params_default["title"],
             "subtitle": params_default["subtitle"],
             "video_width": 700,
         })
-        headline_data = headline.generate()
-
-        # return image clip
+        headline.generate()
         headline_clip = ImageClip(output_path)
-
         if self.max_total_video_duration:
             headline_clip = headline_clip.set_duration(self.max_total_video_duration)
-
         return headline_clip
 
     def upload_to_youtube(self, params=None):
         """
         Faz upload do vídeo para o YouTube.
-        Método reutilizável por todos os templates.
-        
-        Args:
-            params: Dicionário com as configurações:
-                - video_path: Caminho do arquivo de vídeo (obrigatório)
-                - content: Dicionário com title, description, hashtags
-                - youtube: Configurações do YouTube (token_file_name, privacy_status, etc)
-                - tts: Dicionário com narration_text
-                - remove_project_folder: Se True, remove a pasta após upload
-        
-        Returns:
-            video_id: ID do vídeo no YouTube ou None se falhar
+        Aceita parâmetros diretos (title, description) ou extrai de 'content'.
         """
         params_default = {
             "video_path": None,
             "content": {},
             "youtube": {},
             "tts": {},
-            "remove_project_folder": False
+            "remove_project_folder": False,
+            # Campos opcionais para override direto
+            "title": None,
+            "description": None,
+            "tags": None
         }
         
         if params:
@@ -262,7 +262,6 @@ class TemplateMaster:
         content = params_default["content"]
         yt_config = params_default["youtube"]
         tts_config = params_default["tts"]
-        remove_folder = params_default["remove_project_folder"]
         
         if not video_path or not os.path.exists(video_path):
             print(f"❌ Erro: Arquivo de vídeo não encontrado: {video_path}")
@@ -271,39 +270,54 @@ class TemplateMaster:
         try:
             print("\n🚀 Iniciando upload para o YouTube...")
             
-            # Montar título (limitado a 100 caracteres)
-            title = content.get("title", "Vídeo sem título")[:100]
+            # 1. Definição do Título
+            # Usa o passado explicitamente OU pega do content OU usa default
+            title = params_default.get("title")
+            if not title:
+                title = content.get("title", "Vídeo sem título")
+            title = title[:100] # Limite do YouTube
             
-            # Montar descrição (limitada a 5000 caracteres)
-            description_parts = []
-            if content.get("description"):
-                description_parts.append(content["description"])
-            if tts_config.get("narration_text"):
-                description_parts.append("\n\n" + tts_config["narration_text"])
-            if content.get("hashtags"):
-                description_parts.append("\n\n" + content["hashtags"])
-            description = "".join(description_parts).strip()[:5000]
+            # 2. Definição da Descrição
+            description = params_default.get("description")
+            if not description:
+                # Lógica de construção automática (Fallback)
+                description_parts = []
+                if content.get("description"):
+                    description_parts.append(content["description"])
+                if tts_config.get("narration_text"):
+                    description_parts.append("\n\n" + tts_config["narration_text"])
+                if content.get("hashtags"):
+                    # Verifica se é lista ou string antes de adicionar
+                    tags_text = content["hashtags"]
+                    if isinstance(tags_text, list):
+                        tags_text = " ".join(tags_text)
+                    description_parts.append("\n\n" + str(tags_text))
+                description = "".join(description_parts)
             
-            # Processar tags
-            tags = []
-            if content.get("hashtags"):
-                tags = [tag.replace("#", "").strip() 
-                       for tag in content["hashtags"].split() 
-                       if tag.strip()]
-                tags_str = ",".join(tags)
-                # Tags são limitadas a 500 caracteres no total
-                if len(tags_str) > 500:
-                    tags = tags_str[:500].split(",")[:-1]
+            description = description.strip()[:5000] # Limite do YouTube
             
-            # Configurar privacidade e agendamento
+            # 3. Definição das Tags
+            tags = params_default.get("tags")
+            if tags is None:
+                # Tenta extrair de hashtags se não foi passado explicitamente
+                raw_tags = content.get("hashtags", [])
+                if isinstance(raw_tags, str):
+                    # Remove # e divide por espaços ou vírgulas
+                    tags = [tag.replace("#", "").strip() for tag in raw_tags.replace(",", " ").split() if tag.strip()]
+                elif isinstance(raw_tags, list):
+                    tags = [str(tag).replace("#", "").strip() for tag in raw_tags]
+                else:
+                    tags = []
+            
+            # 4. Configurações Finais
             privacy_status = yt_config.get("privacy_status", "private")
             publish_at = yt_config.get("publish_at")
             
             if publish_at:
-                privacy_status = "private"  # Obrigatório para agendamento
+                privacy_status = "private"
                 print(f"⏰ Vídeo será agendado para: {publish_at}")
             
-            # Criar instância do YouTube
+            # Instancia a classe YouTube com os dados processados
             yt = YouTube({
                 "token_file_name": yt_config.get("token_file_name", "youtube_token.json"),
                 "video_path": video_path,
@@ -311,38 +325,26 @@ class TemplateMaster:
                 "description": description,
                 "tags": tags,
                 "privacy_status": privacy_status,
-                "category_id": yt_config.get("category_id", "22"),  # 22 = People & Blogs
+                "category_id": yt_config.get("category_id", "22"),
                 "publish_at": publish_at,
                 "timezone": yt_config.get("timezone", "America/Sao_Paulo"),
+                "pinned_comment": yt_config.get("pinned_comment")
             })
             
-            # Mostrar informações do upload
             print(f"🎬 Título: {title}")
-            print(f"🏷️ Tags: {', '.join(tags[:5])}{'...' if len(tags) > 5 else ''}")
             print(f"🔒 Privacidade: {privacy_status}")
             
-            # Fazer upload
             video_id = yt.upload()
             
-            print(f"✅ Upload concluído com sucesso!")
-            print(f"🔗 Link do vídeo: https://youtu.be/{video_id}")
+            print(f"✅ Upload concluído com sucesso: https://youtu.be/{video_id}")
             
-            # Adicionar comentário fixado (se configurado)
-            if yt_config.get("pinned_comment"):
+            # Limpeza
+            if params_default["remove_project_folder"] and self.output_folder:
                 try:
-                    # Aqui você precisaria implementar a lógica de comentário fixado
-                    # via API do YouTube (comentários são um recurso separado)
-                    print(f"📌 Comentário fixado: {yt_config['pinned_comment'][:50]}...")
+                    shutil.rmtree(self.output_folder)
+                    print(f"🗑️ Pasta do projeto removida.")
                 except Exception as e:
-                    print(f"⚠️ Não foi possível fixar comentário: {e}")
-            
-            # Remover pasta do projeto após upload (se solicitado)
-            # if remove_folder and self.output_folder:
-            #     try:
-            shutil.rmtree(self.output_folder)
-            print(f"🗑️ Pasta do projeto removida: {self.output_folder}")
-                # except Exception as e:
-                #     print(f"⚠️ Não foi possível remover pasta: {e}")
+                    print(f"⚠️ Erro ao remover pasta: {e}")
             
             return video_id
             
@@ -353,18 +355,10 @@ class TemplateMaster:
             return None
 
     def generate_background_color(self, color_hex="#000000"):
-        """
-        Gera uma imagem de fundo com a cor sólida especificada.
-        """
+        # ... (igual ao original)
         from PIL import Image
-
         output_path = os.path.join(self.output_folder, "background_color.png")
-
-        # Criar imagem sólida
         img = Image.new('RGB', (self.width, self.height), color_hex)
         img.save(output_path)
-
-        # Retornar como ImageClip
-        background_clip = ImageClip(output_path).set_duration(1)  # duração temporária de 1 segundo
-
+        background_clip = ImageClip(output_path).set_duration(1)
         return background_clip

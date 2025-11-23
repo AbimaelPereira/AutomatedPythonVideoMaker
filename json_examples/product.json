@@ -2,16 +2,6 @@
     {
         "template": "product",
         "slug": "oleo-rosa-mosqueta",
-        "product": {
-            "name": "Óleo de Rosa Mosqueta 30ml",
-            "image": "url",
-            "price": {
-                "current": 32.90,
-                "old": 49.90,
-                "discount_percent": 34
-            },
-            "product_link": "https://www.amazon.com.br/dp/B0XXXXXXX?tag=seu_id_afiliado"
-        },
         "content": {
             "title": "🌹 O ÓLEO QUE APAGA CICATRIZES 🤫",
             "title_hashtags": "#oleoderosamosqueta #cicatrizacao #antiidade #shorts",
@@ -38,7 +28,7 @@
             },
             {
                 "narration_text": "De R$ 129,90 por apenas R$ 32,90!",
-                "visual": false,
+                "visual": "input.gif",
                 "sound_effect": "input.mp3",
                 "subtitle": true
             },
@@ -53,6 +43,10 @@
             }
         ],
         "output_ratio": "9:16",
-        "youtube": false
+        "youtube": {
+            "token_file_name": "oferta_todo_dia.json",
+            "privacy_status": "private",
+            "publish_at": "2025-11-11 19:00:00"
+        }
     }
 ]

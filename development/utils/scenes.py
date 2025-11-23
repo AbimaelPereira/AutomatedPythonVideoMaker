@@ -43,7 +43,7 @@ for scene_name, scene_data in json_scenes_library.items():
         a = TM.narration_subtitles({
             "narration_text": narration_text,
             "edge_tts": {
-                "voice_id": "pt-BR-MacerioMultilingualNeural"
+                "voice_id": scene_data.get("voice_id"),
             }
         })
 
