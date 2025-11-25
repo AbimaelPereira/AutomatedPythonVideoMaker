@@ -1,282 +1,153 @@
 import os
-import shutil
-import subprocess
-import numpy as np
-import requests  # Import necessário para baixar arquivos
-from urllib.parse import urlparse # Import para parsear URLs
-from PIL import Image, ImageSequence
-from moviepy.editor import VideoFileClip, ImageClip, VideoClip
-from moviepy.video.fx.all import crop, resize
-from moviepy.video.fx import all as vfx
-
-# Compat Pillow ANTIALIAS
-if not hasattr(Image, 'ANTIALIAS'):
-    Image.ANTIALIAS = Image.Resampling.LANCZOS
-
+import requests
+import io
+import mimetypes
+import numpy as np # Necessário para corrigir o array
+from PIL import Image, ImageDraw, ImageFont
+from rembg import remove
+from moviepy.editor import *
+from libs.LayoutEngine import LayoutEngine
 
 class VisualClip:
-    def __init__(self, params=None):
-        defaults = {
-            "visual_file": None,
-            "output_ratio": "9:16",
-            "available_resolutions": {"9:16": (1080, 1920), "16:9": (1920, 1080)},
-            "resolution_output": (1080, 1920),
-            "max_clip_duration": None,
-            "default_image_duration": 5,
-            "temp_download_path": "./temp_downloads",  # NOVO PARAMETRO
-            "valid_video_extensions": ["mp4", "mkv", "avi", "mov", "flv", "webm", "gif"],
-            "valid_image_extensions": ["jpg", "jpeg", "png", "bmp", "tiff", "webp"],
-        }
-        if params:
-            defaults.update(params)
+    def __init__(self, config):
+        self.data = config.get("element_data", {})
+        self.resolution = config.get("resolution_output", (1080, 1920))
+        self.temp_dir = config.get("temp_dir", "output/temp")
+        self.duration = config.get("duration", 5.0)
+        os.makedirs(self.temp_dir, exist_ok=True)
 
-        if defaults["output_ratio"] in defaults["available_resolutions"]:
-            defaults["resolution_output"] = defaults["available_resolutions"][defaults["output_ratio"]]
+    def generate(self):
+        el_type = self.data.get("type")
+        clip = None
 
-        for k, v in defaults.items():
-            setattr(self, k, v)
+        if el_type == "image":
+            clip = self._create_image_clip()
+        elif el_type == "video":
+            clip = self._create_video_clip()
+        elif el_type == "text_box":
+            clip = self._create_text_box_clip()
 
-        if not self.visual_file:
-            raise ValueError("visual_file é obrigatório")
+        if not clip:
+            return None
 
-        # NOVO: Lógica para detectar e baixar URL
-        if self._is_url(self.visual_file):
-            print(f"[VisualClip] URL detectada. Iniciando download: {self.visual_file}")
-            self.visual_file = self._download_from_url(self.visual_file)
+        clip = self._apply_layout(clip)
+        clip = self._apply_animation(clip)
 
-        if not os.path.exists(self.visual_file):
-            raise FileNotFoundError(f"Arquivo visual não encontrado: {self.visual_file}")
+        return clip
 
-    # ---------------------------
-    # NOVO: Verifica se é URL
-    # ---------------------------
-    def _is_url(self, path):
-        return str(path).startswith(('http://', 'https://'))
-
-    # ---------------------------
-    # NOVO: Download do arquivo
-    # ---------------------------
-    def _download_from_url(self, url):
-        try:
-            # Cria diretório temporário se não existir
-            if not os.path.exists(self.temp_download_path):
-                os.makedirs(self.temp_download_path)
-
-            # Extrai o nome do arquivo da URL
-            parsed_url = urlparse(url)
-            filename = os.path.basename(parsed_url.path)
-            
-            # Fallback se a URL não tiver nome de arquivo claro (ex: .com/)
-            if not filename or '.' not in filename:
-                filename = f"downloaded_visual_{hash(url)}.jpg" # Assume jpg como fallback ou use header content-type
-
-            local_path = os.path.join(self.temp_download_path, filename)
-
-            # Se o arquivo já existe, podemos pular o download (cache simples)
-            # Comente as duas linhas abaixo se quiser forçar o download sempre
-            if os.path.exists(local_path):
-                print(f"[VisualClip] Arquivo já existe em cache: {local_path}")
-                return local_path
-
-            # Headers para evitar bloqueio (User-Agent)
-            headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-            }
-            
-            response = requests.get(url, headers=headers, stream=True)
-            response.raise_for_status()
-
-            with open(local_path, 'wb') as f:
-                for chunk in response.iter_content(chunk_size=8192):
-                    f.write(chunk)
-            
-            print(f"[VisualClip] Download concluído: {local_path}")
-            return local_path
-
-        except Exception as e:
-            raise Exception(f"[ERRO] Falha ao baixar visual da URL {url}: {str(e)}")
-
-    # ---------------------------
-    # util: extensão
-    # ---------------------------
-    def get_file_extension(self):
-        return os.path.splitext(self.visual_file)[1][1:].lower()
-
-    # ---------------------------
-    # Detectar transparência
-    # ---------------------------
-    def file_has_transparency(self):
-        ext = self.get_file_extension()
-
-        # Imagens estáticas: PNG, WEBP etc
-        if ext in ["png", "webp", "tiff"]:
+    def _get_source_file(self):
+        source = self.data.get("source")
+        if not source: return None
+        
+        local_path = source
+        if source.startswith(("http:", "https:")):
             try:
-                img = Image.open(self.visual_file).convert("RGBA")
-                alpha = img.split()[-1]
-                has_alpha = alpha.getextrema()[0] < 255
-                return has_alpha
-            except Exception:
-                return False
-
-        # GIFs
-        if ext == "gif":
-            try:
-                img = Image.open(self.visual_file)
-                if img.info.get("transparency") is not None:
-                    return True
-
-                for frame in ImageSequence.Iterator(img):
-                    frame = frame.convert("RGBA")
-                    alpha = frame.split()[-1]
-                    if alpha.getextrema()[0] < 255:
-                        return True
-                return False
-            except Exception:
-                return False
-
-        if ext in ["webm", "mov"]:
-            return False
-
-        return False
-
-    # ---------------------------
-    # Detectar "fundo branco" (color key fallback)
-    # ---------------------------
-    def appears_to_have_white_background(self, threshold=250, sample_pixels=10):
-        try:
-            img = Image.open(self.visual_file).convert("RGBA")
-            w, h = img.size
-
-            boxes = [
-                (0, 0, min(sample_pixels, w), min(sample_pixels, h)),
-                (max(0, w - sample_pixels), 0, w, min(sample_pixels, h)),
-                (0, max(0, h - sample_pixels), min(sample_pixels, w), h),
-                (max(0, w - sample_pixels), max(0, h - sample_pixels), w, h),
-            ]
-
-            for box in boxes:
-                crop_img = img.crop(box).convert("RGB") # Renomeado para evitar conflito com func crop
-                for pixel in crop_img.getdata():
-                    if pixel[0] < threshold or pixel[1] < threshold or pixel[2] < threshold:
-                        return False
-            return True
-        except Exception:
-            return False
-
-    # ---------------------------
-    # Carregar GIF com transparência
-    # ---------------------------
-    def load_gif_with_transparency(self):
-        try:
-            print("[VisualClip] Carregando GIF com transparência preservada...")
-            
-            gif = Image.open(self.visual_file)
-            frames = []
-            durations = []
-            
-            for frame in ImageSequence.Iterator(gif):
-                frame_rgba = frame.convert("RGBA")
-                frames.append(np.array(frame_rgba))
-                durations.append(gif.info.get('duration', 100) / 1000.0)
-            
-            if not frames:
-                raise ValueError("GIF não contém frames válidos")
-            
-            total_duration = sum(durations)
-            
-            def make_frame(t):
-                gif_time = t % total_duration
-                cumulative_time = 0
-                frame_idx = 0
+                filename = os.path.basename(source.split("?")[0])
+                if not filename or "." not in filename:
+                    filename = f"asset_{hash(source)}.png"
                 
-                for i, duration in enumerate(durations):
-                    cumulative_time += duration
-                    if gif_time < cumulative_time:
-                        frame_idx = i
-                        break
-                return frames[frame_idx][:, :, :3]
-            
-            clip = VideoClip(make_frame, duration=total_duration)
-            clip = clip.set_fps(max(1, int(len(frames) / total_duration)))
-            
-            def make_mask(t):
-                gif_time = t % total_duration
-                cumulative_time = 0
-                frame_idx = 0
-                
-                for i, duration in enumerate(durations):
-                    cumulative_time += duration
-                    if gif_time < cumulative_time:
-                        frame_idx = i
-                        break
-                return frames[frame_idx][:, :, 3] / 255.0
-            
-            mask_clip = VideoClip(make_mask, duration=total_duration, ismask=True)
-            mask_clip = mask_clip.set_fps(clip.fps)
-            clip = clip.set_mask(mask_clip)
-            
-            return clip
-            
-        except Exception as e:
-            print(f"[ERRO] Falha ao carregar GIF com transparência: {e}")
-            return None
+                local_path = os.path.join(self.temp_dir, filename)
+                if not os.path.exists(local_path):
+                    response = requests.get(source)
+                    response.raise_for_status()
+                    if "." not in filename:
+                        ext = mimetypes.guess_extension(response.headers.get('content-type'))
+                        if ext: local_path += ext
+                    with open(local_path, 'wb') as f:
+                        f.write(response.content)
+            except Exception as e:
+                print(f"⚠️ Erro ao baixar asset: {e}")
+                return None
+        return local_path
 
-    # ---------------------------
-    # carregar vídeo
-    # ---------------------------
-    def load_video_clip(self):
+    def _create_image_clip(self):
+        path = self._get_source_file()
+        if not path or not os.path.exists(path): return None
+        
         try:
-            ext = self.get_file_extension()
-
-            if ext == "gif":
-                if self.file_has_transparency():
-                    return self.load_gif_with_transparency()
-                else:
-                    clip = VideoFileClip(self.visual_file)
-                    return clip
+            pil_img = Image.open(path)
+            filters = self.data.get("filters", {})
+            if filters.get("remove_bg"):
+                with open(path, "rb") as i:
+                    pil_img = Image.open(io.BytesIO(remove(i.read())))
             
-            clip = VideoFileClip(self.visual_file, has_mask=True)
-
-            if getattr(clip, "mask", None) is None and self.appears_to_have_white_background():
-                try:
-                    clip = clip.fx(vfx.mask_color, color=[255, 255, 255], thr=30)
-                except Exception as e:
-                    print("[VisualClip] falha ao aplicar mask_color no vídeo:", e)
-
-            return clip
-
+            # Força RGBA
+            pil_img = pil_img.convert("RGBA")
+            safe_name = f"proc_{os.path.basename(path)}.png"
+            if not safe_name.endswith(".png"): safe_name += ".png"
+            safe_path = os.path.join(self.temp_dir, safe_name)
+            pil_img.save(safe_path, "PNG")
+            path = safe_path
         except Exception as e:
-            print(f"[ERRO] Falha ao carregar vídeo {self.visual_file}: {e}")
+            print(f"⚠️ Erro img: {e}")
             return None
 
-    # ---------------------------
-    # carregar imagem
-    # ---------------------------
-    def load_image_clip(self):
-        try:
-            if self.file_has_transparency():
-                clip = ImageClip(self.visual_file, transparent=True).set_duration(self.default_image_duration)
-            else:
-                clip = ImageClip(self.visual_file).set_duration(self.default_image_duration)
-                if self.appears_to_have_white_background():
-                    try:
-                        clip = clip.fx(vfx.mask_color, color=[255, 255, 255], thr=30)
-                    except Exception as e:
-                        print("[VisualClip] falha ao aplicar mask_color na imagem:", e)
+        return ImageClip(path).set_duration(self.duration)
 
-            return clip
-        except Exception as e:
-            print(f"[ERRO] Falha ao carregar imagem {self.visual_file}: {e}")
-            return None
+    def _create_video_clip(self):
+        path = self._get_source_file()
+        if not path or not os.path.exists(path): return None
+        
+        # Função para garantir 3 canais (RGB) se o vídeo for grayscale
+        def force_rgb(im):
+            return np.dstack((im, im, im)) if im.ndim == 2 else im
 
-    # ---------------------------
-    # entry point
-    # ---------------------------
-    def generate_visual_clip(self):
-        ext = self.get_file_extension()
-        if ext in self.valid_video_extensions:
-            return self.load_video_clip()
-        elif ext in self.valid_image_extensions:
-            return self.load_image_clip()
+        clip = VideoFileClip(path)
+        # Aplica o filtro em cada frame
+        clip = clip.fl_image(force_rgb)
+        
+        audio_cfg = self.data.get("audio", {})
+        if not audio_cfg.get("keep_audio", False):
+            clip = clip.without_audio()
         else:
-            raise ValueError(f"Tipo de arquivo não suportado: .{ext}")
+            clip = clip.volumex(audio_cfg.get("volume", 1.0))
+            
+        return clip
+
+    def _create_text_box_clip(self):
+        content = self.data.get("content", "")
+        style = self.data.get("style", {})
+        font_family = style.get("font_family", "Arial")
+        font_size = style.get("font_size", 50)
+        
+        font_path = f"fonts/{font_family.split('-')[0]}/{font_family}.ttf"
+        if not os.path.exists(font_path): font_path = "fonts/Lato/Lato-Bold.ttf"
+        try: font = ImageFont.truetype(font_path, font_size)
+        except: font = ImageFont.load_default()
+
+        dummy = ImageDraw.Draw(Image.new("RGBA", (1,1)))
+        bbox = dummy.textbbox((0,0), content, font=font)
+        w, h = bbox[2]-bbox[0], bbox[3]-bbox[1]
+        pad = style.get("padding", [10, 20])
+        box_w, box_h = w + pad[1]*2, h + pad[0]*2
+        
+        img = Image.new("RGBA", (int(box_w), int(box_h)), (0,0,0,0))
+        draw = ImageDraw.Draw(img)
+        draw.rounded_rectangle([(0,0),(box_w,box_h)], radius=style.get("border_radius",0), fill=style.get("background_color","white"))
+        draw.text((pad[1], pad[0]-bbox[1]*0.2), content, font=font, fill=style.get("text_color","black"))
+        
+        temp_path = os.path.join(self.temp_dir, f"textbox_{id(self)}.png")
+        img.save(temp_path)
+        return ImageClip(temp_path).set_duration(self.duration)
+
+    def _apply_layout(self, clip):
+        layout = self.data.get("layout", {})
+        if layout.get("width"):
+            w_px = LayoutEngine.calculate_dimension(layout["width"], self.resolution[0])
+            clip = clip.resize(width=w_px)
+        if layout.get("rotation"): clip = clip.rotate(layout["rotation"])
+        
+        pos = layout.get("position", "center")
+        fx, fy = LayoutEngine.get_position(pos, clip.size, self.resolution, layout.get("margin", 0))
+        return clip.set_position((fx, fy))
+
+    def _apply_animation(self, clip):
+        anim = self.data.get("animation", {})
+        start = float(anim.get("start_at", 0))
+        dur = float(anim.get("duration", 1.0)) if anim.get("duration") != "full" else 1.0
+        
+        clip = clip.set_start(start)
+        if anim.get("type") == "fade_in": clip = clip.crossfadein(dur)
+        elif anim.get("type") == "zoom_in": clip = clip.resize(lambda t: 1 + 0.1*t)
+        
+        return clip
