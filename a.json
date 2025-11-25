@@ -1,0 +1,27 @@
+[
+  {
+    "template": "product",
+    "slug": "black-friday-amazon-fire-echo-dot",
+    "output_ratio": "9:16",
+    "content": {
+      "title": "🔥 BLACK FRIDAY AMAZON: 3 ITENS COM PREÇO DE ERRO! 😱",
+      "description": "🔥 LINKS PROMOCIONAIS (OFICIAIS E SEGUROS):\n\n1️⃣ Fire TV Stick HD (Sua TV vira Smart):\n👉 https://amzn.to/4rkswNC\n\n2️⃣ Echo Pop (Alexa Compacta):\n👉 https://amzn.to/4ojfPzP\n\n3️⃣ Echo Dot 5ª Geração (Melhor Som):\n👉 https://amzn.to/4p4VxeM\n\n⚠️ Aviso: Links de afiliados. Como Participante do Programa de Associados da Amazon, eu ganho de compras qualificadas. Os preços citados podem sofrer alterações; consulte o valor atual no link.\n\n#amazon #blackfriday #casainteligente #alexa #ofertas",
+      "hashtags": "#blackfriday #amazon #alexa"
+    },
+    "tts": {
+      "edge_tts": {
+        "voice_id": "pt-BR-AntonioNeural"
+      }
+    },
+    "background": {
+      "color": "#F8F4F0",
+      "music_dir": "bg_music/mariasaudebeleza"
+    },
+    "scenes": [
+      {
+        "narration_text": "Agora é oficial e você não pode perder a Black da Amazon!",
+        "remove_bg": false
+      }
+    ]
+  }
+]

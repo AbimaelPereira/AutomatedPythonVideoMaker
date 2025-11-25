@@ -49,7 +49,9 @@ class TemplateMaster:
             "edge_tts": {
                 "voice_id": "pt-BR-AntonioNeural",
                 "rate": "0%",
-            }
+            },
+            "output_folder": self.output_folder,
+            "output_basename": self.slug,
         }
 
         if params:
@@ -57,21 +59,23 @@ class TemplateMaster:
             if "edge_tts" in params:
                 params_default["edge_tts"].update(params["edge_tts"])
 
+        print(params_default)
+
         original_dir = os.getcwd()
-        os.chdir(self.output_folder)
+        os.chdir(params_default["output_folder"])
         
         tts = EdgeTTS({
             "text": params_default["narration_text"],
             "voice_id": params_default["edge_tts"]["voice_id"],
             "rate": params_default["edge_tts"].get("rate", "0%"),
-            "output_basename": self.slug,
+            "output_basename": params_default["output_basename"],
         })
         tts_result = tts.generate_audio_and_subtitles()
         
         os.chdir(original_dir)
 
-        audio_path = os.path.join(self.output_folder, tts_result["audio_file"])
-        subtitle_path = os.path.join(self.output_folder, tts_result["subtitle_file"])
+        audio_path = os.path.join(params_default["output_folder"], tts_result["audio_file"])
+        subtitle_path = os.path.join(params_default["output_folder"], tts_result["subtitle_file"])
 
         audio_narration = self.load_audio_clip(audio_path)
         subtitle_clips = self.load_subtitle_clip(subtitle_path).set_duration(audio_narration.duration)

@@ -6,8 +6,8 @@ from moviepy.editor import (
 )
 
 # Constantes baseadas no a.py
-ASSETS_DIR = "./assets/"
-SOUND_EFFECTS_PATH = os.path.join(ASSETS_DIR, "sound_effects/")
+ASSETS_DIR = "./assets"
+SOUND_EFFECTS_PATH = os.path.join(ASSETS_DIR, "/sound_effects/")
 
 class TemplateProduct:
     def __init__(self, video_config):
@@ -41,6 +41,10 @@ class TemplateProduct:
         Processa uma cena individual aplicando a lógica do a.py.
         """
         GAP = 250 # Distância entre elementos visuais
+
+        # path of scene
+        scene_path = os.path.join(self.tm.output_folder, f"scene_{scene_index+1}")
+        os.makedirs(scene_path, exist_ok=True)
         
         audio_narration = None
         audio_sound_effect = None
@@ -53,6 +57,8 @@ class TemplateProduct:
         if scene_data.get("narration_text"):
             narration_config = self.video_config.get("tts", {}).copy()
             narration_config["narration_text"] = scene_data["narration_text"]
+            narration_config["output_folder"] = scene_path
+            narration_config["output_basename"] = f"scene_{scene_index+1}"
             
             # Gera audio e legenda
             audio_and_subtitles = self.tm.narration_subtitles(narration_config)
@@ -71,11 +77,22 @@ class TemplateProduct:
         if scene_data.get("visual"):
             # AQUI: Passando remove_bg
             should_remove_bg = scene_data.get("remove_bg", False)
+            visual_item = scene_data["visual"]
+
+            if not visual_item.startswith(("http:", "https:")):
+                visual_item = ASSETS_DIR + visual_item
             
-            visual_clip = self.tm.load_visual_clip(scene_data["visual"], remove_bg=should_remove_bg)
+            visual_clip = self.tm.load_visual_clip(
+                visual_item,
+                remove_bg=should_remove_bg
+            )
+
+            width_percent = 1
+            if scene_data.get("visual_width_percent"):
+                width_percent = scene_data["visual_width_percent"]
             
-            # Redimensionar para 80% da largura (padrão para produtos com fundo removido fica ótimo)
-            target_width = int(self.tm.width * 0.8)
+            # Redimensionar para a largura especificada (padrão para produtos com fundo removido fica ótimo)
+            target_width = int(self.tm.width * width_percent)
             visual_clip = visual_clip.resize(width=target_width)
 
         # --- MONTAGEM DA CENA (COMPOSITING) ---
