@@ -41,10 +41,19 @@ def main():
     for index, video_config in enumerate(videos_config, 1):
         print(f"\n🎥 Processando Vídeo {index}/{len(videos_config)}")
         
+        # Constrói um nome de arquivo seguro usando o slug ou um padrão
+        slug = video_config.get('slug', f'video_{index}')
+        output_filename = f"{slug}.mp4"
+
         engine = UnifiedVideoEngine(video_config)
-        if engine.process():
+        
+        # CORREÇÃO: Chama o método 'run()' e armazena o caminho de saída
+        output_path = engine.run(output_filename=output_filename)
+        
+        # Verifica se o método run() retornou um caminho (sucesso)
+        if output_path:
             success_count += 1
-            print("✅ Vídeo concluído com sucesso!")
+            print(f"✅ Vídeo concluído com sucesso e salvo em: {output_path}")
         else:
             print("❌ Falha ao gerar vídeo.")
             

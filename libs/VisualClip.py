@@ -7,6 +7,8 @@ from PIL import Image, ImageDraw, ImageFont
 from rembg import remove
 from moviepy.editor import *
 from libs.LayoutEngine import LayoutEngine
+# Importa a nova biblioteca de download
+from libs.MediaDownloader import MediaDownloader 
 
 # Helper: Force 3-channel RGB
 def force_rgb(im):
@@ -19,6 +21,8 @@ class VisualClip:
         self.temp_dir = config.get("temp_dir", "output/temp")
         self.duration = config.get("duration", 5.0)
         os.makedirs(self.temp_dir, exist_ok=True)
+    
+    # [RESOLVE_SOURCE_PATH REMOVIDO DAQUI]
 
     def generate(self):
         el_type = self.data.get("type")
@@ -31,13 +35,11 @@ class VisualClip:
         elif el_type == "text_box":
             clip = self._create_text_box_clip()
 
-        if not clip:
-            return None
+        if not clip: return None
 
         # Apply force_rgb to ALL clips to prevent shape errors
         clip = clip.fl_image(force_rgb)
 
-        # NOVO FLUXO: Aplica rotação e PULA redimensionamento/posicionamento
         layout = self.data.get("layout", {})
         if layout.get("rotation"): clip = clip.rotate(layout["rotation"])
 
@@ -47,7 +49,7 @@ class VisualClip:
 
     @staticmethod
     def calculate_text_box_size(data):
-        """Calcula o tamanho WxH do text box, incluindo o padding."""
+        # ... (mantido inalterado) ...
         content = data.get("content", "")
         style = data.get("style", {})
         font_family = style.get("font_family", "Arial")
@@ -76,35 +78,14 @@ class VisualClip:
         return (int(box_w), int(box_h))
 
 
-    def _get_source_file(self):
-        source = self.data.get("source")
-        if not source: return None
-        
-        local_path = source
-        if source.startswith(("http:", "https:")):
-            try:
-                filename = os.path.basename(source.split("?")[0])
-                if not filename or "." not in filename:
-                    # Padroniza para .png no nome do arquivo cache se a extensão for desconhecida
-                    filename = f"asset_{hash(source)}.png" 
-                
-                local_path = os.path.join(self.temp_dir, filename)
-                if not os.path.exists(local_path):
-                    response = requests.get(source)
-                    response.raise_for_status()
-                    if "." not in filename:
-                        ext = mimetypes.guess_extension(response.headers.get('content-type'))
-                        if ext: local_path += ext
-                    with open(local_path, 'wb') as f:
-                        f.write(response.content)
-            except Exception as e:
-                print(f"⚠️ Erro ao baixar asset: {e}")
-                return None
-        return local_path
-
     def _create_image_clip(self):
-        path = self._get_source_file()
-        if not path or not os.path.exists(path): return None
+        # *** CHAMADA À NOVA LIB DE DOWNLOAD ***
+        path = MediaDownloader.resolve_source_path(self.data.get("source"), self.temp_dir)
+        
+        print(f"[DEBUG_VC: _create_image_clip] Tentando criar clip a partir de: {path}")
+        if not path or not os.path.exists(path): 
+            print("[DEBUG_VC: _create_image_clip] Caminho não é válido ou arquivo não existe.")
+            return None
         
         try:
             pil_img = Image.open(path)
@@ -113,40 +94,33 @@ class VisualClip:
             
             # 1. Aplica filtros como remove_bg
             if filters.get("remove_bg"):
-                print(f"  [VisualClip] Aplicando remove_bg em: {os.path.basename(path)}")
+                print(f"[DEBUG_VC] Aplicando remove_bg em: {os.path.basename(path)}")
                 with open(path, "rb") as i:
                     pil_img = Image.open(io.BytesIO(remove(i.read())))
                 image_was_processed = True
             
-            # 2. Conversão para RGBA (sempre deve ocorrer para garantir formato de vídeo)
+            # 2. Conversão para RGBA
             pil_img = pil_img.convert("RGBA")
 
-            # 3. LÓGICA CORRIGIDA: Sobrescreve a cópia em cache (path)
-            # Padroniza o caminho final para .png se o original não for.
+            # 3. Sobrescreve/Cria cópia PNG para compatibilidade MoviePy
             final_path = path
             base_name, ext = os.path.splitext(path)
             
-            # Se a extensão original não for PNG, precisamos de um novo nome PNG.
-            # Se for PNG, sobrescrevemos.
-            if ext.lower() != '.png':
+            if ext.lower() != '.png' or image_was_processed:
                 final_path = base_name + ".png"
-                # O arquivo original (ex: .jpg) permanece no cache até ser excluído. 
-                # O ImageClip usará o novo .png.
-
-            # Sobrescreve o arquivo final (o cache .png, ou cria um novo .png a partir do .jpg/.webp, etc.)
+                
             pil_img.save(final_path, "PNG")
-            
-            # O clip será criado a partir do arquivo RGBA/PNG padronizado
             path = final_path 
             
         except Exception as e:
-            print(f"⚠️ Erro img: {e}")
+            print(f"[ERRO DEBUG_VC]: Falha no processamento/ImageClip: {e}")
             return None
 
         return ImageClip(path).set_duration(self.duration)
 
     def _create_video_clip(self):
-        path = self._get_source_file()
+        # *** CHAMADA À NOVA LIB DE DOWNLOAD ***
+        path = MediaDownloader.resolve_source_path(self.data.get("source"), self.temp_dir)
         if not path or not os.path.exists(path): return None
         
         clip = VideoFileClip(path)
@@ -160,6 +134,7 @@ class VisualClip:
         return clip
 
     def _create_text_box_clip(self):
+        # ... (mantido inalterado) ...
         content = self.data.get("content", "")
         style = self.data.get("style", {})
         font_family = style.get("font_family", "Arial")
@@ -174,15 +149,13 @@ class VisualClip:
         
         # 1. Calcular BBox e Dimensões
         try:
-            # bbox retorna (left, top, right, bottom)
             bbox = dummy.textbbox((0,0), content, font=font)
             w, h = bbox[2]-bbox[0], bbox[3]-bbox[1]
         except Exception:
-            # Fallback para versões mais antigas
             w, h = dummy.textsize(content, font=font)
-            bbox = (0, 0, w, h) # Assume 0 offset
+            bbox = (0, 0, w, h) 
             
-        pad = style.get("padding", [10, 20]) # [V_pad, H_pad]
+        pad = style.get("padding", [10, 20]) 
         box_w, box_h = w + pad[1]*2, h + pad[0]*2
         
         # 2. Criar Imagem e Desenhar Fundo
@@ -191,8 +164,6 @@ class VisualClip:
         draw.rounded_rectangle([(0,0),(box_w,box_h)], radius=style.get("border_radius",0), fill=style.get("background_color","white"))
         
         # 3. Desenhar Texto (FIX: Ajuste vertical usando bbox[1])
-        # X: pad[1] (margem lateral)
-        # Y: pad[0] (margem superior) - bbox[1] (offset vertical que PIL/Pillow usa)
         text_y_pos = pad[0] - bbox[1] 
 
         draw.text((pad[1], text_y_pos), content, font=font, fill=style.get("text_color","black"))

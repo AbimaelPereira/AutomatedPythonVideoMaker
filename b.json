@@ -1,48 +1,32 @@
 [
   {
-    "slug": "teste_layout_stack",
+    "slug": "teste-fundo-global-simples",
     "output_ratio": "9:16",
     
     "content": {
-      "title": "Teste Stack Verde",
-      "description": "Validando layout vertical automático."
+      "title": "Teste Fundo Global Simples",
+      "description": "Teste de carregamento de imagem web em background global.",
+      "hashtags": "#teste"
     },
 
     "global_settings": {
-      "tts": { "engine": "edge_tts", "voice": "pt-BR-AntonioNeural" },
+      "tts": { "engine": "edge_tts", "voice": "pt-BR-FranciscaNeural" },
       "background": {
-        "visual": { "type": "color", "source": "#00FF00" },
+        "visual": { 
+          "type": "image", 
+          "source": "https://www.reuters.com/resizer/v2/BRTD6MDNLVI5VFIPHLBMPXWU2I.jpg?auth=9f9e8adca0e29457de1c2ec487f4c26731b66ba5c30ee3516cc85b4629247074&width=640&quality=80" 
+        },
         "audio": { "type": "silence" }
-      },
-      "//comment": "Configurações de padding/gap devem estar no Config.py ou variáveis de ambiente"
+      }
     },
 
     "scenes": [
       {
-        "id": "cena_stack_01",
-        "duration": 6,
+        "id": "cena_unica_teste",
         "narration": {
-          "text": "Teste do Teste.",
+          "text": "Numa nova escalada, a China declara que vai esmagar qualquer interferência estrangeira sobre Taiwan. Este é um teste para o fundo global.",
           "subtitles": true
-        },
-        "visual_elements": [
-          {
-            "type": "image",
-            "//comment": "Imagem 1: Smartwatch",
-            "source": "https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=500&q=80",
-            "layout": { 
-                "width": "100%" 
-            }
-          },
-          {
-            "type": "image",
-            "//comment": "Imagem 2: Setup Gamer",
-            "source": "https://images.unsplash.com/photo-1593640408182-31c70c8268f5?w=500&q=80",
-            "layout": { 
-                "width": "100%" 
-            }
-          }
-        ]
+        }
       }
     ]
   }

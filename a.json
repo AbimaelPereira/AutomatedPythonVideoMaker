@@ -1,179 +1,215 @@
 [
   {
-    "slug": "teste-v3-layout-fix",
+    "slug": "geopolitica-escalada-global-vertical-background-fix",
     "output_ratio": "9:16",
-    
     "content": {
-      "title": "Tour V3 (Layout Corrigido) 🚀",
-      "description": "Teste de layout otimizado.",
-      "hashtags": "#dev #python"
+      "title": "ALERTA GLOBAL: Tensões China-Taiwan e a Nova Corrida Armamentista",
+      "description": "Análise das recentes escaladas militares envolvendo China, Taiwan, Turquia e a controvérsia do plano de paz EUA-Ucrânia.",
+      "hashtags": "#geopolitica #china #taiwan #turquia #ucrania #guerra"
     },
-
     "//youtube": {
       "token_file_name": "token_canal_principal.json",
       "privacy_status": "private",
-      "publish_at": "2025-12-25 10:00:00",
-      "category_id": "28"
+      "category_id": "25"
     },
-
     "global_settings": {
-      "tts": { "engine": "edge_tts", "voice": "pt-BR-FranciscaNeural" },
+      "tts": {
+        "engine": "edge_tts",
+        "voice": "pt-BR-FranciscaNeural"
+      },
       "background": {
-        "visual": { "type": "color", "source": "#1a1a1a" },
-        "audio": { "type": "directory", "source": "bg_music/geopolitica", "volume": 0.1, "loop": true }
+        "visual": {
+          "type": "color",
+          "source": "#1a1a1a"
+        },
+        "audio": {
+          "type": "directory",
+          "source": "bg_music/geopolitica",
+          "volume": 0.1,
+          "loop": true
+        }
       }
     },
-
     "scenes": [
       {
-        "id": "cena_01_intro",
-        "duration": null,
+        "id": "cena_01_taiwan_china_1",
         "narration": {
-          "text": "Bem-vindo à nova versão. Ajustamos o layout para não cobrir as legendas.",
+          "text": "Numa nova escalada, a China declara que vai esmagar qualquer interferência estrangeira sobre Taiwan.",
           "subtitles": true
         },
-        "visual_elements": [
-          {
+        "background": {
+          "visual": {
             "type": "image",
-            "source": "https://cdn-icons-png.flaticon.com/512/5968/5968267.png",
-            "//layout": { 
-                "width": "100%", 
-                "//position": ["center", 0.25] 
-            },
-            "animation": { "type": "fade_in", "start_at": 0.5 }
-          },
-          {
-            "type": "text_box",
-            "content": "NOVA ENGINE V3",
-            "style": {
-              "font_family": "Montserrat-Bold",
-              "font_size": 50,
-              "text_color": "#FFFFFF",
-              "background_color": "#0055FF",
-              "border_radius": 15,
-              "padding": [20, 20],
-              "shadow": true
-            },
-            "//layout": { 
-                "//position": "center", 
-                "width": "80%" 
-            },
-            "//animation": { "type": "zoom_in", "duration": 1.5 }
+            "source": "https://www.reuters.com/resizer/v2/BRTD6MDNLVI5VFIPHLBMPXWU2I.jpg?auth=9f9e8adca0e29457de1c2ec487f4c26731b66ba5c30ee3516cc85b4629247074&width=640&quality=80"
           }
-        ]
+        }
+      }
+    ]
+  },
+  {
+    "slug": "geopolitica-escalada-global-vertical",
+    "output_ratio": "9:16",
+    "content": {
+      "title": "ALERTA GLOBAL: Tensões China-Taiwan e a Nova Corrida Armamentista",
+      "description": "Análise das recentes escaladas militares envolvendo China, Taiwan, Turquia e a controvérsia do plano de paz EUA-Ucrânia.",
+      "hashtags": "#geopolitica #china #taiwan #turquia #ucrania #guerra"
+    },
+    "//youtube": {
+      "token_file_name": "token_canal_principal.json",
+      "privacy_status": "private",
+      "category_id": "25"
+    },
+    "global_settings": {
+      "tts": {
+        "engine": "edge_tts",
+        "voice": "pt-BR-FranciscaNeural"
       },
+      "background": {
+        "visual": {
+          "type": "color",
+          "source": "#1a1a1a"
+        },
+        "audio": {
+          "type": "directory",
+          "source": "bg_music/geopolitica",
+          "volume": 0.1,
+          "loop": true
+        }
+      }
+    },
+    "scenes": [
       {
-        "id": "cena_02_override_visual",
+        "id": "cena_00_hook",
         "narration": {
-          "text": "Aqui, a imagem não cobre mais o vídeo de fundo inteiro, e o texto subiu.",
+          "text": "O mundo está à beira de um conflito? Em minutos, você vai descobrir as quatro maiores escaladas geopolíticas da semana.",
           "subtitles": true
         },
-        "tts": { "voice": "pt-BR-AntonioNeural" },
         "background": {
-          "visual": { "type": "video", "source": "assets/bg_videos/tech_loop.mp4" }
-        },
-        "visual_elements": [
-          {
-            "type": "image",
-            "source": "https://images.unsplash.com/photo-1511367461989-f85a21fda167?w=500&q=80",
-            "filters": { "remove_bg": false },
-            "//layout": { 
-                "width": "80%", 
-                "position": ["center", 0.35], 
-                "rotation": 5 
-            },
-            "//animation": { "type": "slide_up", "duration": 1.0 }
+          "visual": {
+            "type": "color",
+            "source": "#000000"
           },
-          {
-            "type": "text_box",
-            "content": "✨ OVERRIDE DE FUNDO",
-            "style": {
-              "font_family": "Lato-Black",
-              "font_size": 40,
-              "text_color": "#000000",
-              "background_color": "#FFD700",
-              "padding": [10, 20],
-              "stroke_color": "#FFFFFF",
-              "stroke_width": 2
-            },
-            "//layout": { 
-                "position": ["center", 0.65] 
-            },
-            "//animation": { "type": "pop_in", "start_at": 2.0 }
+          "audio": {
+            "type": "silence"
           }
-        ]
+        }
       },
       {
-        "id": "cena_03_video_pip",
+        "id": "cena_01_taiwan_china_1",
         "narration": {
-          "text": "Este é um verdadeiro Picture in Picture. O vídeo fica menor e no canto.",
-          "subtitles": false
+          "text": "Numa nova escalada, a China declara que vai esmagar qualquer interferência estrangeira sobre Taiwan.",
+          "subtitles": true
         },
-        "visual_elements": [
-          {
-            "type": "video",
-            "source": "https://www.w3schools.com/html/mov_bbb.mp4",
-            "audio": { "keep_audio": true, "volume": 0.5 },
-            "//layout": { 
-                "width": "50%", 
-                "position": ["center", 0.35]
-            },
-            "//animation": { "type": "fade_in" }
-          },
-          {
-            "type": "text_box",
-            "content": "Picture in Picture",
-            "style": {
-              "font_family": "Arial",
-              "font_size": 40,
-              "text_color": "#FFF",
-              "background_color": "#000000",
-              "padding": [10, 30]
-            },
-            "//layout": { 
-                "position": ["center", 0.15],
-                "margin": 20 
-            },
-            "//animation": { "type": "slide_right", "start_at": 1.0 }
+        "background": {
+          "visual": {
+            "type": "image",
+            "source": "https://www.reuters.com/resizer/v2/BRTD6MDNLVI5VFIPHLBMPXWU2I.jpg?auth=9f9e8adca0e29457de1c2ec487f4c26731b66ba5c30ee3516cc85b4629247074&width=640&quality=80"
           }
-        ]
+        }
       },
       {
-        "id": "cena_04_produto_rembg",
-        "duration": 4.0,
-        "background": {
-            "visual": { "type": "color", "source": "#000000" },
-            "audio": { "type": "silence" }
+        "id": "cena_01_taiwan_china_2",
+        "narration": {
+          "text": "A região volta a ficar em alerta com o aumento das tensões militares no Indo-Pacífico.",
+          "subtitles": true
         },
-        "visual_elements": [
-          {
+        "background": {
+          "visual": {
             "type": "image",
-            "source": "https://plus.unsplash.com/premium_photo-1664202526559-e21e9c0fb46a?w=500",
-            "filters": { "remove_bg": true },
-            "//layout": { 
-                "width": "60%", 
-                "position": ["center", 0.35]
-            },
-            "animation": { "type": "zoom_in", "duration": "full" }
-          },
-          {
-            "type": "text_box",
-            "content": "R$ 49,90",
-            "style": {
-              "font_family": "Poppins-Bold",
-              "font_size": 70,
-              "text_color": "#FFFFFF",
-              "background_color": "#CC0000",
-              "border_radius": 20,
-              "padding": [15, 50],
-              "shadow": true
-            },
-            "//layout": { 
-                "position": ["center", 0.65] 
-            },
-            "//animation": { "type": "pop_in", "start_at": 0.5 }
+            "source": "https://www.aljazeera.com/wp-content/uploads/2025/11/AP21194109002102-1764138628.jpg?resize=770%2C513&quality=80"
           }
-        ]
+        }
+      },
+      {
+        "id": "cena_02_taiwan_defesa_1",
+        "narration": {
+          "text": "Taiwan aprova um pacote histórico de defesa para reforçar suas forças diante das ameaças da China.",
+          "subtitles": true
+        },
+        "background": {
+          "visual": {
+            "type": "image",
+            "source": "https://i.guim.co.uk/img/media/7694b884cde5ad7784ca7a187904cdce9c3660c8/0_0_2008_1338/master/2008.jpg?width=620&dpr=1&s=none&crop=none"
+          }
+        }
+      },
+      {
+        "id": "cena_02_taiwan_defesa_2",
+        "narration": {
+          "text": "O investimento inclui modernização aérea, mísseis avançados e expansão da infraestrutura militar.",
+          "subtitles": true
+        },
+        "background": {
+          "visual": {
+            "type": "image",
+            "source": "https://dims.apnews.com/dims4/default/1f183fc/2147483647/strip/true/crop/6000x4071+0+0/resize/1440x977!/format/webp/quality/90/?url=https%3A%2F%2Fassets.apnews.com%2F72%2F18%2F66102ef0a71b01d0cd24686cbb51%2Fdbc0c009faed43a8a3bc213937078bdc"
+          }
+        }
+      },
+      {
+        "id": "cena_03_turquia_defesa_1",
+        "narration": {
+          "text": "A Turquia fecha contratos bilionários para fortalecer o sistema de defesa aérea Steel Dome.",
+          "subtitles": true
+        },
+        "background": {
+          "visual": {
+            "type": "image",
+            "source": "https://www.ekathimerini.com/wp-content/uploads/2025/11/AP25265227252919-960x600.jpg?v=1764153767"
+          }
+        }
+      },
+      {
+        "id": "cena_03_turquia_defesa_2",
+        "narration": {
+          "text": "O país busca ampliar sua autonomia militar e consolidar sua presença no mercado global de defesa.",
+          "subtitles": true
+        },
+        "background": {
+          "visual": {
+            "type": "image",
+            "source": "https://www.ekathimerini.com/wp-content/uploads/2025/11/AP25265227252919-960x600.jpg?v=1764153767"
+          }
+        }
+      },
+      {
+        "id": "cena_04_eua_ucrania_1",
+        "narration": {
+          "text": "O Kremlin afirma que o plano de paz proposto pelos EUA para a Ucrânia ainda precisa de análise detalhada.",
+          "subtitles": true
+        },
+        "background": {
+          "visual": {
+            "type": "image",
+            "source": "https://www.reuters.com/resizer/v2/U5NADTOPBBIQ3EWPGL2PXCB6XI.jpg?auth=0ea3472518b5011db04778d3d23e7f39eee58c001fa955d7b3873297bef351f5&width=640&quality=80"
+          }
+        }
+      },
+      {
+        "id": "cena_04_eua_ucrania_2",
+        "narration": {
+          "text": "As incertezas diplomáticas mantêm o conflito distante de um acordo definitivo.",
+          "subtitles": true
+        },
+        "background": {
+          "visual": {
+            "type": "image",
+            "source": "https://www.reuters.com/resizer/v2/U5NADTOPBBIQ3EWPGL2PXCB6XI.jpg?auth=0ea3472518b5011db04778d3d23e7f39eee58c001fa955d7b3873297bef351f5&width=640&quality=80"
+          }
+        }
+      },
+      {
+        "id": "cena_final_cta",
+        "narration": {
+          "text": "Para não perder nenhuma análise sobre os bastidores do poder, inscreva-se e ative as notificações. O futuro da geopolítica está em jogo.",
+          "subtitles": true
+        },
+        "background": {
+          "visual": {
+            "type": "color",
+            "source": "#000000"
+          }
+        }
       }
     ]
   }

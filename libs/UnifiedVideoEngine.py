@@ -1,368 +1,290 @@
 import os
-import random
-import shutil
-import requests
+import json
 import numpy as np
+import random
 from moviepy.editor import *
-from PIL import Image
 
+# Assumed imports from user's libs based on project structure
+from libs.Config import Config
+from libs.BackgroundVideo import BackgroundVideo
 from libs.VisualClip import VisualClip
-from libs.TTS_Edge import EdgeTTS
-from libs.YouTube import YouTube
 from libs.Subtitle import Subtitle
-from libs.LayoutEngine import LayoutEngine
-from libs.Config import Config # Adicionado
+from libs.MediaDownloader import MediaDownloader 
+from libs.TTS_Edge import EdgeTTS 
 
-# Helper: Forçar RGB de 3 canais
-def force_rgb(im):
-    return np.dstack((im, im, im)) if im.ndim == 2 else im
-
-# Helper: Converter Hex para Tupla RGB manualmente
-def hex_to_rgb(hex_str):
-    hex_str = str(hex_str).lstrip('#')
-    try:
-        return tuple(int(hex_str[i:i+2], 16) for i in (0, 2, 4))
-    except:
-        return (0, 0, 0)
+# Assumed standard resolution configuration
+AVAILABLE_RESOLUTIONS = {"9:16": (1080, 1920), "16:9": (1920, 1080)}
 
 class UnifiedVideoEngine:
-    def __init__(self, video_config):
-        self.config = video_config
-        self.slug = video_config.get("slug", "video_output")
-        self.root_output = "output"
-        self.output_folder = os.path.join(self.root_output, self.slug)
+    def __init__(self, data_config):
+        self.data_config = data_config
+        self.global_settings = data_config.get("global_settings", {})
+        self.output_ratio = data_config.get("output_ratio", "9:16")
+        self.resolution_output = AVAILABLE_RESOLUTIONS.get(self.output_ratio, (1080, 1920))
+        self.tts_config = self.global_settings.get("tts", {})
         
-        # CORREÇÃO: Instanciar o objeto Config
-        self.app_config = Config()
+        # 1. Instancia a Config.
+        config_instance = Config()
         
-        ratios = {"9:16": (1080, 1920), "16:9": (1920, 1080), "1:1": (1080, 1080)}
-        self.output_ratio = video_config.get("output_ratio", "9:16")
-        self.resolution = ratios.get(self.output_ratio, (1080, 1920))
+        # 2. Define o slug e caminhos.
+        slug = data_config.get("slug", "video_sem_slug")
         
-        # Garantir que o objeto Config tenha as dimensões corretas do vídeo
-        self.app_config.set_item("width", self.resolution[0])
-        self.app_config.set_item("height", self.resolution[1])
+        # Define o diretório base de saída (usa o valor da Config ou o default)
+        base_output_dir = config_instance.output_dir if hasattr(config_instance, 'output_dir') else os.path.join(os.getcwd(), "output")
 
-        self.width, self.height = self.resolution
+        # CORREÇÃO DA ORGANIZAÇÃO DE PASTAS: Cria pasta específica por vídeo
+        self.output_dir = os.path.join(base_output_dir, slug)
+        self.temp_dir = os.path.join(self.output_dir, "temp")
         
-        if os.path.exists(self.output_folder):
-            try: shutil.rmtree(self.output_folder)
-            except: pass
-        os.makedirs(self.output_folder, exist_ok=True)
+        # Cria os diretórios
+        os.makedirs(self.output_dir, exist_ok=True)
+        os.makedirs(self.temp_dir, exist_ok=True)
+        
+        self.final_clips = []
+        self.total_duration = 0.0
 
-    def process(self):
+    def _get_tts_engine(self):
+        # Este método não é mais estritamente necessário, mas mantido.
+        return EdgeTTS()
+
+    def _process_narration(self, scene_data):
+        narration_config = scene_data.get("narration", {})
+        text = narration_config.get("text", "")
+        
+        if not text:
+            print("[UVE] Cena sem narração. Duração será fixa.")
+            return None, 0.0, None
+
+        # Override de voz na cena, se houver
+        voice = scene_data.get("tts", {}).get("voice", self.tts_config.get("voice"))
+        
+        # Arquivo de áudio temporário (apenas o basename)
+        audio_basename = os.path.join(self.temp_dir, f"audio_{scene_data['id']}")
+        
+        print(f"[UVE] Gerando áudio para cena {scene_data['id']} com voz {voice}...")
+        
         try:
-            print(f"🚀 Iniciando processamento do projeto: {self.slug}")
-            final_clips = []
-            scenes = self.config.get("scenes", [])
+            # CORREÇÃO DO ERRO: Passa todos os parâmetros relevantes para o construtor EdgeTTS
+            tts_params = {
+                "text": text,
+                "voice_id": voice,
+                "output_basename": audio_basename,
+                # Adicione outros parâmetros EdgeTTS se necessário, como 'rate'
+            }
+            tts_engine = EdgeTTS(params=tts_params)
             
-            for i, scene in enumerate(scenes):
-                print(f"  🎬 Processando cena {i+1}/{len(scenes)} (ID: {scene.get('id', 'unk')})")
-                clip = self._process_scene(scene, i)
-                if clip: final_clips.append(clip)
+            # Chama o método sem argumentos, usando self.text, self.voice_id, etc.
+            final_audio_path, word_boundaries = tts_engine.generate_audio_and_subtitles()
             
-            if not final_clips: 
-                print("❌ Nenhuma cena gerada.")
-                return False
-
-            print("  🔨 Concatenando cenas...")
-            final_video = concatenate_videoclips(final_clips, method="compose")
+            # Recalcula a duração a partir do arquivo gerado
+            audio_clip = AudioFileClip(final_audio_path)
+            duration = audio_clip.duration
             
-            out_path = os.path.join(self.output_folder, f"{self.slug}.mp4")
-            print(f"  💾 Renderizando vídeo final em: {out_path}")
-            
-            # Renderização
-            final_video.write_videofile(out_path, fps=30, codec="libx264", audio_codec="aac", threads=4)
-            
-            if self.config.get("youtube"): self._handle_youtube_upload(out_path)
-            return True
-
         except Exception as e:
-            print(f"❌ Erro fatal no engine: {e}")
-            import traceback
-            traceback.print_exc()
-            return False
-            
-    def _create_debug_overlay(self, duration):
-        """
-        Cria um clipe de debug temporário para visualizar as margens (padding).
-        Retorna um ColorClip semi-transparente que cobre a Área Útil (Caixa Principal).
-        """
-        # Obter configurações de Padding e Dimensões do objeto app_config
-        W, H = self.app_config.width, self.app_config.height
-        pad_top = self.app_config.padding_top
-        pad_side = self.app_config.padding_side
-        pad_bot = self.app_config.padding_bottom 
-
-        inner_w = W - 2 * pad_side
-        inner_h = H - pad_top - pad_bot 
-
-        # Cor de debug (ex: amarelo semi-transparente)
-        color_rgb = (255, 255, 0) 
-        opacity = 0.25
-
-        # Adiciona verificação para garantir que o clipe não tenha dimensões zero ou negativas
-        if inner_w <= 0 or inner_h <= 0:
-            print(f"  [DEBUG] Área útil inválida para o overlay: W={inner_w}, H={inner_h}. Pulando overlay.")
-            return None 
-
-        # 1. Cria um clipe do tamanho da área útil
-        inner_box = ColorClip((inner_w, inner_h), color=color_rgb, duration=duration)
+            print(f"[ERRO UVE] Falha ao gerar TTS: {e}")
+            return None, 4.0, None # Fallback
         
-        # 2. Posiciona o clipe na área delimitada pelo padding
-        # A posição (x, y) é o canto superior esquerdo do box
-        inner_box = inner_box.set_position((pad_side, pad_top))
+        audio_clip = AudioFileClip(final_audio_path)
         
-        # 3. Define a opacidade
-        inner_box = inner_box.set_opacity(opacity)
+        return audio_clip, duration, word_boundaries
+
+    def _create_background_clip(self, scene_data, scene_duration):
+        # Prioriza a configuração da cena, senão usa a global
+        background_config = scene_data.get("background", self.global_settings.get("background", {}))
+        visual_config = background_config.get("visual", {})
         
-        return inner_box
+        bg_clip = None
+        bg_type = visual_config.get("type", "color")
+        bg_source = visual_config.get("source")
+        
+        print(f"[UVE] Criando clipe de fundo. Tipo: {bg_type}, Fonte: {bg_source}")
 
-    def _process_scene(self, scene_data, index):
-        # --- ORGANIZAÇÃO DE PASTAS ---
-        scene_id = scene_data.get("id", f"unk_{index}")
-        safe_id = "".join([c if c.isalnum() or c in ('-','_') else '_' for c in scene_id])
-        scene_dir_name = f"scene_{index+1:02d}_{safe_id}"
-        scene_dir = os.path.join(self.output_folder, scene_dir_name)
-        os.makedirs(scene_dir, exist_ok=True)
-        # -----------------------------
+        if bg_type == "color":
+            color_source = bg_source or "#1a1a1a"
+            bg_clip = ColorClip(self.resolution_output, color=color_source, duration=scene_duration)
+            
+        elif bg_type == "image":
+            image_path = bg_source
 
-        narration = scene_data.get("narration", {})
-        tts_clip = None
-        sub_layer = None
-        duration = scene_data.get("duration", 5.0)
-
-        # 1. TTS & Legendas
-        if narration.get("text"):
-            glob_tts = self.config.get("global_settings", {}).get("tts", {})
-            voice = scene_data.get("tts", {}).get("voice") or glob_tts.get("voice", "pt-BR-AntonioNeural")
+            # Chamada ao MediaDownloader para resolver URLs no novo self.temp_dir
+            if image_path and image_path.lower().startswith(("http:", "https:")):
+                image_path = MediaDownloader.resolve_source_path(image_path, self.temp_dir)
             
-            scene_basename = os.path.join(scene_dir, "narration")
-            
-            tts = EdgeTTS({
-                "text": narration["text"], 
-                "voice_id": voice, 
-                "output_basename": scene_basename,
-                "rate": "0%"
-            })
-            res = tts.generate_audio_and_subtitles()
-            
-            if os.path.exists(res["audio_file"]):
-                tts_clip = AudioFileClip(os.path.abspath(res["audio_file"]))
-                duration = tts_clip.duration
-            
-            if narration.get("subtitles"):
+            if image_path and os.path.exists(image_path):
+                print(f"[UVE] Fundo de imagem local (ou baixado): {image_path}")
                 try:
-                    pad_bottom = getattr(self.app_config, 'padding_bottom', 150)
+                    # Carrega a imagem e define a duração
+                    bg_clip = ImageClip(image_path, duration=scene_duration)
                     
-                    sub = Subtitle({
-                        "subtitle_narration_file": os.path.abspath(res["subtitle_file"]),
-                        "resolution_output": self.resolution,
-                        "font_size": 70
-                    })
-                    sub_layer = sub.generate()
-                except Exception as e: print(f"⚠️ Erro legenda: {e}")
-
-        # --- CÁLCULO DE LAYOUT (STACK) ---
-        sub_height = 0
-        if sub_layer:
-            sub_height = getattr(sub_layer, 'h', 0)
-
-        raw_visuals = scene_data.get("visual_elements", [])
-        
-        prepared_visuals_for_layout = []
-        
-        for v in raw_visuals:
-            v_copy = v.copy()
-            
-            # NOVO TRECHO: Injeta o tamanho real para text_box antes do LayoutEngine
-            if v_copy.get('type') == 'text_box':
-                try:
-                    v_copy['original_size'] = VisualClip.calculate_text_box_size(v_copy)
-                except Exception as e:
-                    print(f"⚠️ Erro ao calcular tamanho do text_box: {e}")
-                    v_copy['original_size'] = (1920, 1080) # Fallback 
-            
-            elif 'original_size' not in v_copy:
-                v_copy['original_size'] = (1920, 1080) 
-                
-            prepared_visuals_for_layout.append(v_copy)
-            # FIM DO NOVO TRECHO
-
-        layout_results, (sub_x, sub_y) = LayoutEngine.process_stack_layout(
-            prepared_visuals_for_layout, 
-            sub_height, 
-            self.app_config 
-        )
-
-        if sub_layer:
-            sub_layer = sub_layer.set_position((sub_x, sub_y))
-        # ---------------------------------------------
-
-        # 2. Background
-        bg_clip = self._get_background_clip(scene_data, duration, scene_dir)
-
-        # 3. Layers (Visuais)
-        layers = [bg_clip]
-        
-        # NOVO: INJETA O OVERLAY DE DEBUG
-        if self.app_config.debug_layout:
-            print("  [DEBUG] Injetando overlay para visualização do padding.")
-            debug_overlay = self._create_debug_overlay(duration)
-            if debug_overlay:
-                layers.append(debug_overlay)
-        
-        for index, v_data in enumerate(raw_visuals):
-            if index < len(layout_results):
-                calc_data = layout_results[index]
-                final_w, final_h = calc_data['final_size']
-                final_x, final_y = calc_data['final_position']
-                
-                if 'layout' not in v_data: v_data['layout'] = {}
-                
-                # Instancia o clip
-                vc = VisualClip({
-                    "element_data": v_data, 
-                    "resolution_output": self.resolution, 
-                    "temp_dir": scene_dir,
-                    "duration": duration
-                })
-                c = vc.generate()
-                
-                if c:
-                    # --- APLICAÇÃO CORRIGIDA DO LAYOUT ---
+                    # O fundo deve preencher o quadro (resize/crop)
+                    width, height = bg_clip.size
+                    target_w, target_h = self.resolution_output
                     
-                    # 1. Checa as dimensões reais do clipe
-                    clip_w, clip_h = c.size
-                    clip_ratio = clip_w / clip_h
-                    target_ratio = final_w / final_h
-                    
-                    # 2. Redimensiona o clipe para preencher o box (Cover/Crop)
-                    if clip_ratio > target_ratio:
-                        # O clipe é mais largo que o box (precisa cortar lateralmente)
-                        # Redimensiona pela altura para garantir que preencha o box verticalmente
-                        c = c.resize(height=final_h)
-                        # Recorta para a largura do box, centralizando
-                        c = c.crop(x_center=c.w/2, width=final_w)
+                    if (width / height) < (target_w / target_h):
+                        bg_clip = bg_clip.resize(width=target_w)
+                        bg_clip = vfx.crop(bg_clip, x_center=target_w/2, y_center=target_h/2, width=target_w, height=target_h)
                     else:
-                        # O clipe é mais alto que o box (precisa cortar verticalmente)
-                        # Redimensiona pela largura para garantir que preencha o box horizontalmente
-                        c = c.resize(width=final_w)
-                        # Recorta para a altura do box, centralizando
-                        c = c.crop(y_center=c.h/2, height=final_h)
-
-                    # 3. Posiciona o clipe cortado/redimensionado
-                    c = c.set_position((final_x, final_y))
+                        bg_clip = bg_clip.resize(height=target_h)
+                        bg_clip = vfx.crop(bg_clip, x_center=target_w/2, y_center=target_h/2, width=target_w, height=target_h)
                     
-                    if c.duration is None: c = c.set_duration(duration)
-                    elif c.duration > duration: c = c.set_duration(duration)
-                    
-                    layers.append(c)
+                    # Adiciona zoom_in simples como efeito visual (opcional)
+                    bg_clip = bg_clip.fx(vfx.resize, lambda t: 1.0 + 0.05 * t/scene_duration).set_pos("center")
+                    bg_clip = bg_clip.subclip(0, scene_duration) # Garante a duração
 
-        if sub_layer: layers.append(sub_layer)
-
-        # 4. Composite
-        comp = CompositeVideoClip(layers, size=self.resolution).set_duration(duration)
-        
-        audios = []
-        if tts_clip: audios.append(tts_clip)
-        
-        bg_music = self._get_background_music(scene_data, duration, scene_dir)
-        if bg_music: audios.append(bg_music)
-        
-        if audios: comp = comp.set_audio(CompositeAudioClip(audios))
-        return comp
-
-    def _get_background_clip(self, scene_data, duration, scene_dir):
-        glob_bg = self.config.get("global_settings", {}).get("background", {}).get("visual", {})
-        bg = scene_data.get("background", {}).get("visual", glob_bg)
-        
-        clip = None
-        src = bg.get("source")
-        
-        if src: src = str(src)
-
-        if bg.get("type") in ["image", "image_dir"]:
-            if bg["type"] == "image_dir" and os.path.isdir(src):
-                files = [os.path.join(src, f) for f in os.listdir(src) if f.endswith(('.jpg','.png'))]
-                if files: src = random.choice(files)
-            
-            if src and os.path.exists(src):
-                try:
-                    img = Image.open(src).convert("RGB")
-                    tmp = os.path.join(scene_dir, f"bg_image.jpg")
-                    img.save(tmp)
-                    clip = ImageClip(tmp)
-                except: pass
-
-        elif bg.get("type") in ["video", "video_dir"]:
-            if bg["type"] == "video_dir" and os.path.isdir(src):
-                files = [os.path.join(src, f) for f in os.listdir(src) if f.endswith(('.mp4','.mov'))]
-                if files: src = random.choice(files)
-            
-            if src and os.path.exists(src):
-                clip = VideoFileClip(src)
-                if clip.duration < duration: clip = vfx.loop(clip, duration=duration)
-
-        if not clip: 
-            color_str = src if (bg.get("type")=="color" and src) else "#000000"
-            rgb_color = hex_to_rgb(color_str)
-            clip = ColorClip(self.resolution, color=rgb_color)
-
-        clip = clip.fl_image(force_rgb)
-
-        if isinstance(clip, (ImageClip, VideoFileClip)) and not isinstance(clip, ColorClip):
-            ratio_clip = clip.w / clip.h
-            ratio_target = self.width / self.height
-            if ratio_clip > ratio_target:
-                clip = clip.resize(height=self.height)
-                clip = clip.crop(x_center=clip.w/2, width=self.width)
+                except Exception as e:
+                    print(f"[ERRO UVE] Falha ao criar ImageClip de fundo: {e}. Usando cor de fallback.")
+                    bg_clip = ColorClip(self.resolution_output, color="#000000", duration=scene_duration)
             else:
-                clip = clip.resize(width=self.width)
-                clip = clip.crop(y_center=clip.h/2, height=self.height)
+                 print("[UVE] Falha ao obter caminho da imagem. Usando cor de fallback.")
+                 bg_clip = ColorClip(self.resolution_output, color="#000000", duration=scene_duration)
 
-        return clip.set_duration(duration)
+        elif bg_type == "video":
+            # Simplificação: assume que videos de background são resolvidos pelo BackgroundVideo
+            bg_video_processor = BackgroundVideo(params={"background_videos_dir": bg_source, "resolution_output": self.resolution_output})
+            bg_clip = bg_video_processor.generate_background_video()
+            
+            if bg_clip and bg_clip.duration < scene_duration:
+                # Loop se o vídeo for muito curto
+                bg_clip = vfx.loop(bg_clip, duration=scene_duration)
+            elif bg_clip and bg_clip.duration > scene_duration:
+                bg_clip = bg_clip.subclip(0, scene_duration)
 
-    def _get_background_music(self, scene_data, duration, scene_dir):
-        glob_audio = self.config.get("global_settings", {}).get("background", {}).get("audio", {})
-        audio = scene_data.get("background", {}).get("audio", glob_audio)
+        if bg_clip is None:
+            # Fallback final se tudo falhar
+            print("[UVE] Falha total ao criar clipe de fundo. Usando clipe preto.")
+            return ColorClip(self.resolution_output, color="#000000", duration=scene_duration)
+
+        # Adiciona o áudio de fundo (global ou por cena)
+        audio_config = background_config.get("audio", self.global_settings.get("background", {}).get("audio", {}))
         
-        src = audio.get("source")
-        if src: src = str(src) 
+        if audio_config.get("type") == "directory" and audio_config.get("source"):
+             bg_music_dir = audio_config["source"]
+             # Adiciona o path base do projeto, assumindo que bg_music/geopolitica é relativo
+             full_bg_music_dir = os.path.join(os.getcwd(), bg_music_dir) 
+             
+             if os.path.isdir(full_bg_music_dir):
+                 music_files = [os.path.join(full_bg_music_dir, f) for f in os.listdir(full_bg_music_dir) if f.endswith(".mp3")]
+                 if music_files:
+                     bg_audio_clip = AudioFileClip(random.choice(music_files)).subclip(0, scene_duration)
+                     bg_audio_clip = bg_audio_clip.volumex(audio_config.get("volume", 0.1))
+                     
+                     if bg_clip.audio is None:
+                        bg_clip = bg_clip.set_audio(bg_audio_clip)
+                     else:
+                        # Mixa o áudio de fundo (se já houver) com a música de fundo
+                        bg_clip.audio = CompositeAudioClip([bg_clip.audio, bg_audio_clip])
 
-        if audio.get("type") == "url":
-            try:
-                local = os.path.join(scene_dir, f"bg_music.mp3")
-                if not os.path.exists(local):
-                    with open(local, 'wb') as f: f.write(requests.get(src).content)
-                src = local
-            except: pass
+        return bg_clip.set_duration(scene_duration)
+
+
+    def _create_visual_elements_clip(self, scene_data, scene_duration):
+        # Processa os elementos visuais que se sobrepõem ao fundo
+        visual_elements = scene_data.get("visual_elements", [])
         
-        if src and os.path.isdir(src):
-            files = [os.path.join(src, f) for f in os.listdir(src) if f.lower().endswith(('.mp3', '.wav', '.aac', '.m4a'))]
-            if files: src = random.choice(files)
-            else: return None
-
-        if src and os.path.exists(src) and os.path.isfile(src):
-            try:
-                m = AudioFileClip(src)
-                if m.duration < duration: m = afx.audio_loop(m, duration=duration)
-                else: m = m.subclip(0, duration)
-                return m.volumex(audio.get("volume", 0.1))
-            except Exception: pass
+        element_clips = []
+        for element_data in visual_elements:
+            config = {
+                "element_data": element_data,
+                "resolution_output": self.resolution_output,
+                "temp_dir": self.temp_dir,
+                "duration": scene_duration
+            }
+            clip_processor = VisualClip(config)
+            clip = clip_processor.generate()
+            if clip:
+                element_clips.append(clip)
         
-        return None
+        if not element_clips:
+            return None
+            
+        # Simplificação: compõe todos os elementos visuais
+        return CompositeVideoClip(element_clips, size=self.resolution_output).set_duration(scene_duration)
 
-    def _handle_youtube_upload(self, video_path):
-        yt_cfg = self.config.get("youtube", {})
-        try:
-            yt = YouTube({
-                "token_file_name": yt_cfg.get("token_file_name"),
-                "video_path": video_path,
-                "title": self.config.get("content", {}).get("title"),
-                "description": self.config.get("content", {}).get("description"),
-                "privacy_status": yt_cfg.get("privacy_status", "private"),
-                "publish_at": yt_cfg.get("publish_at")
-            })
-            yt.upload()
-        except Exception as e: print(f"⚠️ Erro upload: {e}")
+
+    def _create_subtitle_clip(self, scene_duration, word_timing):
+        # Apenas cria o clipe de legenda se houver timing
+        if not word_timing:
+            return None
+        
+        # O EdgeTTS retorna os limites de palavras para a Subtitle usar
+        subtitle_config = self.global_settings.get("subtitle", {})
+        
+        # Assumimos que Subtitle é uma classe que retorna um TextClip/CompositeVideoClip
+        subtitle_generator = Subtitle(
+            word_timing=word_timing,
+            resolution=self.resolution_output,
+            config=subtitle_config
+        )
+        
+        return subtitle_generator.generate().set_duration(scene_duration)
+
+    def run(self, output_filename="final_video.mp4"):
+        print("[UVE] Iniciando processamento do vídeo...")
+        all_scene_clips = []
+
+        for scene in self.data_config.get("scenes", []):
+            scene_id = scene.get("id", "cena_desconhecida")
+            print(f"=========================================================")
+            print(f"[UVE] Processando cena: {scene_id}")
+
+            # 1. Processar Narração (TTS)
+            audio_clip, duration_from_tts, word_timing = self._process_narration(scene)
+            
+            # 2. Definir Duração da Cena
+            scene_duration = scene.get("duration", duration_from_tts)
+            if not scene_duration or scene_duration < 0.1:
+                scene_duration = 4.0 # Duração de fallback
+            print(f"[UVE] Duração final da cena: {scene_duration:.2f} segundos.")
+
+            # 3. Criar Clipe de Fundo (Com a correção de URL de imagem)
+            background_clip = self._create_background_clip(scene, scene_duration)
+            
+            # 4. Criar Clipe de Elementos Visuais
+            visual_clip = self._create_visual_elements_clip(scene, scene_duration)
+            
+            # 5. Criar Clipe de Legendas (Subtitles)
+            subtitle_clip = None
+            if scene.get("narration", {}).get("subtitles", False):
+                subtitle_clip = self._create_subtitle_clip(scene_duration, word_timing)
+
+            # 6. Compor a Cena
+            final_scene_clip = [background_clip]
+            if visual_clip: final_scene_clip.append(visual_clip)
+            if subtitle_clip: final_scene_clip.append(subtitle_clip)
+
+            composed_clip = CompositeVideoClip(final_scene_clip, size=self.resolution_output).set_duration(scene_duration)
+            
+            # 7. Adicionar o Áudio da Narração
+            if audio_clip:
+                composed_clip.audio = CompositeAudioClip([composed_clip.audio, audio_clip]) if composed_clip.audio else audio_clip
+
+            all_scene_clips.append(composed_clip)
+            self.total_duration += scene_duration
+
+        if not all_scene_clips:
+            print("[ERRO UVE] Nenhuma cena processada.")
+            return None
+            
+        # 8. Concatenar todas as cenas
+        final_video = concatenate_videoclips(all_scene_clips, method="compose")
+
+        # 9. Escrever o Arquivo Final
+        # Garante o nome do arquivo final baseado no slug na pasta correta
+        slug = self.data_config.get("slug", "final_video")
+        output_filename = f"{slug}.mp4"
+        output_path = os.path.join(self.output_dir, output_filename)
+        
+        print(f"=========================================================")
+        print(f"[UVE] Escrevendo vídeo final em: {output_path}")
+        final_video.write_videofile(
+            output_path,
+            codec='libx264',
+            audio_codec='aac',
+            # Usa o self.temp_dir correto para o arquivo de áudio temporário do MoviePy
+            temp_audiofile=os.path.join(self.temp_dir, 'temp-audio.m4a'),
+            remove_temp=True,
+            fps=24,
+            preset='medium'
+        )
+        print("[UVE] Processamento concluído.")
+        return output_path

@@ -18,7 +18,7 @@ class BackgroundVideo:
             "max_clip_duration": 4,
             "max_total_video_duration": None,
             "crossfade_duration": 0.8,
-            "enable_crossfade": False,  # <-- nova flag
+            "enable_crossfade": False, 
             "max_clips": None,
             "shuffle_clips": True,
             "valid_extensions": ["mp4", "mkv", "avi", "mov", "flv", "webm"],
@@ -33,6 +33,7 @@ class BackgroundVideo:
 
     def load_and_resize_clip(self, video_path):
         try:
+            print(f"[DEBUG_BV: load_and_resize_clip] Carregando e redimensionando: {os.path.basename(video_path)}")
             video = VideoFileClip(video_path, audio=False)
             if video.duration > self.max_clip_duration:
                 video = video.subclip(0, self.max_clip_duration)
@@ -53,7 +54,7 @@ class BackgroundVideo:
 
             return resize(video, newsize=(target_w, target_h))
         except Exception as e:
-            print(f"[ERRO] Falha em load_and_resize_clip: {e}")
+            print(f"[ERRO DEBUG_BV] Falha em load_and_resize_clip para {video_path}: {e}")
             return None
 
     def apply_crossfade_transition(self, clips):
@@ -66,6 +67,7 @@ class BackgroundVideo:
         return base
 
     def generate_background_video(self):
+        print("[DEBUG_BV: generate_background_video] INICIADO. Isto deve ser chamado apenas para fundos de vídeo.")
         # Lista de vídeos válidos
         video_files = [f for f in os.listdir(self.background_videos_dir)
                     if any(f.lower().endswith(ext) for ext in self.valid_extensions)]
@@ -86,14 +88,12 @@ class BackgroundVideo:
             if clip:
                 clips.append(clip)
             else:
-                print(f"[ERRO] Falha ao carregar: {video_name}")
+                print(f"[ERRO DEBUG_BV] Falha ao carregar clipe: {video_name}")
 
         if not clips:
             print("[ERRO] Nenhum clipe pôde ser carregado.")
             return None
 
-        # Ajustar duração total considerando o crossfade:
-        # A duração final = (soma das durações dos clipes) - (n_clips - 1)*crossfade_duration.
         if self.max_total_video_duration:
             final_duration = 0
             extended_clips = []
@@ -101,16 +101,14 @@ class BackgroundVideo:
             while True:
                 clip = clips[idx % len(clips)]
                 if extended_clips:
-                    # Ao adicionar um novo clipe, perde-se crossfade_duration
                     nova_duracao = final_duration + clip.duration - self.crossfade_duration
                 else:
                     nova_duracao = final_duration + clip.duration
 
                 if nova_duracao >= self.max_total_video_duration:
-                    # Ajusta o último clipe para que o vídeo fique exatamente com a duração desejada.
                     restante = self.max_total_video_duration - final_duration
                     if extended_clips:
-                        restante += self.crossfade_duration  # recuperar o tempo de crossfade não utilizado
+                        restante += self.crossfade_duration
                     if restante < clip.duration:
                         clip = clip.subclip(0, restante)
                     extended_clips.append(clip)
@@ -121,7 +119,6 @@ class BackgroundVideo:
                     idx += 1
             clips = extended_clips
         elif self.loop_background:
-            # Repetir clipes algumas vezes para ter vídeo mais longo
             clips = clips * 3
 
         if self.enable_crossfade:
@@ -132,5 +129,5 @@ class BackgroundVideo:
         if self.max_total_video_duration:
             final_video = final_video.subclip(0, self.max_total_video_duration)
         
+        print("[DEBUG_BV: generate_background_video] FINALIZADO.")
         return final_video
-
