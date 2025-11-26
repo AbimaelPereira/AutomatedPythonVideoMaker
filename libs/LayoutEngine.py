@@ -3,11 +3,16 @@ from moviepy.editor import TextClip
 class LayoutEngine:
     @staticmethod
     def calculate_dimension(value, total_size):
-        """Converte porcentagem (string) ou inteiro para pixels."""
+        """Converte porcentagem (string), float multiplicador (0.0 a 1.0) ou inteiro para pixels."""
         if isinstance(value, str) and "%" in value:
             percent = float(value.replace("%", "")) / 100
             return int(total_size * percent)
-        return int(value)
+            
+        # FIX 1: Se for float entre 0.0 e 1.0 (ex: 1.0, 0.8), trata como multiplicador da total_size.
+        if isinstance(value, float) and 0.0 <= value <= 1.0:
+            return int(total_size * value)
+            
+        return int(value) # Se for um inteiro (pixels absolutos) ou outro float > 1.0
 
     @staticmethod
     def get_position(layout_pos, element_size, canvas_size, margin=0):

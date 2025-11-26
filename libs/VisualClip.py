@@ -45,6 +45,37 @@ class VisualClip:
 
         return clip
 
+    @staticmethod
+    def calculate_text_box_size(data):
+        """Calcula o tamanho WxH do text box, incluindo o padding."""
+        content = data.get("content", "")
+        style = data.get("style", {})
+        font_family = style.get("font_family", "Arial")
+        font_size = style.get("font_size", 50)
+        
+        font_path = f"fonts/{font_family.split('-')[0]}/{font_family}.ttf"
+        if not os.path.exists(font_path): font_path = "fonts/Lato/Lato-Bold.ttf"
+        try: font = ImageFont.truetype(font_path, font_size)
+        except: font = ImageFont.load_default()
+
+        dummy = ImageDraw.Draw(Image.new("RGBA", (1,1)))
+        
+        try:
+            bbox = dummy.textbbox((0,0), content, font=font)
+            w, h = bbox[2]-bbox[0], bbox[3]-bbox[1]
+        except Exception:
+            w, h = dummy.textsize(content, font=font)
+            
+        pad = style.get("padding", [10, 20]) # [V_pad, H_pad]
+        
+        box_w, box_h = w + pad[1]*2, h + pad[0]*2
+        
+        if box_w < 1: box_w = 1 
+        if box_h < 1: box_h = 1
+        
+        return (int(box_w), int(box_h))
+
+
     def _get_source_file(self):
         source = self.data.get("source")
         if not source: return None
@@ -140,15 +171,31 @@ class VisualClip:
         except: font = ImageFont.load_default()
 
         dummy = ImageDraw.Draw(Image.new("RGBA", (1,1)))
-        bbox = dummy.textbbox((0,0), content, font=font)
-        w, h = bbox[2]-bbox[0], bbox[3]-bbox[1]
-        pad = style.get("padding", [10, 20])
+        
+        # 1. Calcular BBox e Dimensões
+        try:
+            # bbox retorna (left, top, right, bottom)
+            bbox = dummy.textbbox((0,0), content, font=font)
+            w, h = bbox[2]-bbox[0], bbox[3]-bbox[1]
+        except Exception:
+            # Fallback para versões mais antigas
+            w, h = dummy.textsize(content, font=font)
+            bbox = (0, 0, w, h) # Assume 0 offset
+            
+        pad = style.get("padding", [10, 20]) # [V_pad, H_pad]
         box_w, box_h = w + pad[1]*2, h + pad[0]*2
         
+        # 2. Criar Imagem e Desenhar Fundo
         img = Image.new("RGBA", (int(box_w), int(box_h)), (0,0,0,0))
         draw = ImageDraw.Draw(img)
         draw.rounded_rectangle([(0,0),(box_w,box_h)], radius=style.get("border_radius",0), fill=style.get("background_color","white"))
-        draw.text((pad[1], pad[0]-bbox[1]*0.2), content, font=font, fill=style.get("text_color","black"))
+        
+        # 3. Desenhar Texto (FIX: Ajuste vertical usando bbox[1])
+        # X: pad[1] (margem lateral)
+        # Y: pad[0] (margem superior) - bbox[1] (offset vertical que PIL/Pillow usa)
+        text_y_pos = pad[0] - bbox[1] 
+
+        draw.text((pad[1], text_y_pos), content, font=font, fill=style.get("text_color","black"))
         
         temp_path = os.path.join(self.temp_dir, f"textbox_{id(self)}.png")
         img.save(temp_path)

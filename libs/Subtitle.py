@@ -19,6 +19,13 @@ class Subtitle:
         if params:
             defaults.update(params)
 
+        print("=" * 10)
+        print("📝 Configurações de legenda:")
+        for k, v in defaults.items():
+            print(f"  {k}: {v}")
+
+        print("=" * 10)
+
         for k, v in defaults.items():
             setattr(self, k, v)
 

@@ -36,9 +36,9 @@
           {
             "type": "image",
             "source": "https://cdn-icons-png.flaticon.com/512/5968/5968267.png",
-            "layout": { 
-                "width": "25%", 
-                "position": ["center", 0.25] 
+            "//layout": { 
+                "width": "100%", 
+                "//position": ["center", 0.25] 
             },
             "animation": { "type": "fade_in", "start_at": 0.5 }
           },
@@ -51,11 +51,11 @@
               "text_color": "#FFFFFF",
               "background_color": "#0055FF",
               "border_radius": 15,
-              "padding": [20, 40],
+              "padding": [20, 20],
               "shadow": true
             },
-            "layout": { 
-                "position": "center", 
+            "//layout": { 
+                "//position": "center", 
                 "width": "80%" 
             },
             "//animation": { "type": "zoom_in", "duration": 1.5 }
@@ -77,12 +77,12 @@
             "type": "image",
             "source": "https://images.unsplash.com/photo-1511367461989-f85a21fda167?w=500&q=80",
             "filters": { "remove_bg": false },
-            "layout": { 
+            "//layout": { 
                 "width": "80%", 
                 "position": ["center", 0.35], 
                 "rotation": 5 
             },
-            "animation": { "type": "slide_up", "duration": 1.0 }
+            "//animation": { "type": "slide_up", "duration": 1.0 }
           },
           {
             "type": "text_box",
@@ -96,7 +96,7 @@
               "stroke_color": "#FFFFFF",
               "stroke_width": 2
             },
-            "layout": { 
+            "//layout": { 
                 "position": ["center", 0.65] 
             },
             "//animation": { "type": "pop_in", "start_at": 2.0 }
@@ -114,11 +114,11 @@
             "type": "video",
             "source": "https://www.w3schools.com/html/mov_bbb.mp4",
             "audio": { "keep_audio": true, "volume": 0.5 },
-            "layout": { 
+            "//layout": { 
                 "width": "50%", 
                 "position": ["center", 0.35]
             },
-            "animation": { "type": "fade_in" }
+            "//animation": { "type": "fade_in" }
           },
           {
             "type": "text_box",
@@ -130,11 +130,11 @@
               "background_color": "#000000",
               "padding": [10, 30]
             },
-            "layout": { 
+            "//layout": { 
                 "position": ["center", 0.15],
                 "margin": 20 
             },
-            "animation": { "type": "slide_right", "start_at": 1.0 }
+            "//animation": { "type": "slide_right", "start_at": 1.0 }
           }
         ]
       },
@@ -142,7 +142,7 @@
         "id": "cena_04_produto_rembg",
         "duration": 4.0,
         "background": {
-            "visual": { "type": "color", "source": "#FFFFFF" },
+            "visual": { "type": "color", "source": "#000000" },
             "audio": { "type": "silence" }
         },
         "visual_elements": [
@@ -150,7 +150,7 @@
             "type": "image",
             "source": "https://plus.unsplash.com/premium_photo-1664202526559-e21e9c0fb46a?w=500",
             "filters": { "remove_bg": true },
-            "layout": { 
+            "//layout": { 
                 "width": "60%", 
                 "position": ["center", 0.35]
             },
@@ -168,7 +168,7 @@
               "padding": [15, 50],
               "shadow": true
             },
-            "layout": { 
+            "//layout": { 
                 "position": ["center", 0.65] 
             },
             "//animation": { "type": "pop_in", "start_at": 0.5 }

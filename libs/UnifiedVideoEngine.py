@@ -92,13 +92,19 @@ class UnifiedVideoEngine:
         W, H = self.app_config.width, self.app_config.height
         pad_top = self.app_config.padding_top
         pad_side = self.app_config.padding_side
-        
+        pad_bot = self.app_config.padding_bottom 
+
         inner_w = W - 2 * pad_side
-        inner_h = H - self.app_config.padding_top - self.app_config.padding_bottom
-        
+        inner_h = H - pad_top - pad_bot 
+
         # Cor de debug (ex: amarelo semi-transparente)
         color_rgb = (255, 255, 0) 
         opacity = 0.25
+
+        # Adiciona verificação para garantir que o clipe não tenha dimensões zero ou negativas
+        if inner_w <= 0 or inner_h <= 0:
+            print(f"  [DEBUG] Área útil inválida para o overlay: W={inner_w}, H={inner_h}. Pulando overlay.")
+            return None 
 
         # 1. Cria um clipe do tamanho da área útil
         inner_box = ColorClip((inner_w, inner_h), color=color_rgb, duration=duration)
@@ -168,9 +174,20 @@ class UnifiedVideoEngine:
         
         for v in raw_visuals:
             v_copy = v.copy()
-            if 'original_size' not in v_copy:
+            
+            # NOVO TRECHO: Injeta o tamanho real para text_box antes do LayoutEngine
+            if v_copy.get('type') == 'text_box':
+                try:
+                    v_copy['original_size'] = VisualClip.calculate_text_box_size(v_copy)
+                except Exception as e:
+                    print(f"⚠️ Erro ao calcular tamanho do text_box: {e}")
+                    v_copy['original_size'] = (1920, 1080) # Fallback 
+            
+            elif 'original_size' not in v_copy:
                 v_copy['original_size'] = (1920, 1080) 
+                
             prepared_visuals_for_layout.append(v_copy)
+            # FIM DO NOVO TRECHO
 
         layout_results, (sub_x, sub_y) = LayoutEngine.process_stack_layout(
             prepared_visuals_for_layout, 
@@ -192,7 +209,8 @@ class UnifiedVideoEngine:
         if self.app_config.debug_layout:
             print("  [DEBUG] Injetando overlay para visualização do padding.")
             debug_overlay = self._create_debug_overlay(duration)
-            layers.append(debug_overlay)
+            if debug_overlay:
+                layers.append(debug_overlay)
         
         for index, v_data in enumerate(raw_visuals):
             if index < len(layout_results):
@@ -213,8 +231,27 @@ class UnifiedVideoEngine:
                 
                 if c:
                     # --- APLICAÇÃO CORRIGIDA DO LAYOUT ---
-                    # Usa a tupla (final_w, final_h) para garantir que nenhuma dimensão seja zero
-                    c = c.resize((final_w, final_h)) 
+                    
+                    # 1. Checa as dimensões reais do clipe
+                    clip_w, clip_h = c.size
+                    clip_ratio = clip_w / clip_h
+                    target_ratio = final_w / final_h
+                    
+                    # 2. Redimensiona o clipe para preencher o box (Cover/Crop)
+                    if clip_ratio > target_ratio:
+                        # O clipe é mais largo que o box (precisa cortar lateralmente)
+                        # Redimensiona pela altura para garantir que preencha o box verticalmente
+                        c = c.resize(height=final_h)
+                        # Recorta para a largura do box, centralizando
+                        c = c.crop(x_center=c.w/2, width=final_w)
+                    else:
+                        # O clipe é mais alto que o box (precisa cortar verticalmente)
+                        # Redimensiona pela largura para garantir que preencha o box horizontalmente
+                        c = c.resize(width=final_w)
+                        # Recorta para a altura do box, centralizando
+                        c = c.crop(y_center=c.h/2, height=final_h)
+
+                    # 3. Posiciona o clipe cortado/redimensionado
                     c = c.set_position((final_x, final_y))
                     
                     if c.duration is None: c = c.set_duration(duration)
