@@ -17,7 +17,19 @@ class Config:
             "valid_extensions": ["mp4", "mkv", "avi", "mov", "flv", "webm"],
             "available_resolutions": {"9:16": (1080, 1920), "16:9": (1920, 1080)},
             "output_ratio": os.getenv("OUTPUT_RATIO", "9:16"),
-            "padding": 50,
+            
+            # --- NOVAS CONFIGURAÇÕES DE LAYOUT ---
+            "padding": 50, # Mantido para compatibilidade, mas o ideal é usar os específicos abaixo
+            "padding_top": int(os.getenv("PADDING_TOP", 100)),     # Margem segura topo
+            "padding_bottom": int(os.getenv("PADDING_BOTTOM", 150)), # Margem segura base (onde fica a legenda)
+            "padding_side": int(os.getenv("PADDING_SIDE", 50)),    # Margem lateral
+            "stack_gap_percent": float(os.getenv("STACK_GAP_PERCENT", 0.02)), # 2% da altura da tela como gap padrão
+            # -------------------------------------
+
+            # --- NOVO: DEBUG LAYOUT ---
+            "debug_layout": to_bool(os.getenv("DEBUG_LAYOUT", False)),
+            # --------------------------
+
             "max_width_percent": 0.6,
             "manchete_opacity": 0.89,
             "crossfade_duration": float(os.getenv("CROSSFADE_DURATION", 0.5)),

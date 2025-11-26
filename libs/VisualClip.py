@@ -37,7 +37,10 @@ class VisualClip:
         # Apply force_rgb to ALL clips to prevent shape errors
         clip = clip.fl_image(force_rgb)
 
-        clip = self._apply_layout(clip)
+        # NOVO FLUXO: Aplica rotação e PULA redimensionamento/posicionamento
+        layout = self.data.get("layout", {})
+        if layout.get("rotation"): clip = clip.rotate(layout["rotation"])
+
         clip = self._apply_animation(clip)
 
         return clip
@@ -51,7 +54,8 @@ class VisualClip:
             try:
                 filename = os.path.basename(source.split("?")[0])
                 if not filename or "." not in filename:
-                    filename = f"asset_{hash(source)}.png"
+                    # Padroniza para .png no nome do arquivo cache se a extensão for desconhecida
+                    filename = f"asset_{hash(source)}.png" 
                 
                 local_path = os.path.join(self.temp_dir, filename)
                 if not os.path.exists(local_path):
@@ -74,16 +78,36 @@ class VisualClip:
         try:
             pil_img = Image.open(path)
             filters = self.data.get("filters", {})
+            image_was_processed = False
+            
+            # 1. Aplica filtros como remove_bg
             if filters.get("remove_bg"):
+                print(f"  [VisualClip] Aplicando remove_bg em: {os.path.basename(path)}")
                 with open(path, "rb") as i:
                     pil_img = Image.open(io.BytesIO(remove(i.read())))
+                image_was_processed = True
             
+            # 2. Conversão para RGBA (sempre deve ocorrer para garantir formato de vídeo)
             pil_img = pil_img.convert("RGBA")
-            safe_name = f"proc_{os.path.basename(path)}.png"
-            if not safe_name.endswith(".png"): safe_name += ".png"
-            safe_path = os.path.join(self.temp_dir, safe_name)
-            pil_img.save(safe_path, "PNG")
-            path = safe_path
+
+            # 3. LÓGICA CORRIGIDA: Sobrescreve a cópia em cache (path)
+            # Padroniza o caminho final para .png se o original não for.
+            final_path = path
+            base_name, ext = os.path.splitext(path)
+            
+            # Se a extensão original não for PNG, precisamos de um novo nome PNG.
+            # Se for PNG, sobrescrevemos.
+            if ext.lower() != '.png':
+                final_path = base_name + ".png"
+                # O arquivo original (ex: .jpg) permanece no cache até ser excluído. 
+                # O ImageClip usará o novo .png.
+
+            # Sobrescreve o arquivo final (o cache .png, ou cria um novo .png a partir do .jpg/.webp, etc.)
+            pil_img.save(final_path, "PNG")
+            
+            # O clip será criado a partir do arquivo RGBA/PNG padronizado
+            path = final_path 
+            
         except Exception as e:
             print(f"⚠️ Erro img: {e}")
             return None
