@@ -1,0 +1,81 @@
+[
+  {
+    "slug": "teste",
+    "output_ratio": "9:16",
+    "content": {
+      "title": "Tour V3 (Layout Corrigido) 🚀",
+      "description": "Teste de layout otimizado.",
+      "hashtags": "#dev #python"
+    },
+    "global_settings": {
+      "tts": {
+        "engine": "edge_tts",
+        "voice": "pt-BR-FranciscaNeural"
+      },
+      "background": {
+        "visual": {
+          "type": "color",
+          "source": "#58e100"
+        },
+        "audio": {
+          "type": "directory",
+          "source": "bg_music/geopolitica",
+          "volume": 0.3,
+          "loop": true
+        }
+      }
+    },
+    "scenes": [
+      {
+        "id": "cena_01_intro",
+        "duration": null,
+        "narration": {
+          "text": "Bem-vindo à nova versão. Ajustamos o layout para não cobrir as legendas.",
+          "subtitles": true
+        },
+        "visual_elements": [
+          {
+            "type": "image",
+            "source": "https://cdn-icons-png.flaticon.com/512/5968/5968267.png",
+            "layout": {
+              "width": "25%",
+              "position": [
+                "center",
+                0.25
+              ]
+            },
+            "animation": {
+              "type": "fade_in",
+              "start_at": 0.5,
+              "duration": 0.25
+            }
+          },
+          {
+            "type": "text_box",
+            "content": "NOVA ENGINE V3",
+            "style": {
+              "font_family": "Montserrat-Bold",
+              "font_size": 50,
+              "text_color": "#FFFFFF",
+              "background_color": "#0055FF",
+              "border_radius": 15,
+              "padding": [
+                40,
+                40
+              ],
+              "shadow": true
+            },
+            "layout": {
+              "position": "center",
+              "width": "100%"
+            },
+            "//animation": {
+              "type": "zoom_in",
+              "duration": 1.5
+            }
+          }
+        ]
+      }
+    ]
+  }
+]

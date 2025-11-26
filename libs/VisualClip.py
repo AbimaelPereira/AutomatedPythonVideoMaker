@@ -2,11 +2,15 @@ import os
 import requests
 import io
 import mimetypes
-import numpy as np # Necessário para corrigir o array
+import numpy as np 
 from PIL import Image, ImageDraw, ImageFont
 from rembg import remove
 from moviepy.editor import *
 from libs.LayoutEngine import LayoutEngine
+
+# Helper: Force 3-channel RGB
+def force_rgb(im):
+    return np.dstack((im, im, im)) if im.ndim == 2 else im
 
 class VisualClip:
     def __init__(self, config):
@@ -29,6 +33,9 @@ class VisualClip:
 
         if not clip:
             return None
+
+        # Apply force_rgb to ALL clips to prevent shape errors
+        clip = clip.fl_image(force_rgb)
 
         clip = self._apply_layout(clip)
         clip = self._apply_animation(clip)
@@ -71,7 +78,6 @@ class VisualClip:
                 with open(path, "rb") as i:
                     pil_img = Image.open(io.BytesIO(remove(i.read())))
             
-            # Força RGBA
             pil_img = pil_img.convert("RGBA")
             safe_name = f"proc_{os.path.basename(path)}.png"
             if not safe_name.endswith(".png"): safe_name += ".png"
@@ -88,13 +94,7 @@ class VisualClip:
         path = self._get_source_file()
         if not path or not os.path.exists(path): return None
         
-        # Função para garantir 3 canais (RGB) se o vídeo for grayscale
-        def force_rgb(im):
-            return np.dstack((im, im, im)) if im.ndim == 2 else im
-
         clip = VideoFileClip(path)
-        # Aplica o filtro em cada frame
-        clip = clip.fl_image(force_rgb)
         
         audio_cfg = self.data.get("audio", {})
         if not audio_cfg.get("keep_audio", False):

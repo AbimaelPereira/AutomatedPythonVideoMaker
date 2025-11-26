@@ -1,15 +1,15 @@
 [
   {
-    "slug": "teste-v3-funcionalidades-full",
+    "slug": "teste-v3-layout-fix",
     "output_ratio": "9:16",
     
     "content": {
-      "title": "Tour Completo V3 🚀",
-      "description": "Vídeo de teste demonstrando todas as capacidades da nova engine V3.",
-      "hashtags": "#dev #python #automacao #moviepy"
+      "title": "Tour V3 (Layout Corrigido) 🚀",
+      "description": "Teste de layout otimizado.",
+      "hashtags": "#dev #python"
     },
 
-    "youtube": {
+    "//youtube": {
       "token_file_name": "token_canal_principal.json",
       "privacy_status": "private",
       "publish_at": "2025-12-25 10:00:00",
@@ -17,21 +17,10 @@
     },
 
     "global_settings": {
-      "tts": {
-        "engine": "edge_tts",
-        "voice": "pt-BR-FranciscaNeural"
-      },
+      "tts": { "engine": "edge_tts", "voice": "pt-BR-FranciscaNeural" },
       "background": {
-        "visual": {
-          "type": "color",
-          "source": "#1a1a1a"
-        },
-        "audio": {
-          "type": "url",
-          "source": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
-          "volume": 0.1,
-          "loop": true
-        }
+        "visual": { "type": "color", "source": "#1a1a1a" },
+        "audio": { "type": "directory", "source": "bg_music/geopolitica", "volume": 0.1, "loop": true }
       }
     },
 
@@ -40,54 +29,59 @@
         "id": "cena_01_intro",
         "duration": null,
         "narration": {
-          "text": "Bem-vindo à nova versão do gerador de vídeos. Esta é a cena um, usando configurações globais.",
+          "text": "Bem-vindo à nova versão. Ajustamos o layout para não cobrir as legendas.",
           "subtitles": true
         },
         "visual_elements": [
+          {
+            "type": "image",
+            "source": "https://cdn-icons-png.flaticon.com/512/5968/5968267.png",
+            "layout": { 
+                "width": "25%", 
+                "position": ["center", 0.25] 
+            },
+            "animation": { "type": "fade_in", "start_at": 0.5 }
+          },
           {
             "type": "text_box",
             "content": "NOVA ENGINE V3",
             "style": {
               "font_family": "Montserrat-Bold",
-              "font_size": 60,
+              "font_size": 50,
               "text_color": "#FFFFFF",
               "background_color": "#0055FF",
               "border_radius": 15,
               "padding": [20, 40],
               "shadow": true
             },
-            "layout": { "position": "center", "width": "80%" },
-            "animation": { "type": "zoom_in", "duration": 1.5 }
-          },
-          {
-            "type": "image",
-            "source": "https://cdn-icons-png.flaticon.com/512/5968/5968267.png",
-            "layout": { "width": "20%", "position": ["center", 0.2] },
-            "animation": { "type": "fade_in", "start_at": 0.5 }
+            "layout": { 
+                "position": "center", 
+                "width": "80%" 
+            },
+            "//animation": { "type": "zoom_in", "duration": 1.5 }
           }
         ]
       },
       {
         "id": "cena_02_override_visual",
         "narration": {
-          "text": "Aqui mudamos o fundo para um vídeo e a voz do narrador. Perceba a animação de entrada.",
+          "text": "Aqui, a imagem não cobre mais o vídeo de fundo inteiro, e o texto subiu.",
           "subtitles": true
         },
-        "tts": {
-          "voice": "pt-BR-AntonioNeural"
-        },
+        "tts": { "voice": "pt-BR-AntonioNeural" },
         "background": {
-          "visual": {
-            "type": "video",
-            "source": "assets/bg_videos/tech_loop.mp4"
-          }
+          "visual": { "type": "video", "source": "assets/bg_videos/tech_loop.mp4" }
         },
         "visual_elements": [
           {
             "type": "image",
             "source": "https://images.unsplash.com/photo-1511367461989-f85a21fda167?w=500&q=80",
             "filters": { "remove_bg": false },
-            "layout": { "width": "90%", "position": "center", "rotation": 5 },
+            "layout": { 
+                "width": "80%", 
+                "position": ["center", 0.35], 
+                "rotation": 5 
+            },
             "animation": { "type": "slide_up", "duration": 1.0 }
           },
           {
@@ -95,22 +89,24 @@
             "content": "✨ OVERRIDE DE FUNDO",
             "style": {
               "font_family": "Lato-Black",
-              "font_size": 45,
+              "font_size": 40,
               "text_color": "#000000",
               "background_color": "#FFD700",
               "padding": [10, 20],
               "stroke_color": "#FFFFFF",
               "stroke_width": 2
             },
-            "layout": { "position": ["center", 0.85] },
-            "animation": { "type": "pop_in", "start_at": 2.0 }
+            "layout": { 
+                "position": ["center", 0.65] 
+            },
+            "//animation": { "type": "pop_in", "start_at": 2.0 }
           }
         ]
       },
       {
         "id": "cena_03_video_pip",
         "narration": {
-          "text": "Agora, um exemplo de vídeo sobreposto com áudio original mantido.",
+          "text": "Este é um verdadeiro Picture in Picture. O vídeo fica menor e no canto.",
           "subtitles": false
         },
         "visual_elements": [
@@ -118,7 +114,10 @@
             "type": "video",
             "source": "https://www.w3schools.com/html/mov_bbb.mp4",
             "audio": { "keep_audio": true, "volume": 0.5 },
-            "layout": { "width": "100%", "position": "center" },
+            "layout": { 
+                "width": "50%", 
+                "position": ["center", 0.35]
+            },
             "animation": { "type": "fade_in" }
           },
           {
@@ -131,7 +130,10 @@
               "background_color": "#000000",
               "padding": [10, 30]
             },
-            "layout": { "position": ["left", "top"], "margin": 50 },
+            "layout": { 
+                "position": ["center", 0.15],
+                "margin": 20 
+            },
             "animation": { "type": "slide_right", "start_at": 1.0 }
           }
         ]
@@ -148,7 +150,10 @@
             "type": "image",
             "source": "https://plus.unsplash.com/premium_photo-1664202526559-e21e9c0fb46a?w=500",
             "filters": { "remove_bg": true },
-            "layout": { "width": "70%", "position": "center" },
+            "layout": { 
+                "width": "60%", 
+                "position": ["center", 0.35]
+            },
             "animation": { "type": "zoom_in", "duration": "full" }
           },
           {
@@ -156,15 +161,17 @@
             "content": "R$ 49,90",
             "style": {
               "font_family": "Poppins-Bold",
-              "font_size": 80,
+              "font_size": 70,
               "text_color": "#FFFFFF",
               "background_color": "#CC0000",
               "border_radius": 20,
               "padding": [15, 50],
               "shadow": true
             },
-            "layout": { "position": ["center", 0.75] },
-            "animation": { "type": "pop_in", "start_at": 0.5 }
+            "layout": { 
+                "position": ["center", 0.65] 
+            },
+            "//animation": { "type": "pop_in", "start_at": 0.5 }
           }
         ]
       }

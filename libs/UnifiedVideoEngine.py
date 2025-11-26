@@ -11,6 +11,18 @@ from libs.TTS_Edge import EdgeTTS
 from libs.YouTube import YouTube
 from libs.Subtitle import Subtitle
 
+# Helper: Forçar RGB de 3 canais
+def force_rgb(im):
+    return np.dstack((im, im, im)) if im.ndim == 2 else im
+
+# Helper: Converter Hex para Tupla RGB manualmente
+def hex_to_rgb(hex_str):
+    hex_str = str(hex_str).lstrip('#')
+    try:
+        return tuple(int(hex_str[i:i+2], 16) for i in (0, 2, 4))
+    except:
+        return (0, 0, 0)
+
 class UnifiedVideoEngine:
     def __init__(self, video_config):
         self.config = video_config
@@ -49,7 +61,7 @@ class UnifiedVideoEngine:
             out_path = os.path.join(self.output_folder, f"{self.slug}.mp4")
             print(f"  💾 Renderizando vídeo final em: {out_path}")
             
-            # Preset 'ultrafast' para teste rápido, mude para 'medium' em produção
+            # Renderização
             final_video.write_videofile(out_path, fps=30, codec="libx264", audio_codec="aac", threads=4)
             
             if self.config.get("youtube"): self._handle_youtube_upload(out_path)
@@ -62,6 +74,16 @@ class UnifiedVideoEngine:
             return False
 
     def _process_scene(self, scene_data, index):
+        # --- ORGANIZAÇÃO DE PASTAS ---
+        # Cria uma pasta específica para esta cena (ex: scene_01_intro)
+        scene_id = scene_data.get("id", f"unk_{index}")
+        # Sanitiza o nome da pasta
+        safe_id = "".join([c if c.isalnum() or c in ('-','_') else '_' for c in scene_id])
+        scene_dir_name = f"scene_{index+1:02d}_{safe_id}"
+        scene_dir = os.path.join(self.output_folder, scene_dir_name)
+        os.makedirs(scene_dir, exist_ok=True)
+        # -----------------------------
+
         narration = scene_data.get("narration", {})
         tts_clip = None
         sub_layer = None
@@ -72,7 +94,8 @@ class UnifiedVideoEngine:
             glob_tts = self.config.get("global_settings", {}).get("tts", {})
             voice = scene_data.get("tts", {}).get("voice") or glob_tts.get("voice", "pt-BR-AntonioNeural")
             
-            scene_basename = os.path.join(self.output_folder, f"scene_{index}")
+            # Salva o áudio dentro da pasta da cena
+            scene_basename = os.path.join(scene_dir, "narration")
             
             tts = EdgeTTS({
                 "text": narration["text"], 
@@ -96,8 +119,8 @@ class UnifiedVideoEngine:
                     sub_layer = sub.generate()
                 except Exception as e: print(f"⚠️ Erro legenda: {e}")
 
-        # 2. Background
-        bg_clip = self._get_background_clip(scene_data, duration)
+        # 2. Background (Passamos scene_dir para salvar assets lá)
+        bg_clip = self._get_background_clip(scene_data, duration, scene_dir)
 
         # 3. Layers
         layers = [bg_clip]
@@ -105,7 +128,7 @@ class UnifiedVideoEngine:
             vc = VisualClip({
                 "element_data": v, 
                 "resolution_output": self.resolution, 
-                "temp_dir": self.output_folder, 
+                "temp_dir": scene_dir, # Assets visuais salvos na pasta da cena
                 "duration": duration
             })
             c = vc.generate()
@@ -122,25 +145,22 @@ class UnifiedVideoEngine:
         
         audios = []
         if tts_clip: audios.append(tts_clip)
-        bg_music = self._get_background_music(scene_data, duration)
+        
+        # Música de fundo (Passamos scene_dir)
+        bg_music = self._get_background_music(scene_data, duration, scene_dir)
         if bg_music: audios.append(bg_music)
         
         if audios: comp = comp.set_audio(CompositeAudioClip(audios))
         return comp
 
-    def _get_background_clip(self, scene_data, duration):
+    def _get_background_clip(self, scene_data, duration, scene_dir):
         glob_bg = self.config.get("global_settings", {}).get("background", {}).get("visual", {})
         bg = scene_data.get("background", {}).get("visual", glob_bg)
         
         clip = None
         src = bg.get("source")
         
-        # CORREÇÃO 1: Forçar string pura para evitar erro 'np.str_'
         if src: src = str(src)
-
-        # Função helper para garantir RGB em vídeos
-        def force_rgb(im):
-            return np.dstack((im, im, im)) if im.ndim == 2 else im
 
         if bg.get("type") in ["image", "image_dir"]:
             if bg["type"] == "image_dir" and os.path.isdir(src):
@@ -150,7 +170,8 @@ class UnifiedVideoEngine:
             if src and os.path.exists(src):
                 try:
                     img = Image.open(src).convert("RGB")
-                    tmp = os.path.join(self.output_folder, f"bg_{hash(src)}.jpg")
+                    # Salva cópia temporária na pasta da cena
+                    tmp = os.path.join(scene_dir, f"bg_image.jpg")
                     img.save(tmp)
                     clip = ImageClip(tmp)
                 except: pass
@@ -162,16 +183,17 @@ class UnifiedVideoEngine:
             
             if src and os.path.exists(src):
                 clip = VideoFileClip(src)
-                clip = clip.fl_image(force_rgb)
                 if clip.duration < duration: clip = vfx.loop(clip, duration=duration)
 
         # Fallback e ColorClip
         if not clip: 
-            # Se for cor, garante que é string válida
-            color = src if (bg.get("type")=="color" and src) else "#000000"
-            clip = ColorClip(self.resolution, color=str(color))
+            color_str = src if (bg.get("type")=="color" and src) else "#000000"
+            rgb_color = hex_to_rgb(color_str)
+            clip = ColorClip(self.resolution, color=rgb_color)
 
-        # CORREÇÃO 2: Impedir resize em ColorClip (eles já nascem no tamanho certo)
+        # Force RGB
+        clip = clip.fl_image(force_rgb)
+
         if isinstance(clip, (ImageClip, VideoFileClip)) and not isinstance(clip, ColorClip):
             ratio_clip = clip.w / clip.h
             ratio_target = self.width / self.height
@@ -184,26 +206,35 @@ class UnifiedVideoEngine:
 
         return clip.set_duration(duration)
 
-    def _get_background_music(self, scene_data, duration):
+    def _get_background_music(self, scene_data, duration, scene_dir):
         glob_audio = self.config.get("global_settings", {}).get("background", {}).get("audio", {})
         audio = scene_data.get("background", {}).get("audio", glob_audio)
         
         src = audio.get("source")
-        if src: src = str(src) # Sanitização
+        if src: src = str(src) 
 
         if audio.get("type") == "url":
             try:
-                local = os.path.join(self.output_folder, f"bg_music_{hash(src)}.mp3")
+                # Baixa música para a pasta da cena
+                local = os.path.join(scene_dir, f"bg_music.mp3")
                 if not os.path.exists(local):
                     with open(local, 'wb') as f: f.write(requests.get(src).content)
                 src = local
             except: pass
-            
-        if src and os.path.exists(src):
-            m = AudioFileClip(src)
-            if m.duration < duration: m = afx.audio_loop(m, duration=duration)
-            else: m = m.subclip(0, duration)
-            return m.volumex(audio.get("volume", 0.1))
+        
+        if src and os.path.isdir(src):
+            files = [os.path.join(src, f) for f in os.listdir(src) if f.lower().endswith(('.mp3', '.wav', '.aac', '.m4a'))]
+            if files: src = random.choice(files)
+            else: return None
+
+        if src and os.path.exists(src) and os.path.isfile(src):
+            try:
+                m = AudioFileClip(src)
+                if m.duration < duration: m = afx.audio_loop(m, duration=duration)
+                else: m = m.subclip(0, duration)
+                return m.volumex(audio.get("volume", 0.1))
+            except Exception: pass
+        
         return None
 
     def _handle_youtube_upload(self, video_path):
