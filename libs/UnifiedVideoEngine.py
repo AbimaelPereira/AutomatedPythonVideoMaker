@@ -18,86 +18,87 @@ AVAILABLE_RESOLUTIONS = {"9:16": (1080, 1920), "16:9": (1920, 1080)}
 class UnifiedVideoEngine:
     def __init__(self, data_config):
         self.data_config = data_config
+        # Garante que global_settings existe
         self.global_settings = data_config.get("global_settings", {})
         self.output_ratio = data_config.get("output_ratio", "9:16")
         self.resolution_output = AVAILABLE_RESOLUTIONS.get(self.output_ratio, (1080, 1920))
         self.tts_config = self.global_settings.get("tts", {})
         
-        # 1. Instancia a Config.
+        # 1. Instancia a Config para pegar paths padrões se necessário
         config_instance = Config()
         
         # 2. Define o slug e caminhos.
         slug = data_config.get("slug", "video_sem_slug")
         
-        # Define o diretório base de saída (usa o valor da Config ou o default)
+        # Define o diretório base de saída
         base_output_dir = config_instance.output_dir if hasattr(config_instance, 'output_dir') else os.path.join(os.getcwd(), "output")
 
-        # CORREÇÃO DA ORGANIZAÇÃO DE PASTAS: Cria pasta específica por vídeo
+        # Define a pasta do vídeo.
         self.output_dir = os.path.join(base_output_dir, slug)
-        self.temp_dir = os.path.join(self.output_dir, "temp")
         
-        # Cria os diretórios
+        # Cria o diretório do vídeo
         os.makedirs(self.output_dir, exist_ok=True)
-        os.makedirs(self.temp_dir, exist_ok=True)
         
         self.final_clips = []
         self.total_duration = 0.0
 
     def _get_tts_engine(self):
-        # Este método não é mais estritamente necessário, mas mantido.
         return EdgeTTS()
 
-    def _process_narration(self, scene_data):
+    def _process_narration(self, scene_data, target_dir):
+        # target_dir será a pasta da cena
         narration_config = scene_data.get("narration", {})
         text = narration_config.get("text", "")
         
         if not text:
             print("[UVE] Cena sem narração. Duração será fixa.")
-            return None, 0.0, None
+            return None, 0.0, None, None
 
-        # Override de voz na cena, se houver
         voice = scene_data.get("tts", {}).get("voice", self.tts_config.get("voice"))
         
-        # Arquivo de áudio temporário (apenas o basename)
-        audio_basename = os.path.join(self.temp_dir, f"audio_{scene_data['id']}")
+        # Define o caminho base do áudio DENTRO da pasta da cena
+        audio_basename = os.path.join(target_dir, f"audio_{scene_data['id']}")
         
-        print(f"[UVE] Gerando áudio para cena {scene_data['id']} com voz {voice}...")
+        print(f"[UVE] Gerando áudio para cena {scene_data['id']} em {target_dir}...")
         
         try:
-            # CORREÇÃO DO ERRO: Passa todos os parâmetros relevantes para o construtor EdgeTTS
             tts_params = {
                 "text": text,
                 "voice_id": voice,
                 "output_basename": audio_basename,
-                # Adicione outros parâmetros EdgeTTS se necessário, como 'rate'
             }
             tts_engine = EdgeTTS(params=tts_params)
             
-            # Chama o método sem argumentos, usando self.text, self.voice_id, etc.
-            final_audio_path, word_boundaries = tts_engine.generate_audio_and_subtitles()
+            tts_result = tts_engine.generate_audio_and_subtitles()
             
-            # Recalcula a duração a partir do arquivo gerado
+            final_audio_path = tts_result.get("audio_file")
+            word_boundaries = tts_result.get("word_boundaries")
+            subtitle_file = tts_result.get("subtitle_file")
+            
             audio_clip = AudioFileClip(final_audio_path)
             duration = audio_clip.duration
             
         except Exception as e:
             print(f"[ERRO UVE] Falha ao gerar TTS: {e}")
-            return None, 4.0, None # Fallback
+            return None, 4.0, None, None
         
-        audio_clip = AudioFileClip(final_audio_path)
-        
-        return audio_clip, duration, word_boundaries
+        return audio_clip, duration, word_boundaries, subtitle_file
 
-    def _create_background_clip(self, scene_data, scene_duration):
-        # Prioriza a configuração da cena, senão usa a global
-        background_config = scene_data.get("background", self.global_settings.get("background", {}))
+    def _create_background_clip(self, scene_data, scene_duration, scene_dir, video_dir):
+        if "background" in scene_data:
+            background_config = scene_data["background"]
+            storage_dir = scene_dir
+            print(f"[UVE] Usando fundo específico da cena. Salvando em: {storage_dir}")
+        else:
+            background_config = self.global_settings.get("background", {})
+            storage_dir = video_dir
+            print(f"[UVE] Usando fundo global. Salvando em: {storage_dir}")
+
         visual_config = background_config.get("visual", {})
         
         bg_clip = None
         bg_type = visual_config.get("type", "color")
         bg_source = visual_config.get("source")
-        
-        print(f"[UVE] Criando clipe de fundo. Tipo: {bg_type}, Fonte: {bg_source}")
 
         if bg_type == "color":
             color_source = bg_source or "#1a1a1a"
@@ -106,17 +107,13 @@ class UnifiedVideoEngine:
         elif bg_type == "image":
             image_path = bg_source
 
-            # Chamada ao MediaDownloader para resolver URLs no novo self.temp_dir
             if image_path and image_path.lower().startswith(("http:", "https:")):
-                image_path = MediaDownloader.resolve_source_path(image_path, self.temp_dir)
+                image_path = MediaDownloader.resolve_source_path(image_path, storage_dir)
             
             if image_path and os.path.exists(image_path):
-                print(f"[UVE] Fundo de imagem local (ou baixado): {image_path}")
                 try:
-                    # Carrega a imagem e define a duração
                     bg_clip = ImageClip(image_path, duration=scene_duration)
                     
-                    # O fundo deve preencher o quadro (resize/crop)
                     width, height = bg_clip.size
                     target_w, target_h = self.resolution_output
                     
@@ -127,39 +124,32 @@ class UnifiedVideoEngine:
                         bg_clip = bg_clip.resize(height=target_h)
                         bg_clip = vfx.crop(bg_clip, x_center=target_w/2, y_center=target_h/2, width=target_w, height=target_h)
                     
-                    # Adiciona zoom_in simples como efeito visual (opcional)
                     bg_clip = bg_clip.fx(vfx.resize, lambda t: 1.0 + 0.05 * t/scene_duration).set_pos("center")
-                    bg_clip = bg_clip.subclip(0, scene_duration) # Garante a duração
+                    bg_clip = bg_clip.subclip(0, scene_duration)
 
                 except Exception as e:
-                    print(f"[ERRO UVE] Falha ao criar ImageClip de fundo: {e}. Usando cor de fallback.")
+                    print(f"[ERRO UVE] Falha ao criar ImageClip de fundo: {e}.")
                     bg_clip = ColorClip(self.resolution_output, color="#000000", duration=scene_duration)
             else:
-                 print("[UVE] Falha ao obter caminho da imagem. Usando cor de fallback.")
                  bg_clip = ColorClip(self.resolution_output, color="#000000", duration=scene_duration)
 
         elif bg_type == "video":
-            # Simplificação: assume que videos de background são resolvidos pelo BackgroundVideo
             bg_video_processor = BackgroundVideo(params={"background_videos_dir": bg_source, "resolution_output": self.resolution_output})
             bg_clip = bg_video_processor.generate_background_video()
             
             if bg_clip and bg_clip.duration < scene_duration:
-                # Loop se o vídeo for muito curto
                 bg_clip = vfx.loop(bg_clip, duration=scene_duration)
             elif bg_clip and bg_clip.duration > scene_duration:
                 bg_clip = bg_clip.subclip(0, scene_duration)
 
         if bg_clip is None:
-            # Fallback final se tudo falhar
-            print("[UVE] Falha total ao criar clipe de fundo. Usando clipe preto.")
             return ColorClip(self.resolution_output, color="#000000", duration=scene_duration)
 
-        # Adiciona o áudio de fundo (global ou por cena)
+        # Áudio de fundo
         audio_config = background_config.get("audio", self.global_settings.get("background", {}).get("audio", {}))
         
         if audio_config.get("type") == "directory" and audio_config.get("source"):
              bg_music_dir = audio_config["source"]
-             # Adiciona o path base do projeto, assumindo que bg_music/geopolitica é relativo
              full_bg_music_dir = os.path.join(os.getcwd(), bg_music_dir) 
              
              if os.path.isdir(full_bg_music_dir):
@@ -171,14 +161,12 @@ class UnifiedVideoEngine:
                      if bg_clip.audio is None:
                         bg_clip = bg_clip.set_audio(bg_audio_clip)
                      else:
-                        # Mixa o áudio de fundo (se já houver) com a música de fundo
                         bg_clip.audio = CompositeAudioClip([bg_clip.audio, bg_audio_clip])
 
         return bg_clip.set_duration(scene_duration)
 
 
-    def _create_visual_elements_clip(self, scene_data, scene_duration):
-        # Processa os elementos visuais que se sobrepõem ao fundo
+    def _create_visual_elements_clip(self, scene_data, scene_duration, scene_dir):
         visual_elements = scene_data.get("visual_elements", [])
         
         element_clips = []
@@ -186,7 +174,7 @@ class UnifiedVideoEngine:
             config = {
                 "element_data": element_data,
                 "resolution_output": self.resolution_output,
-                "temp_dir": self.temp_dir,
+                "temp_dir": scene_dir, 
                 "duration": scene_duration
             }
             clip_processor = VisualClip(config)
@@ -197,26 +185,41 @@ class UnifiedVideoEngine:
         if not element_clips:
             return None
             
-        # Simplificação: compõe todos os elementos visuais
         return CompositeVideoClip(element_clips, size=self.resolution_output).set_duration(scene_duration)
 
 
-    def _create_subtitle_clip(self, scene_duration, word_timing):
-        # Apenas cria o clipe de legenda se houver timing
-        if not word_timing:
+    def _create_subtitle_clip(self, scene_duration, subtitle_file):
+        if not subtitle_file or not os.path.exists(subtitle_file):
+            print("[UVE] Arquivo de legenda não encontrado ou inexistente.")
             return None
         
-        # O EdgeTTS retorna os limites de palavras para a Subtitle usar
-        subtitle_config = self.global_settings.get("subtitle", {})
+        # Copia configurações globais de legenda
+        subtitle_config = self.global_settings.get("subtitle", {}).copy()
         
-        # Assumimos que Subtitle é uma classe que retorna um TextClip/CompositeVideoClip
-        subtitle_generator = Subtitle(
-            word_timing=word_timing,
-            resolution=self.resolution_output,
-            config=subtitle_config
-        )
+        # ---------------------------------------------------------------------
+        # MUDANÇA CRÍTICA: Extrai os paddings das configurações globais
+        # Se não estiverem definidos no JSON, usa valores seguros padrão.
+        # ---------------------------------------------------------------------
+        padding_bottom = self.global_settings.get("padding_bottom", 150)
+        padding_side = self.global_settings.get("padding_side", 50)
         
-        return subtitle_generator.generate().set_duration(scene_duration)
+        print(f"[UVE] Configurando legendas com Padding Inferior: {padding_bottom}px, Lateral: {padding_side}px")
+
+        # Adiciona/Sobrescreve com os parâmetros obrigatórios e os novos paddings
+        subtitle_config.update({
+            "subtitle_narration_file": subtitle_file,
+            "resolution_output": self.resolution_output,
+            # Passa os valores exatos de padding para a classe Subtitle
+            "padding_bottom": padding_bottom,
+            "padding_side": padding_side
+        })
+        
+        try:
+            subtitle_generator = Subtitle(params=subtitle_config)
+            return subtitle_generator.generate().set_duration(scene_duration)
+        except Exception as e:
+            print(f"[ERRO UVE] Falha ao gerar legenda: {e}")
+            return None
 
     def run(self, output_filename="final_video.mp4"):
         print("[UVE] Iniciando processamento do vídeo...")
@@ -227,34 +230,37 @@ class UnifiedVideoEngine:
             print(f"=========================================================")
             print(f"[UVE] Processando cena: {scene_id}")
 
-            # 1. Processar Narração (TTS)
-            audio_clip, duration_from_tts, word_timing = self._process_narration(scene)
+            scene_dir = os.path.join(self.output_dir, scene_id)
+            os.makedirs(scene_dir, exist_ok=True)
+            print(f"[UVE] Pasta da cena: {scene_dir}")
+
+            # 1. Narração
+            audio_clip, duration_from_tts, word_timing, subtitle_file = self._process_narration(scene, scene_dir)
             
-            # 2. Definir Duração da Cena
+            # 2. Duração
             scene_duration = scene.get("duration", duration_from_tts)
             if not scene_duration or scene_duration < 0.1:
-                scene_duration = 4.0 # Duração de fallback
+                scene_duration = 4.0 
             print(f"[UVE] Duração final da cena: {scene_duration:.2f} segundos.")
 
-            # 3. Criar Clipe de Fundo (Com a correção de URL de imagem)
-            background_clip = self._create_background_clip(scene, scene_duration)
+            # 3. Fundo
+            background_clip = self._create_background_clip(scene, scene_duration, scene_dir, self.output_dir)
             
-            # 4. Criar Clipe de Elementos Visuais
-            visual_clip = self._create_visual_elements_clip(scene, scene_duration)
+            # 4. Elementos Visuais
+            visual_clip = self._create_visual_elements_clip(scene, scene_duration, scene_dir)
             
-            # 5. Criar Clipe de Legendas (Subtitles)
+            # 5. Legendas
             subtitle_clip = None
             if scene.get("narration", {}).get("subtitles", False):
-                subtitle_clip = self._create_subtitle_clip(scene_duration, word_timing)
+                subtitle_clip = self._create_subtitle_clip(scene_duration, subtitle_file)
 
-            # 6. Compor a Cena
+            # 6. Composição
             final_scene_clip = [background_clip]
             if visual_clip: final_scene_clip.append(visual_clip)
             if subtitle_clip: final_scene_clip.append(subtitle_clip)
 
             composed_clip = CompositeVideoClip(final_scene_clip, size=self.resolution_output).set_duration(scene_duration)
             
-            # 7. Adicionar o Áudio da Narração
             if audio_clip:
                 composed_clip.audio = CompositeAudioClip([composed_clip.audio, audio_clip]) if composed_clip.audio else audio_clip
 
@@ -265,23 +271,22 @@ class UnifiedVideoEngine:
             print("[ERRO UVE] Nenhuma cena processada.")
             return None
             
-        # 8. Concatenar todas as cenas
         final_video = concatenate_videoclips(all_scene_clips, method="compose")
 
-        # 9. Escrever o Arquivo Final
-        # Garante o nome do arquivo final baseado no slug na pasta correta
         slug = self.data_config.get("slug", "final_video")
         output_filename = f"{slug}.mp4"
         output_path = os.path.join(self.output_dir, output_filename)
         
         print(f"=========================================================")
         print(f"[UVE] Escrevendo vídeo final em: {output_path}")
+        
+        ffmpeg_audio_temp = os.path.join(self.output_dir, 'temp-audio-rendering.m4a')
+        
         final_video.write_videofile(
             output_path,
             codec='libx264',
             audio_codec='aac',
-            # Usa o self.temp_dir correto para o arquivo de áudio temporário do MoviePy
-            temp_audiofile=os.path.join(self.temp_dir, 'temp-audio.m4a'),
+            temp_audiofile=ffmpeg_audio_temp,
             remove_temp=True,
             fps=24,
             preset='medium'

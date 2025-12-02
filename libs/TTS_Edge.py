@@ -28,7 +28,6 @@ class EdgeTTS:
             "silence_thresh": -40,
             "min_silence_len": 400,
             "keep_silence": 275,
-            # "rate": "+15%"
         }
         if params:
             defaults.update(params)
@@ -69,7 +68,15 @@ class EdgeTTS:
         return audio_data, word_boundaries
 
     def _remove_silences(self, audio_data, word_boundaries):
-        with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
+        # GARANTIA: Usa o mesmo diretório do arquivo final para o temporário
+        target_dir = os.path.dirname(self.output_basename)
+        if not target_dir: target_dir = "."
+        
+        # Cria o diretório se não existir (apenas segurança, pois UVE já cria)
+        os.makedirs(target_dir, exist_ok=True)
+
+        # Cria arquivo temporário LOCALMENTE (não no /tmp do sistema)
+        with tempfile.NamedTemporaryFile(suffix=".wav", delete=False, dir=target_dir) as tmp:
             tmp.write(audio_data)
             tmp.flush()
             tmp_path = tmp.name
@@ -91,7 +98,6 @@ class EdgeTTS:
             segment = audio[start:end + self.keep_silence]
             new_audio += segment
 
-            # Realinha palavras que caem dentro desse trecho
             for w in word_boundaries:
                 if w["start"] >= start and w["end"] <= end:
                     new_start = current_time + (w["start"] - start)
@@ -104,7 +110,6 @@ class EdgeTTS:
 
             current_time += len(segment)
 
-        # garante ordenação e remove sobreposições
         adjusted_boundaries.sort(key=lambda x: x["start"])
 
         final_path = f"{self.output_basename}.{self.audio_format}"
@@ -116,7 +121,7 @@ class EdgeTTS:
         with open(srt_path, "w", encoding="utf-8") as f:
             for i, w in enumerate(word_boundaries, 1):
                 start = max(0, w['start'])
-                end = max(start + 50, w['end'])  # evita sobreposição mínima
+                end = max(start + 50, w['end'])
                 f.write(f"{i}\n")
                 f.write(f"{ms_to_srt_time(start)} --> {ms_to_srt_time(end)}\n")
                 f.write(f"{w['word']}\n\n")
@@ -132,5 +137,6 @@ class EdgeTTS:
         return {
             "audio_file": str(final_audio),
             "subtitle_file": str(srt_file),
-            "audio_total_duration": duration
+            "audio_total_duration": duration,
+            "word_boundaries": new_boundaries
         }
