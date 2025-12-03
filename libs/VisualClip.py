@@ -161,7 +161,12 @@ class VisualClip:
         # 2. Criar Imagem e Desenhar Fundo
         img = Image.new("RGBA", (int(box_w), int(box_h)), (0,0,0,0))
         draw = ImageDraw.Draw(img)
-        draw.rounded_rectangle([(0,0),(box_w,box_h)], radius=style.get("border_radius",0), fill=style.get("background_color","white"))
+        
+        background_color = style.get("background_color", "white")
+        
+        # CORREÇÃO ANTERIOR MANTIDA: Só desenha o fundo se não for 'transparent'
+        if background_color != "transparent":
+            draw.rounded_rectangle([(0,0),(box_w,box_h)], radius=style.get("border_radius",0), fill=background_color)
         
         # 3. Desenhar Texto (FIX: Ajuste vertical usando bbox[1])
         text_y_pos = pad[0] - bbox[1] 

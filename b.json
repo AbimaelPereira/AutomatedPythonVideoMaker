@@ -1,0 +1,67 @@
+[
+  {
+    "slug": "demo_funcionalidades_v3",
+    "output_ratio": "9:16",
+    "global_settings": {
+      "tts": {
+        "voice": "pt-BR-AntonioNeural",
+        "volume": "+0%"
+      },
+      "background": {
+        "audio": {
+          "type": "file",
+          "source": "assets/sound_effects/input.mp3",
+          "volume": 0.1
+        },
+        "visual": {
+          "type": "image",
+          "source": "https://www.infomoney.com.br/wp-content/uploads/2025/07/0d9a3378.webp"
+        }
+      }
+    },
+    "scenes": [
+      {
+        "id": "intro_texto",
+        "duration": 3.0,
+        "narration": {
+          "text": "Bem-vindo ao teste de funcionalidades.",
+          "subtitles": true
+        },
+        "background": {
+          "visual": {
+            "type": "image",
+            "source": "https://conteudo.imguol.com.br/c/noticias/17/2025/10/26/26out2025---donald-trump-e-lula-deram-aperto-de-mao-1761471246610_v2_300x225.jpg.webp"
+          }
+        }
+      },
+      {
+        "id": "imagens_efeitos",
+        "duration": 3.5,
+        "narration": {
+          "text": "Suporte a imagens e remoção de fundo.",
+          "subtitles": true
+        },
+        "background": {
+          "visual": {
+            "type": "color",
+            "source": "#ffffff"
+          }
+        }
+      },
+      {
+        "id": "video_layout",
+        "duration": 3.5,
+        "narration": {
+          "text": "E elementos animados posicionados.",
+          "subtitles": true
+        },
+        "background": {
+          "visual": {
+            "type": "color",
+            "source": "#000000"
+          }
+        }
+      }
+    ]
+  }
+]

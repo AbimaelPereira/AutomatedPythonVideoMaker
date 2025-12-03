@@ -7,13 +7,31 @@ from moviepy.editor import *
 # Assumed imports from user's libs based on project structure
 from libs.Config import Config
 from libs.BackgroundVideo import BackgroundVideo
-from libs.VisualClip import VisualClip
+from libs.VisualClip import VisualClip, force_rgb 
 from libs.Subtitle import Subtitle
 from libs.MediaDownloader import MediaDownloader 
 from libs.TTS_Edge import EdgeTTS 
 
 # Assumed standard resolution configuration
 AVAILABLE_RESOLUTIONS = {"9:16": (1080, 1920), "16:9": (1920, 1080)}
+
+# --- HELPER PARA CONVERSÃO SEGURA DE COR ---
+def hex_to_rgb(hex_value):
+    """Converte string hex (#RRGGBB) para tupla (R, G, B) para evitar erros no ColorClip."""
+    if not isinstance(hex_value, str):
+        return hex_value # Retorna como está se não for string (ex: já é tupla)
+    
+    hex_value = hex_value.lstrip('#')
+    try:
+        if len(hex_value) == 6:
+            return tuple(int(hex_value[i:i+2], 16) for i in (0, 2, 4))
+        else:
+            print(f"[WARN] Cor inválida: {hex_value}. Usando preto.")
+            return (0, 0, 0)
+    except ValueError:
+        print(f"[WARN] Erro ao converter cor: {hex_value}. Usando preto.")
+        return (0, 0, 0)
+# -------------------------------------------
 
 class UnifiedVideoEngine:
     def __init__(self, data_config):
@@ -101,8 +119,10 @@ class UnifiedVideoEngine:
         bg_source = visual_config.get("source")
 
         if bg_type == "color":
+            # CORREÇÃO: Converter hex para RGB
             color_source = bg_source or "#1a1a1a"
-            bg_clip = ColorClip(self.resolution_output, color=color_source, duration=scene_duration)
+            rgb_color = hex_to_rgb(color_source)
+            bg_clip = ColorClip(self.resolution_output, color=rgb_color, duration=scene_duration)
             
         elif bg_type == "image":
             image_path = bg_source
@@ -129,9 +149,9 @@ class UnifiedVideoEngine:
 
                 except Exception as e:
                     print(f"[ERRO UVE] Falha ao criar ImageClip de fundo: {e}.")
-                    bg_clip = ColorClip(self.resolution_output, color="#000000", duration=scene_duration)
+                    bg_clip = ColorClip(self.resolution_output, color=(0,0,0), duration=scene_duration)
             else:
-                 bg_clip = ColorClip(self.resolution_output, color="#000000", duration=scene_duration)
+                 bg_clip = ColorClip(self.resolution_output, color=(0,0,0), duration=scene_duration)
 
         elif bg_type == "video":
             bg_video_processor = BackgroundVideo(params={"background_videos_dir": bg_source, "resolution_output": self.resolution_output})
@@ -143,7 +163,8 @@ class UnifiedVideoEngine:
                 bg_clip = bg_clip.subclip(0, scene_duration)
 
         if bg_clip is None:
-            return ColorClip(self.resolution_output, color="#000000", duration=scene_duration)
+            # Fallback seguro com tupla
+            bg_clip = ColorClip(self.resolution_output, color=(0,0,0), duration=scene_duration)
 
         # Áudio de fundo
         audio_config = background_config.get("audio", self.global_settings.get("background", {}).get("audio", {}))
@@ -162,6 +183,24 @@ class UnifiedVideoEngine:
                         bg_clip = bg_clip.set_audio(bg_audio_clip)
                      else:
                         bg_clip.audio = CompositeAudioClip([bg_clip.audio, bg_audio_clip])
+        
+        # Tratamento de áudio para arquivo único (conforme seu JSON original tinha suporte implícito)
+        elif audio_config.get("type") == "file" and audio_config.get("source"):
+            audio_source = MediaDownloader.resolve_source_path(audio_config["source"], storage_dir)
+            if audio_source and os.path.exists(audio_source):
+                bg_audio_clip = AudioFileClip(audio_source)
+                # Loop se o áudio for menor que a cena
+                if bg_audio_clip.duration < scene_duration:
+                    bg_audio_clip = afx.audio_loop(bg_audio_clip, duration=scene_duration)
+                else:
+                    bg_audio_clip = bg_audio_clip.subclip(0, scene_duration)
+                
+                bg_audio_clip = bg_audio_clip.volumex(audio_config.get("volume", 0.1))
+                if bg_clip.audio is None:
+                    bg_clip = bg_clip.set_audio(bg_audio_clip)
+                else:
+                    bg_clip.audio = CompositeAudioClip([bg_clip.audio, bg_audio_clip])
+
 
         return bg_clip.set_duration(scene_duration)
 
@@ -193,23 +232,15 @@ class UnifiedVideoEngine:
             print("[UVE] Arquivo de legenda não encontrado ou inexistente.")
             return None
         
-        # Copia configurações globais de legenda
         subtitle_config = self.global_settings.get("subtitle", {}).copy()
-        
-        # ---------------------------------------------------------------------
-        # MUDANÇA CRÍTICA: Extrai os paddings das configurações globais
-        # Se não estiverem definidos no JSON, usa valores seguros padrão.
-        # ---------------------------------------------------------------------
         padding_bottom = self.global_settings.get("padding_bottom", 150)
         padding_side = self.global_settings.get("padding_side", 50)
         
         print(f"[UVE] Configurando legendas com Padding Inferior: {padding_bottom}px, Lateral: {padding_side}px")
 
-        # Adiciona/Sobrescreve com os parâmetros obrigatórios e os novos paddings
         subtitle_config.update({
             "subtitle_narration_file": subtitle_file,
             "resolution_output": self.resolution_output,
-            # Passa os valores exatos de padding para a classe Subtitle
             "padding_bottom": padding_bottom,
             "padding_side": padding_side
         })
@@ -255,12 +286,29 @@ class UnifiedVideoEngine:
                 subtitle_clip = self._create_subtitle_clip(scene_duration, subtitle_file)
 
             # 6. Composição
+            # Empilha: Fundo -> Visual -> Legenda
             final_scene_clip = [background_clip]
             if visual_clip: final_scene_clip.append(visual_clip)
             if subtitle_clip: final_scene_clip.append(subtitle_clip)
 
-            composed_clip = CompositeVideoClip(final_scene_clip, size=self.resolution_output).set_duration(scene_duration)
+            # --- CORREÇÃO DE SEGURANÇA ---
+            # Garante que TODOS os clips sejam RGB antes de compor
+            # Isso evita que o MoviePy tente misturar arrays de Strings (do ColorClip bugado) ou Máscaras com RGB
+            safe_clips = []
+            for c in final_scene_clip:
+                try:
+                    # Aplica force_rgb que foi importado do VisualClip
+                    c = c.fl_image(force_rgb) 
+                    safe_clips.append(c)
+                except Exception as e:
+                    print(f"[WARN] Falha ao sanitizar clip: {e}")
+                    safe_clips.append(c)
+
+            composed_clip = CompositeVideoClip(safe_clips, size=self.resolution_output).set_duration(scene_duration)
             
+            # Reforço final
+            composed_clip = composed_clip.fl_image(force_rgb)
+
             if audio_clip:
                 composed_clip.audio = CompositeAudioClip([composed_clip.audio, audio_clip]) if composed_clip.audio else audio_clip
 
