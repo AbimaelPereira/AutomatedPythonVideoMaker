@@ -8,11 +8,6 @@
         "volume": "+0%"
       },
       "background": {
-        "audio": {
-          "type": "file",
-          "source": "assets/sound_effects/input.mp3",
-          "volume": 0.1
-        },
         "visual": {
           "type": "color",
           "source": "#1a1a1a"
@@ -56,83 +51,6 @@
             "animation": {
               "type": "fade_in",
               "duration": 1.0
-            }
-          }
-        ]
-      },
-      {
-        "id": "imagens_efeitos",
-        "duration": 3.5,
-        "narration": {
-          "text": "Suporte a imagens e remoção de fundo.",
-          "subtitles": true
-        },
-        "background": {
-          "visual": {
-            "type": "color",
-            "source": "#ffffff"
-          }
-        },
-        "visual_elements": [
-          {
-            "type": "image",
-            "source": "assets/oferta_todo_dia/black_friday_amazon.gif",
-            "filters": {
-              "remove_bg": false
-            },
-            "layout": {
-              "width": "90%",
-              "position": "center"
-            },
-            "animation": {
-              "type": "zoom_in",
-              "duration": "full"
-            }
-          }
-        ]
-      },
-      {
-        "id": "video_layout",
-        "duration": 3.5,
-        "narration": {
-          "text": "E elementos animados posicionados.",
-          "subtitles": true
-        },
-        "background": {
-          "visual": {
-            "type": "color",
-            "source": "#000000"
-          }
-        },
-        "visual_elements": [
-          {
-            "type": "video",
-            "source": "assets/oferta_todo_dia/inscreva_se.gif",
-            "audio": {
-              "keep_audio": false
-            },
-            "layout": {
-              "width": "60%",
-              "position": "bottom_center",
-              "margin": 300,
-              "rotation": 0
-            },
-            "animation": {
-              "type": "fade_in",
-              "duration": 0.5
-            }
-          },
-          {
-            "type": "text_box",
-            "content": "FIM DO DEMO",
-            "style": {
-              "font_family": "Poppins-ExtraBold",
-              "font_size": 60,
-              "text_color": "#00ff00",
-              "background_color": "transparent"
-            },
-            "layout": {
-              "position": "center"
             }
           }
         ]

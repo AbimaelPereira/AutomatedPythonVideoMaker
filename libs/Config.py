@@ -3,7 +3,6 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-
 class Config:
     def __init__(self):
         def to_bool(value):
@@ -18,18 +17,22 @@ class Config:
             "available_resolutions": {"9:16": (1080, 1920), "16:9": (1920, 1080)},
             "output_ratio": os.getenv("OUTPUT_RATIO", "9:16"),
             
-            # --- NOVAS CONFIGURAÇÕES DE LAYOUT ---
-            "padding": 50, # Mantido para compatibilidade, mas o ideal é usar os específicos abaixo
-            "padding_top": int(os.getenv("PADDING_TOP", 100)),     # Margem segura topo
-            "padding_bottom": int(os.getenv("PADDING_BOTTOM", 150)), # Margem segura base (onde fica a legenda)
-            "padding_side": int(os.getenv("PADDING_SIDE", 50)),    # Margem lateral
-            "stack_gap_percent": float(os.getenv("STACK_GAP_PERCENT", 0.02)), # 2% da altura da tela como gap padrão
+            # --- CONFIGURAÇÕES DE LAYOUT (TELA 9:16) ---
+            # Padding Bottom define a altura da CAIXA AZUL (Legenda)
+            "padding_bottom": int(os.getenv("PADDING_BOTTOM", 250)), 
+            
+            # Padding Top define o início da CAIXA VERMELHA (Visuais)
+            "padding_top": int(os.getenv("PADDING_TOP", 100)),     
+            
+            # Padding Side define a margem lateral da CAIXA VERMELHA
+            "padding_side": int(os.getenv("PADDING_SIDE", 50)),    
+            
+            # Espaço entre os elementos visuais na pilha (2% da altura)
+            "stack_gap_percent": float(os.getenv("STACK_GAP_PERCENT", 0.02)), 
             # -------------------------------------
 
-            # --- NOVO: DEBUG LAYOUT ---
+            "padding": 50, # Fallback
             "debug_layout": to_bool(os.getenv("DEBUG_LAYOUT", False)),
-            # --------------------------
-
             "max_width_percent": 0.6,
             "manchete_opacity": 0.89,
             "crossfade_duration": float(os.getenv("CROSSFADE_DURATION", 0.5)),
@@ -64,7 +67,6 @@ class Config:
         self.config[key] = value
         setattr(self, key, value)
 
-        # se for output_ratio, atualiza width e height
         if key == "output_ratio":
             if value in self.config["available_resolutions"]:
                 self.set_item("resolution_output", self.config["available_resolutions"][value])

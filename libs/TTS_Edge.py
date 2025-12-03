@@ -65,6 +65,8 @@ class EdgeTTS:
                     "end": end_ms
                 })
 
+        # print(word_boundaries) # Debug opcional
+
         return audio_data, word_boundaries
 
     def _remove_silences(self, audio_data, word_boundaries):
@@ -72,10 +74,8 @@ class EdgeTTS:
         target_dir = os.path.dirname(self.output_basename)
         if not target_dir: target_dir = "."
         
-        # Cria o diretório se não existir (apenas segurança, pois UVE já cria)
         os.makedirs(target_dir, exist_ok=True)
 
-        # Cria arquivo temporário LOCALMENTE (não no /tmp do sistema)
         with tempfile.NamedTemporaryFile(suffix=".wav", delete=False, dir=target_dir) as tmp:
             tmp.write(audio_data)
             tmp.flush()
@@ -93,20 +93,47 @@ class EdgeTTS:
         new_audio = AudioSegment.empty()
         adjusted_boundaries = []
         current_time = 0
+        
+        # Conjunto para evitar duplicar palavras se houver sobreposição estranha
+        processed_words_indices = set()
+
+        # Tolerância em ms para "salvar" palavras que começam um pouco antes ou terminam um pouco depois
+        # do corte seco do silêncio.
+        TOLERANCE = 150 
 
         for start, end in non_silence_ranges:
-            segment = audio[start:end + self.keep_silence]
+            # O segmento de áudio inclui o keep_silence no final
+            segment_end_extended = end + self.keep_silence
+            segment = audio[start:segment_end_extended]
             new_audio += segment
 
-            for w in word_boundaries:
-                if w["start"] >= start and w["end"] <= end:
-                    new_start = current_time + (w["start"] - start)
-                    new_end = current_time + (w["end"] - start)
+            for i, w in enumerate(word_boundaries):
+                if i in processed_words_indices:
+                    continue
+
+                # CORREÇÃO PRINCIPAL:
+                # 1. Usa segment_end_extended (pois o áudio existe até lá)
+                # 2. Adiciona TOLERANCE para pegar palavras que o pydub cortou o "rabinho" (fade out)
+                # 3. Adiciona TOLERANCE no início para pegar ataques suaves
+                
+                word_starts_in_segment = w["start"] >= (start - TOLERANCE)
+                word_ends_in_segment = w["end"] <= (segment_end_extended + TOLERANCE)
+
+                if word_starts_in_segment and word_ends_in_segment:
+                    # Calcula o novo tempo relativo
+                    # max(0, ...) evita tempo negativo se a tolerância pegou algo antes
+                    offset_start = max(0, w["start"] - start)
+                    duration = w["end"] - w["start"]
+                    
+                    new_start = current_time + offset_start
+                    new_end = new_start + duration
+
                     adjusted_boundaries.append({
                         "word": w["word"],
                         "start": new_start,
                         "end": new_end
                     })
+                    processed_words_indices.add(i)
 
             current_time += len(segment)
 
@@ -121,7 +148,9 @@ class EdgeTTS:
         with open(srt_path, "w", encoding="utf-8") as f:
             for i, w in enumerate(word_boundaries, 1):
                 start = max(0, w['start'])
-                end = max(start + 50, w['end'])
+                # Garante duração mínima para não piscar na tela
+                end = max(start + 100, w['end']) 
+                
                 f.write(f"{i}\n")
                 f.write(f"{ms_to_srt_time(start)} --> {ms_to_srt_time(end)}\n")
                 f.write(f"{w['word']}\n\n")
@@ -131,9 +160,16 @@ class EdgeTTS:
         audio_data, word_boundaries = asyncio.get_event_loop().run_until_complete(
             self._synthesize_audio_async()
         )
+        
+        # Remove silêncios e ajusta legendas
         final_audio, new_boundaries = self._remove_silences(audio_data, word_boundaries)
+        
+        # [REMOVIDO] O exit() e prints de debug que paravam a execução
+        # print(new_boundaries) 
+        
         srt_file = self._generate_srt_word_by_word(new_boundaries)
         duration = MP3(str(final_audio)).info.length
+        
         return {
             "audio_file": str(final_audio),
             "subtitle_file": str(srt_file),
