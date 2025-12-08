@@ -1,6 +1,6 @@
 [
   {
-    "slug": "demo_funcionalidades_v3",
+    "slug": "gilmar_mendes_stf",
     "output_ratio": "9:16",
     "global_settings": {
       "tts": {
@@ -8,53 +8,82 @@
         "volume": "+0%"
       },
       "background": {
-        "visual": {
-          "type": "color",
-          "source": "#1a1a1a"
+        "//audio": {
+          "type": "directory",
+          "source": "bg_music/geopolitica",
+          "volume": 0.2
         }
-      },
-      "//subtitle": {
-        "font_size": 60,
-        "color": "yellow"
       }
     },
     "scenes": [
       {
-        "id": "intro_texto",
-        "duration": 3.0,
+        "id": "scene_1",
         "narration": {
-          "text": "Bem-vindo ao teste de funcionalidades.",
+          "text": "Guerra declarada em Brasília! Uma canetada do STF acaba de mudar as regras do jogo político.",
           "subtitles": true
         },
         "background": {
           "visual": {
-            "type": "color",
-            "source": "#2c3e50"
+            "type": "image",
+            "source": "./assets/Geopolitica/video1/1.png"
           }
+        }
+      },
+      {
+        "id": "scene_2",
+        "narration": {
+          "text": "O ministro Gilmar Mendes determinou que apenas a Procuradoria-Geral da República pode pedir o impeachment de ministros da Corte.",
+          "subtitles": true
         },
-        "visual_elements": [
-          {
-            "type": "text_box",
-            "content": "TESTE VISUAL",
-            "style": {
-              "font_family": "Lato-Bold",
-              "font_size": 80,
-              "text_color": "white",
-              "background_color": "#e74c3c",
-              "padding": [20, 40],
-              "border_radius": 15
-            },
-            "layout": {
-              "position": "top_center",
-              "margin": 150
-            },
-            "animation": {
-              "type": "fade_in",
-              "duration": 1.0
-            }
+        "background": {
+          "visual": {
+            "type": "image",
+            "source": "./assets/Geopolitica/video1/2.png"
           }
-        ]
+        }
+      },
+      {
+        "id": "scene_3",
+        "narration": {
+          "text": "A decisão caiu como uma bomba no Congresso. Parlamentares já articulam uma PEC urgente para derrubar a medida.",
+          "subtitles": true
+        },
+        "background": {
+          "visual": {
+            "type": "image",
+            "source": "./assets/Geopolitica/video1/3.png"
+          }
+        }
+      },
+      {
+        "id": "scene_4",
+        "narration": {
+          "text": "Especialistas alertam: o conflito entre Judiciário e Legislativo atingiu seu nível mais crítico em anos.",
+          "subtitles": true
+        },
+        "background": {
+          "visual": {
+            "type": "image",
+            "source": "./assets/Geopolitica/video1/4.png"
+          }
+        }
+      },
+      {
+        "id": "scene_5",
+        "narration": {
+          "text": "Quais os proximos passos dessa guerra? Já se inscreve pra não ficar desinformado!",
+          "subtitles": true
+        },
+        "background": {
+          "visual": {
+            "type": "image",
+            "source": "./assets/Geopolitica/video1/5.png"
+          }
+        }
       }
-    ]
+    ],
+    "youtube": {
+      ""
+    }
   }
 ]

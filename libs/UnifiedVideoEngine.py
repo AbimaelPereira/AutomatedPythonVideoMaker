@@ -11,6 +11,7 @@ from libs.Subtitle import Subtitle
 from libs.MediaDownloader import MediaDownloader 
 from libs.TTS_Edge import EdgeTTS
 from libs.LayoutEngine import LayoutEngine 
+from libs.Youtube import Youtube
 
 AVAILABLE_RESOLUTIONS = {"9:16": (1080, 1920), "16:9": (1920, 1080)}
 
@@ -126,6 +127,7 @@ class UnifiedVideoEngine:
                         bg_clip = bg_clip.resize(height=target_h)
                         bg_clip = vfx.crop(bg_clip, x_center=target_w/2, y_center=target_h/2, width=target_w, height=target_h)
                     
+                    # aplica um leve zoom in ao longo do tempo
                     bg_clip = bg_clip.fx(vfx.resize, lambda t: 1.0 + 0.05 * t/scene_duration).set_pos("center")
                     bg_clip = bg_clip.subclip(0, scene_duration)
                 except Exception as e:
@@ -133,7 +135,7 @@ class UnifiedVideoEngine:
             else:
                  bg_clip = ColorClip(self.resolution_output, color=(0,0,0), duration=scene_duration)
 
-        elif bg_type == "video":
+        elif bg_type == "directory" and bg_source:
             bg_video_processor = BackgroundVideo(params={"background_videos_dir": bg_source, "resolution_output": self.resolution_output})
             bg_clip = bg_video_processor.generate_background_video()
             if bg_clip:
@@ -141,6 +143,32 @@ class UnifiedVideoEngine:
                     bg_clip = vfx.loop(bg_clip, duration=scene_duration)
                 else:
                     bg_clip = bg_clip.subclip(0, scene_duration)
+        # video file
+        elif bg_type == "video" and bg_source:
+            video_path = bg_source
+            if video_path.lower().startswith(("http:", "https:")):
+                video_path = MediaDownloader.resolve_source_path(video_path, storage_dir)
+            if video_path and os.path.exists(video_path):
+                try:
+                    bg_clip = VideoFileClip(video_path, audio=False)
+                    width, height = bg_clip.size
+                    target_w, target_h = self.resolution_output
+                    
+                    if (width / height) < (target_w / target_h):
+                        bg_clip = bg_clip.resize(width=target_w)
+                        bg_clip = vfx.crop(bg_clip, x_center=target_w/2, y_center=target_h/2, width=target_w, height=target_h)
+                    else:
+                        bg_clip = bg_clip.resize(height=target_h)
+                        bg_clip = vfx.crop(bg_clip, x_center=target_w/2, y_center=target_h/2, width=target_w, height=target_h)
+                    
+                    if bg_clip.duration < scene_duration:
+                        bg_clip = vfx.loop(bg_clip, duration=scene_duration)
+                    else:
+                        bg_clip = bg_clip.subclip(0, scene_duration)
+                except Exception as e:
+                    bg_clip = ColorClip(self.resolution_output, color=(0,0,0), duration=scene_duration)
+            else:
+                bg_clip = ColorClip(self.resolution_output, color=(0,0,0), duration=scene_duration)
 
         if bg_clip is None:
             bg_clip = ColorClip(self.resolution_output, color=(0,0,0), duration=scene_duration)
@@ -340,4 +368,13 @@ class UnifiedVideoEngine:
             fps=24,
             preset='medium'
         )
+
+        if self.data_config.get("youtube"):
+            print("[UVE] Iniciando upload para o YouTube...")
+            youtube_params = self.data_config.get("youtube", {})
+            youtube_params["video_path"] = output_path
+
+            youtube_uploader = Youtube(params=youtube_params)
+            youtube_uploader.upload()
+
         return output_path
