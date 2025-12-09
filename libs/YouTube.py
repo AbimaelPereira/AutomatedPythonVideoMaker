@@ -26,7 +26,6 @@ class YouTube:
             "video_path": os.getenv("VIDEO_PATH", "test_video.mp4"),
             "title": os.getenv("VIDEO_TITLE", "🎥 Teste de Upload via API"),
             "description": os.getenv("VIDEO_DESCRIPTION", "Vídeo de teste enviado automaticamente via API do YouTube."),
-            "pinned_comment": os.getenv("VIDEO_PINNED_COMMENT", False),
             "tags": os.getenv("VIDEO_TAGS", "python,youtube,teste").split(","),
             "category_id": os.getenv("VIDEO_CATEGORY_ID", "22"),  # 22 = People & Blogs
             "privacy_status": os.getenv("VIDEO_PRIVACY", "private"),  # private | unlisted | public
@@ -137,9 +136,6 @@ class YouTube:
                 "privacyStatus": self.privacy_status
             }
         }
-
-        if self.pinned_comment:
-            request_body["snippet"]["pinnedComment"] = self.pinned_comment
 
         # Agendamento opcional - SEMPRE em UTC
         if self.publish_at and self.privacy_status == "private":
