@@ -1,6 +1,6 @@
 [
   {
-    "slug": "gilmar_mendes_stf",
+    "slug": "achadinhos_verao_refrescante",
     "output_ratio": "9:16",
     "global_settings": {
       "tts": {
@@ -8,82 +8,234 @@
         "volume": "+0%"
       },
       "background": {
-        "//audio": {
-          "type": "directory",
-          "source": "bg_music/geopolitica",
-          "volume": 0.2
+        "visual": {
+          "type": "color",
+          "source": "#FFC107"
         }
       }
     },
+    "youtube": {
+      "token_file_name": "oferta_todo_dia.json",
+      "privacy_status": "private",
+      "category_id": "22",
+      "title": "Achadinhos para Sobreviver ao Calor! 🥵 Ventilador e Climatizador WAP e Mondial #shorts",
+      "tags": [
+        "ventilador",
+        "climatizador",
+        "wap",
+        "mondial",
+        "verão",
+        "calor",
+        "ofertas",
+        "amazon",
+        "achadinhos",
+        "casa"
+      ],
+      "description": "Fuja do calor agora mesmo com esses achadinhos! Confira os links oficiais:\n\n1️⃣ Ventilador Mondial 30cm: https://amzn.to/4oS1Pxf\n\n2️⃣ Ventilador WAP 50cm: https://amzn.to/4940YVz\n\n3️⃣ Climatizador WAP 4 em 1: https://amzn.to/4oK1FYR\n\n⚠️ Aviso: Links de afiliados. Como Participante do Programa de Associados da Amazon, eu ganho de compras qualificadas.Os preços citados podem sofrer alterações; consulte o valor atual no link.\n\n#ventilador #climatizador #wap #mondial #verao #calor #achadinhos"
+    },
     "scenes": [
       {
-        "id": "scene_1",
+        "id": "intro_verao2",
         "narration": {
-          "text": "Guerra declarada em Brasília! Uma canetada do STF acaba de mudar as regras do jogo político.",
+          "text": "3 opções pra acalmar o calor de Dezembro! A ultima com certeza vai te deixar geladão!",
           "subtitles": true
         },
         "background": {
           "visual": {
             "type": "image",
-            "source": "./assets/Geopolitica/video1/1.png"
+            "source": "assets/temp/1.jpeg"
           }
         }
       },
       {
-        "id": "scene_2",
+        "id": "11",
         "narration": {
-          "text": "O ministro Gilmar Mendes determinou que apenas a Procuradoria-Geral da República pode pedir o impeachment de ministros da Corte.",
+          "text": "Pra começar, de 140 por menos de 100 pila tu já sai com esse ventilador Mondial",
           "subtitles": true
         },
         "background": {
           "visual": {
-            "type": "image",
-            "source": "./assets/Geopolitica/video1/2.png"
+            "type": "color",
+            "source": "#FFFFFF"
           }
-        }
+        },
+        "visual_elements": [
+          {
+            "type": "image",
+            "source": "https://m.media-amazon.com/images/I/41Ye1x-V5iL.jpg",
+            "layout": {
+              "width": "1",
+              "position": "center"
+            },
+            "filters": {
+              "remove_bg": true
+            }
+          }
+        ]
       },
       {
-        "id": "scene_3",
+        "id": "12",
         "narration": {
-          "text": "A decisão caiu como uma bomba no Congresso. Parlamentares já articulam uma PEC urgente para derrubar a medida.",
+          "text": "Menos de 100 pila hoje dá pra comprar o quê? Aproveita enquanto tá com preço bom!",
           "subtitles": true
         },
         "background": {
           "visual": {
-            "type": "image",
-            "source": "./assets/Geopolitica/video1/3.png"
+            "type": "color",
+            "source": "#FFFFFF"
           }
-        }
+        },
+        "visual_elements": [
+          {
+            "type": "image",
+            "source": "https://m.media-amazon.com/images/I/51bUsgoR0LL.jpg",
+            "layout": {
+              "width": "1",
+              "position": "center"
+            }
+          }
+        ]
       },
       {
-        "id": "scene_4",
+        "id": "21",
         "narration": {
-          "text": "Especialistas alertam: o conflito entre Judiciário e Legislativo atingiu seu nível mais crítico em anos.",
+          "text": "O próximo, de 280 por 160 pila. Tu vai fazer a terra girar mais rápido com esse WAP Flow Turbo.",
           "subtitles": true
         },
         "background": {
           "visual": {
-            "type": "image",
-            "source": "./assets/Geopolitica/video1/4.png"
+            "type": "color",
+            "source": "#E0F7FA"
           }
-        }
+        },
+        "visual_elements": [
+          {
+            "type": "image",
+            "source": "https://m.media-amazon.com/images/I/513jwgJt1ML.jpg",
+            "layout": {
+              "width": "1",
+              "position": "center"
+            },
+            "filters": {
+              "remove_bg": true
+            }
+          }
+        ]
       },
       {
-        "id": "scene_5",
+        "id": "22",
         "narration": {
-          "text": "Quais os proximos passos dessa guerra? Já se inscreve pra não ficar desinformado!",
+          "text": "Mas como eu já disse, compra logo antes que os estoques acabem! É só 160 pila!",
           "subtitles": true
         },
         "background": {
           "visual": {
-            "type": "image",
-            "source": "./assets/Geopolitica/video1/5.png"
+            "type": "color",
+            "source": "#E0F7FA"
           }
-        }
+        },
+        "visual_elements": [
+          {
+            "type": "image",
+            "source": "https://m.media-amazon.com/images/I/61iosLU-RgL.jpg",
+            "layout": {
+              "width": "1",
+              "position": "center"
+            }
+          }
+        ]
+      },
+      {
+        "id": "31",
+        "narration": {
+          "text": "Agora se tu quer bancar de rico gastando pouco, o Climatizador da WAP vai te dar esse luxo.",
+          "subtitles": true
+        },
+        "background": {
+          "visual": {
+            "type": "color",
+            "source": "#FFFFFF"
+          }
+        },
+        "visual_elements": [
+          {
+            "type": "image",
+            "source": "https://m.media-amazon.com/images/I/21UDXEEL1dL.jpg",
+            "layout": {
+              "width": "1",
+              "position": "center"
+            },
+            "filters": {
+              "remove_bg": true
+            }
+          }
+        ]
+      },
+      {
+        "id": "32",
+        "narration": {
+          "text": "De 560 por 470 pila vai nevar no teu dezembro! Bora enquanto tá com preço bom e ainda da pra parcelar!",
+          "subtitles": true
+        },
+        "background": {
+          "visual": {
+            "type": "color",
+            "source": "#FFFFFF"
+          }
+        },
+        "visual_elements": [
+          {
+            "type": "image",
+            "source": "https://m.media-amazon.com/images/I/81YXAhDhx+L._AC_SL1500_.jpg",
+            "layout": {
+              "width": "1",
+              "position": "center"
+            }
+          }
+        ]
+      },
+      {
+        "id": "cta_final",
+        "duration": 5.0,
+        "narration": {
+          "text": "Sai logo do calor! Confere os links na descrição e se inscreve no canal!",
+          "subtitles": true
+        },
+        "background": {
+          "visual": {
+            "type": "color",
+            "source": "#FF5722"
+          }
+        },
+        "visual_elements": [
+          {
+            "type": "image",
+            "source": "assets/oferta_todo_dia/oferta_todo_dia.gif",
+            "layout": {
+              "width": "0.5",
+              "position": "top",
+              "margin": 150
+            },
+            "animation": {
+              "type": "fade_in",
+              "duration": 1.0
+            }
+          },
+          {
+            "type": "image",
+            "source": "assets/oferta_todo_dia/links_descricao.gif",
+            "layout": {
+              "width": "0.8",
+              "position": "bottom",
+              "margin": 150
+            },
+            "animation": {
+              "type": "zoom_in",
+              "duration": 0.5
+            }
+          }
+        ]
       }
-    ],
-    "youtube": {
-      ""
-    }
+    ]
   }
 ]

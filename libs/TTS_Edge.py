@@ -46,6 +46,7 @@ class EdgeTTS:
             self.text,
             self.voice_id,
             rate="+15%",
+            # pitch="-15Hz",
             boundary="WordBoundary"
         )
 

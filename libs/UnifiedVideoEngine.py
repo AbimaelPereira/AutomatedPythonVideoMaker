@@ -11,7 +11,7 @@ from libs.Subtitle import Subtitle
 from libs.MediaDownloader import MediaDownloader 
 from libs.TTS_Edge import EdgeTTS
 from libs.LayoutEngine import LayoutEngine 
-from libs.Youtube import Youtube
+from libs.YouTube import YouTube
 
 AVAILABLE_RESOLUTIONS = {"9:16": (1080, 1920), "16:9": (1920, 1080)}
 
@@ -374,7 +374,7 @@ class UnifiedVideoEngine:
             youtube_params = self.data_config.get("youtube", {})
             youtube_params["video_path"] = output_path
 
-            youtube_uploader = Youtube(params=youtube_params)
+            youtube_uploader = YouTube(params=youtube_params)
             youtube_uploader.upload()
 
         return output_path
