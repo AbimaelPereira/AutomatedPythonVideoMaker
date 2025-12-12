@@ -75,6 +75,7 @@ class UnifiedVideoEngine:
                 "voice_id": voice,
                 "output_basename": audio_basename,
             }
+            
             tts_engine = EdgeTTS(params=tts_params)
             tts_result = tts_engine.generate_audio_and_subtitles()
             
@@ -331,6 +332,30 @@ class UnifiedVideoEngine:
             final_scene_clip = [background_clip]
             if visual_clip: final_scene_clip.append(visual_clip)
             if subtitle_clip: final_scene_clip.append(subtitle_clip)
+
+            # --- [INÍCIO] DEBUG_LAYOUT: Area Útil (Visuais + Legenda) ---
+            if os.getenv("DEBUG_LAYOUT") == "1":
+                # Pega as dimensões
+                W, H = self.resolution_output
+                pad_top = self.config_instance.padding_top
+                pad_bottom = self.config_instance.padding_bottom
+                pad_side = self.config_instance.padding_side
+                
+                # Largura = Tela inteira menos as laterais
+                debug_w = W - (2 * pad_side)
+                
+                # Altura = Tela inteira menos o topo 
+                # (Mantemos o fundo/legenda inclusos, pois padding_bottom é a altura da legenda)
+                debug_h = H - pad_top
+                
+                # Cria o retângulo semitransparente (Vermelho)
+                debug_area = ColorClip(
+                    size=(int(debug_w), int(debug_h)), 
+                    color=(255, 0, 0)
+                ).set_opacity(0.3).set_position((pad_side, pad_top)).set_duration(scene_duration)
+                
+                final_scene_clip.append(debug_area)
+            # --- [FIM] DEBUG_LAYOUT ---
 
             safe_clips = []
             for c in final_scene_clip:

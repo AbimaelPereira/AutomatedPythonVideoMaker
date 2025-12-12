@@ -19,7 +19,7 @@ class Config:
             
             # --- CONFIGURAÇÕES DE LAYOUT (TELA 9:16) ---
             # Padding Bottom define a altura da CAIXA AZUL (Legenda)
-            "padding_bottom": int(os.getenv("PADDING_BOTTOM", 350)), 
+            "padding_bottom": int(os.getenv("PADDING_BOTTOM", 850)), 
             
             # Padding Top define o início da CAIXA VERMELHA (Visuais)
             "padding_top": int(os.getenv("PADDING_TOP", 100)),     

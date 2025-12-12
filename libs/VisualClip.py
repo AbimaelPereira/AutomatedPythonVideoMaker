@@ -134,7 +134,6 @@ class VisualClip:
         return clip
 
     def _create_text_box_clip(self):
-        # ... (mantido inalterado) ...
         content = self.data.get("content", "")
         style = self.data.get("style", {})
         font_family = style.get("font_family", "Arial")
@@ -164,14 +163,33 @@ class VisualClip:
         
         background_color = style.get("background_color", "white")
         
-        # CORREÇÃO ANTERIOR MANTIDA: Só desenha o fundo se não for 'transparent'
         if background_color != "transparent":
             draw.rounded_rectangle([(0,0),(box_w,box_h)], radius=style.get("border_radius",0), fill=background_color)
         
-        # 3. Desenhar Texto (FIX: Ajuste vertical usando bbox[1])
+        # 3. Desenhar Texto
+        # bbox[1] é geralmente negativo ou pequeno, ajustamos para desenhar na linha correta
+        text_x_pos = pad[1]
         text_y_pos = pad[0] - bbox[1] 
 
-        draw.text((pad[1], text_y_pos), content, font=font, fill=style.get("text_color","black"))
+        text_color = style.get("text_color","black")
+        draw.text((text_x_pos, text_y_pos), content, font=font, fill=text_color)
+        
+        # --- [NOVO] Lógica de Riscado (Strikethrough) ---
+        if style.get("strikethrough", False):
+            # Calcula a posição Y da linha (aproximadamente no meio da altura visual do texto)
+            # O fator 0.6 costuma alinhar melhor visualmente com a 'cintura' das letras
+            line_y = pad[0] + (h * 0.6)
+            
+            # Espessura da linha proporcional ao tamanho da fonte
+            line_width = max(2, int(font_size / 15))
+            
+            # Desenha a linha
+            draw.line(
+                [(text_x_pos, line_y), (text_x_pos + w, line_y)], 
+                fill=text_color, 
+                width=line_width
+            )
+        # -----------------------------------------------
         
         temp_path = os.path.join(self.temp_dir, f"textbox_{id(self)}.png")
         img.save(temp_path)

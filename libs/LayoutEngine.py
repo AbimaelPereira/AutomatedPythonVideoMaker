@@ -3,20 +3,35 @@ from moviepy.editor import TextClip
 class LayoutEngine:
     @staticmethod
     def calculate_dimension(value, total_size):
-        """Converte porcentagem (string), float multiplicador (0.0 a 1.0) ou inteiro para pixels."""
-        if isinstance(value, str) and "%" in value:
-            try:
-                percent = float(value.replace("%", "")) / 100
-                return int(total_size * percent)
-            except ValueError:
-                return int(total_size) # Fallback seguro
-            
-        if isinstance(value, float) and 0.0 <= value <= 1.0:
-            return int(total_size * value)
-            
+        """
+        Converte porcentagem (string), float multiplicador (0.0 a 1.0) ou inteiro para pixels.
+        CORREÇÃO: Interpreta valores <= 1.0 (como "1" ou "0.8") como multiplicadores (100%, 80%),
+        evitando que virem 1 pixel.
+        """
         try:
-            return int(value)
+            # 1. Trata porcentagem explícita (ex: "80%")
+            if isinstance(value, str) and "%" in value:
+                percent = float(value.replace("%", "")) / 100.0
+                return int(total_size * percent)
+
+            # 2. Converte para float para análise numérica
+            float_val = float(value)
+            
+            # Se for 0, é 0 pixels mesmo
+            if float_val == 0:
+                return 0
+                
+            # REGRA INTELIGENTE:
+            # Se o valor for <= 1.0 (ex: "1", 1, "0.5"), tratamos como PORCENTAGEM do total.
+            # "1" vira 100% (total_size), "0.5" vira 50%.
+            if abs(float_val) <= 1.0:
+                return int(total_size * float_val)
+            
+            # Se o valor for > 1.0 (ex: "500", "1080"), tratamos como PIXELS absolutos.
+            return int(float_val)
+
         except (ValueError, TypeError):
+            # Fallback seguro em caso de erro
             return int(total_size)
 
     @staticmethod
@@ -43,7 +58,7 @@ class LayoutEngine:
         elif isinstance(pos_x, str) and "%" in pos_x:
             x = int(cw * (float(pos_x.strip('%')) / 100))
         else:
-            try: x = int(pos_x)
+            try: x = LayoutEngine.calculate_dimension(pos_x, cw)
             except: x = (cw - w) // 2
 
         # Calcular Y
@@ -56,7 +71,7 @@ class LayoutEngine:
         elif isinstance(pos_y, str) and "%" in pos_y:
             y = int(ch * (float(pos_y.strip('%')) / 100))
         else:
-            try: y = int(pos_y)
+            try: y = LayoutEngine.calculate_dimension(pos_y, ch)
             except: y = (ch - h) // 2
 
         return (x, y)
@@ -78,9 +93,6 @@ class LayoutEngine:
         # Largura Interna da Caixa (Área útil horizontal)
         inner_width = W - (2 * pad_side)
 
-        # A área de visuais termina onde começa a área da legenda (Box Azul)
-        # Visual Area Bottom = H - pad_bot
-        
         # Altura disponível para os visuais (Da margem segura até o topo da área da legenda)
         available_visual_height = (H - pad_bot) - pad_top
         
@@ -103,7 +115,6 @@ class LayoutEngine:
             layout_data = item.get('layout', {})
             
             # Largura desejada: padrão 100% da caixa interna (inner_width)
-            # Se o usuário especificou 'width' no json (ex: "80%"), respeita
             req_width = layout_data.get('width', 1.0) 
             
             target_w = LayoutEngine.calculate_dimension(req_width, inner_width)
@@ -114,7 +125,7 @@ class LayoutEngine:
             processed_items.append({
                 'target_w': target_w,
                 'target_h': target_h,
-                'layout': layout_data # Mantém ref para overrides manuais se existirem
+                'layout': layout_data 
             })
             
             total_stack_height += target_h
@@ -157,7 +168,6 @@ class LayoutEngine:
             if final_h < 2: final_h = 2
 
             # Calcular X (Sempre centralizado horizontalmente segundo a imagem)
-            # Se o JSON forçar 'position_x', obedece relativo ao inner_box, senão centraliza
             pos_x_req = p_item['layout'].get('position_x')
             
             if pos_x_req is not None:

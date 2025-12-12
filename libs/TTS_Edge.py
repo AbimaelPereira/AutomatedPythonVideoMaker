@@ -25,9 +25,9 @@ class EdgeTTS:
             "audio_format": "mp3",
             "output_basename": "narration",
             "text": None,
-            "silence_thresh": -40,
+            "silence_thresh": -50,
             "min_silence_len": 400,
-            "keep_silence": 275,
+            "keep_silence": 295,
         }
         if params:
             defaults.update(params)
@@ -38,6 +38,9 @@ class EdgeTTS:
         if self.text is None and self.text_file_path.exists():
             self.text = self.text_file_path.read_text(encoding="utf-8").strip()
 
+        # print(defaults)
+        # exit()
+
     async def _synthesize_audio_async(self):
         if not self.text:
             raise ValueError("Nenhum texto disponível para síntese.")
@@ -45,7 +48,7 @@ class EdgeTTS:
         communicate = edge_tts.Communicate(
             self.text,
             self.voice_id,
-            rate="+15%",
+            # rate="+15%",
             # pitch="-15Hz",
             boundary="WordBoundary"
         )
@@ -55,6 +58,7 @@ class EdgeTTS:
 
         async for chunk in communicate.stream():
             if chunk["type"] == "audio":
+                print("chegoou")
                 audio_data += chunk["data"]
             elif chunk["type"] == "WordBoundary":
                 D = 10000

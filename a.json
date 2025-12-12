@@ -18,7 +18,7 @@
       "token_file_name": "oferta_todo_dia.json",
       "privacy_status": "private",
       "category_id": "22",
-      "title": "Achadinhos para Sobreviver ao Calor! 🥵 Ventilador e Climatizador WAP e Mondial #shorts",
+      "title": "FAÇA ISSO NO CALOR 🥵 #shorts",
       "tags": [
         "ventilador",
         "climatizador",
@@ -61,6 +61,39 @@
         },
         "visual_elements": [
           {
+            "type": "text_box",
+            "content": "R$ 140,00",
+            "style": {
+              "font_size": 25,
+              "text_color": "#2b2b2b",
+              "background_color": "transparent",
+              "font_family": "Lato-Bold",
+              "strikethrough": true
+            },
+            "layout": {
+              "width": "0.75",
+              "position": "center"
+            }
+          },
+          {
+            "type": "text_box",
+            "content": "R$ 97,90",
+            "style": {
+              "font_size": 50,
+              "text_color": "#FFFFFF",
+              "background_color": "#000000",
+              "font_family": "Lato-Bold",
+              "padding": [
+                10,
+                10
+              ]
+            },
+            "layout": {
+              "width": "0.85",
+              "position": "center"
+            }
+          },
+          {
             "type": "image",
             "source": "https://m.media-amazon.com/images/I/41Ye1x-V5iL.jpg",
             "layout": {
@@ -87,6 +120,24 @@
         },
         "visual_elements": [
           {
+            "type": "text_box",
+            "content": "R$ 97,90",
+            "style": {
+              "font_size": 50,
+              "text_color": "#FFFFFF",
+              "background_color": "#000000",
+              "font_family": "Lato-Bold",
+              "padding": [
+                10,
+                10
+              ]
+            },
+            "layout": {
+              "width": "0.85",
+              "position": "center"
+            }
+          },
+          {
             "type": "image",
             "source": "https://m.media-amazon.com/images/I/51bUsgoR0LL.jpg",
             "layout": {
@@ -109,6 +160,39 @@
           }
         },
         "visual_elements": [
+          {
+            "type": "text_box",
+            "content": "R$ 279,90",
+            "style": {
+              "font_size": 25,
+              "text_color": "#2b2b2b",
+              "background_color": "transparent",
+              "font_family": "Lato-Bold",
+              "strikethrough": true
+            },
+            "layout": {
+              "width": "0.75",
+              "position": "center"
+            }
+          },
+          {
+            "type": "text_box",
+            "content": "R$ 159,90",
+            "style": {
+              "font_size": 50,
+              "text_color": "#FFFFFF",
+              "background_color": "#000000",
+              "font_family": "Lato-Bold",
+              "padding": [
+                10,
+                10
+              ]
+            },
+            "layout": {
+              "width": "0.85",
+              "position": "center"
+            }
+          },
           {
             "type": "image",
             "source": "https://m.media-amazon.com/images/I/513jwgJt1ML.jpg",
@@ -136,6 +220,24 @@
         },
         "visual_elements": [
           {
+            "type": "text_box",
+            "content": "R$ 159,90",
+            "style": {
+              "font_size": 50,
+              "text_color": "#FFFFFF",
+              "background_color": "#000000",
+              "font_family": "Lato-Bold",
+              "padding": [
+                10,
+                10
+              ]
+            },
+            "layout": {
+              "width": "0.85",
+              "position": "center"
+            }
+          },
+          {
             "type": "image",
             "source": "https://m.media-amazon.com/images/I/61iosLU-RgL.jpg",
             "layout": {
@@ -148,7 +250,7 @@
       {
         "id": "31",
         "narration": {
-          "text": "Agora se tu quer bancar de rico gastando pouco, o Climatizador da WAP vai te dar esse luxo.",
+          "text": "Agora se tu quer bancar de rico gastando pouco, o Climatizador 4 em 1 da WAP vai te dar esse luxo.",
           "subtitles": true
         },
         "background": {
@@ -158,6 +260,39 @@
           }
         },
         "visual_elements": [
+          {
+            "type": "text_box",
+            "content": "R$ 559,90",
+            "style": {
+              "font_size": 25,
+              "text_color": "#2b2b2b",
+              "background_color": "transparent",
+              "font_family": "Lato-Bold",
+              "strikethrough": true
+            },
+            "layout": {
+              "width": "0.75",
+              "position": "center"
+            }
+          },
+          {
+            "type": "text_box",
+            "content": "R$ 470,81",
+            "style": {
+              "font_size": 50,
+              "text_color": "#FFFFFF",
+              "background_color": "#000000",
+              "font_family": "Lato-Bold",
+              "padding": [
+                10,
+                10
+              ]
+            },
+            "layout": {
+              "width": "0.85",
+              "position": "center"
+            }
+          },
           {
             "type": "image",
             "source": "https://m.media-amazon.com/images/I/21UDXEEL1dL.jpg",
@@ -184,6 +319,24 @@
           }
         },
         "visual_elements": [
+          {
+            "type": "text_box",
+            "content": "R$ 470,81",
+            "style": {
+              "font_size": 50,
+              "text_color": "#FFFFFF",
+              "background_color": "#000000",
+              "font_family": "Lato-Bold",
+              "padding": [
+                10,
+                10
+              ]
+            },
+            "layout": {
+              "width": "0.85",
+              "position": "center"
+            }
+          },
           {
             "type": "image",
             "source": "https://m.media-amazon.com/images/I/81YXAhDhx+L._AC_SL1500_.jpg",
