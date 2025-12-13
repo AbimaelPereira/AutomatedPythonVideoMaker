@@ -45,11 +45,11 @@ class EdgeTTS:
         if not self.text:
             raise ValueError("Nenhum texto disponível para síntese.")
 
+            # pitch="-15Hz",
         communicate = edge_tts.Communicate(
             self.text,
             self.voice_id,
-            # rate="+15%",
-            # pitch="-15Hz",
+            rate="+15%",
             boundary="WordBoundary"
         )
 
