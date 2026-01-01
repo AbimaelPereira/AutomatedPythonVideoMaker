@@ -1,0 +1,38 @@
+{
+  "slug": "oracao_da_manha_01",
+  "output_ratio": "9:16",
+  "global_settings": {
+    "tts": {
+      "voice": "pt-BR-AntonioNeural"
+    },
+    "padding_bottom": 450,
+    "padding_top": 100,
+    "//subtitle": {
+      "font_path": "./fonts/TrajanPro/TrajanPro-Bold.ttf",
+      "font_size": 75,
+      "color": "white",
+      "stroke_color": "black",
+      "stroke_width": 3
+    },
+    "background": {
+      "visual": {
+        "type": "directory",
+        "source": "assets/video/defaults/paisagens"
+      }
+    }
+  },
+  "scenes": [
+    {
+      "id": "cena_1",
+      "narration": {
+        "text": "Senhor, ao iniciar este dia, coloco minha vida em Vossas mãos e agradeço por mais uma oportunidade de recomeçar."
+      }
+    },
+    {
+      "id": "cena_2",
+      "narration": {
+        "text": "Peço sabedoria para minhas decisões, força para os meus desafios e paz para o meu coração e para a minha família."
+      }
+    }
+  ]
+}

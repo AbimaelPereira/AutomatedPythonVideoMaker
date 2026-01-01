@@ -8,11 +8,11 @@ __pycache__/
 /output/*
 !/output/.gitkeep
 
-/videos_default/*
-!/videos_default/.gitkeep
+assets/video/defaults/*
+!assets/video/defaults/.gitkeep
 
-/bg_music/*
-!/bg_music/.gitkeep
+/assets/audio/background/*
+!/assets/audio/background/.gitkeep
 
 /tokens/*
 !/tokens/.gitkeep

@@ -58,7 +58,6 @@ class EdgeTTS:
 
         async for chunk in communicate.stream():
             if chunk["type"] == "audio":
-                print("chegoou")
                 audio_data += chunk["data"]
             elif chunk["type"] == "WordBoundary":
                 D = 10000
