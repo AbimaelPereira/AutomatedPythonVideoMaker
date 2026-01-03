@@ -1,16 +1,10 @@
 {
     "slug": "oracao_da_manha_01",
+    "channel": "vida_de_oracao",
     "output_ratio": "9:16",
     "global_settings": {
         "tts": {
             "voice": "pt-BR-AntonioNeural"
-        },
-        "subtitle": {
-            "font_path": "./assets/fonts/CormorantGaramond/CormorantGaramond-Light.ttf",
-            "font_size": 110,
-            "color": "#E5C687",
-            "stroke_color": "#A68A56",
-            "stroke_width": 1
         },
         "background": {
             "visual": {

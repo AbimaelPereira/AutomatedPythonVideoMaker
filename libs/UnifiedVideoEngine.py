@@ -394,7 +394,8 @@ class UnifiedVideoEngine:
             preset='medium'
         )
 
-        if self.data_config.get("youtube"):
+        # e debug for false
+        if self.data_config.get("youtube") and self.data_config.get("debug") is not True:
             print("[UVE] Iniciando upload para o YouTube...")
             youtube_params = self.data_config.get("youtube", {})
             youtube_params["video_path"] = output_path

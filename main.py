@@ -1,66 +1,52 @@
 import os
 import json
-import time
-from dotenv import load_dotenv
+import argparse
+from libs.Config import Config
 from libs.UnifiedVideoEngine import UnifiedVideoEngine
 
-load_dotenv()
-
 def main():
-    print("\n" + "="*60)
-    print("🎬 GERADOR DE VÍDEOS AUTOMATIZADO V3 (Unified)")
-    print("="*60)
-    
-    start_time = time.time()
-    
-    # Seleção de JSON
-    if os.getenv("DEBUG") == "1":
-        json_file = os.getenv("DEFAULT_JSON_DEBUG", "video-spec-v3-doc.md") # Ajustar para seu json de teste
-        print(f"🔧 Modo DEBUG ativado")
-    else:
-        json_file = input("\n📂 Informe o caminho do arquivo JSON V3: ").strip()
-        if not json_file:
-            json_file = "json_examples/default.json"
+    # 1. Configurar Argumentos da Linha de Comando
+    parser = argparse.ArgumentParser(description="Automated Python Video Maker")
+    parser.add_argument("json_file", help="Caminho para o arquivo JSON de geração do vídeo")
+    args = parser.parse_args()
 
-    if not os.path.exists(json_file):
-        print(f"❌ Arquivo não encontrado: {json_file}")
+    # 2. Validar Arquivo de Entrada
+    if not os.path.exists(args.json_file):
+        print(f"❌ Erro Crítico: O arquivo '{args.json_file}' não foi encontrado.")
         return
 
-    # Carregar JSON
     try:
-        with open(json_file, "r", encoding="utf-8") as f:
-            # Suporta tanto lista de vídeos quanto objeto único (transforma em lista)
-            data = json.load(f)
-            videos_config = data if isinstance(data, list) else [data]
-    except Exception as e:
-        print(f"❌ Erro ao ler JSON: {e}")
-        return
-    
-    success_count = 0
-    
-    for index, video_config in enumerate(videos_config, 1):
-        print(f"\n🎥 Processando Vídeo {index}/{len(videos_config)}")
-        
-        # Constrói um nome de arquivo seguro usando o slug ou um padrão
-        slug = video_config.get('slug', f'video_{index}')
-        output_filename = f"{slug}.mp4"
-
-        engine = UnifiedVideoEngine(video_config)
-        
-        # CORREÇÃO: Chama o método 'run()' e armazena o caminho de saída
-        output_path = engine.run(output_filename=output_filename)
-        
-        # Verifica se o método run() retornou um caminho (sucesso)
-        if output_path:
-            success_count += 1
-            print(f"✅ Vídeo concluído com sucesso e salvo em: {output_path}")
-        else:
-            print("❌ Falha ao gerar vídeo.")
+        # 3. Ler o JSON do Vídeo
+        with open(args.json_file, 'r', encoding='utf-8') as f:
+            video_data = json.load(f)
             
-    elapsed = time.time() - start_time
-    print("\n" + "="*60)
-    print(f"🏁 Fim. Sucesso: {success_count}/{len(videos_config)}. Tempo: {elapsed:.2f}s")
-    print("="*60)
+        print(f"📂 Processando arquivo: {args.json_file}")
+        
+    except json.JSONDecodeError as e:
+        print(f"❌ Erro de Sintaxe no JSON: {e}")
+        return
+
+    # 4. Inicializar Configuração (Com Deep Merge automático)
+    try:
+        config = Config(video_data=video_data)
+        config.validate() # Garante que pastas existem
+        
+        # Mostra configuração se o debug estiver ativo
+        if config.debug:
+            config.show_configs()
+            
+    except Exception as e:
+        print(f"❌ Erro na Configuração: {e}")
+        return
+
+    # 5. Iniciar o Motor de Vídeo
+    try:
+        engine = UnifiedVideoEngine(config)
+        engine.run()
+    except Exception as e:
+        print(f"❌ Erro durante a execução do motor: {e}")
+        import traceback
+        traceback.print_exc()
 
 if __name__ == "__main__":
     main()

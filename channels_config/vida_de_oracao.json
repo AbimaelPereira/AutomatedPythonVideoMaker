@@ -9,12 +9,6 @@
             "color": "#E5C687",
             "stroke_color": "#A68A56",
             "stroke_width": 1
-        },
-        "//background": {
-            "visual": {
-                "type": "color",
-                "source": "#ffffff"
-            }
         }
     },
     "youtube": {
