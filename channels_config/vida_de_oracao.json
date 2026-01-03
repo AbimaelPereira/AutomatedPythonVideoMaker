@@ -1,6 +1,4 @@
 {
-    "slug": "oracao_da_manha_01",
-    "output_ratio": "9:16",
     "global_settings": {
         "tts": {
             "voice": "pt-BR-AntonioNeural"
@@ -12,20 +10,16 @@
             "stroke_color": "#A68A56",
             "stroke_width": 1
         },
-        "background": {
+        "//background": {
             "visual": {
                 "type": "color",
                 "source": "#ffffff"
             }
         }
     },
-    "scenes": [
-        {
-            "id": "cena_1",
-            "narration": {
-                "text": "Senhor ao iniciar este dia!",
-                "subtitles": true
-            }
-        }
-    ]
+    "youtube": {
+        "token_file_name": "vida_de_oracao.json",
+        "privacy_status": "private",
+        "category_id": "22"
+    }
 }

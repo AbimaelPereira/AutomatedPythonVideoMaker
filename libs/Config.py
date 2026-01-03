@@ -33,6 +33,10 @@ class Config:
             "stack_gap_percent": float(os.getenv("STACK_GAP_PERCENT", 0.02)), 
             # -------------------------------------
 
+            # Configurações de Estilo de Legenda
+            "stroke_width": int(os.getenv("STROKE_WIDTH", 3)), # Valor ideal para técnica de sobreposição
+            "font_size": int(os.getenv("FONT_SIZE", 70)),
+
             "padding": 50, 
             "debug_layout": to_bool(os.getenv("DEBUG_LAYOUT", False)),
             "max_width_percent": 0.6,
@@ -60,7 +64,6 @@ class Config:
             print(f"{key}: {value}")
 
     def validate(self):
-        # Validação ajustada para os novos caminhos
         if not os.path.isdir(self.background_videos_dir):
             os.makedirs(self.background_videos_dir, exist_ok=True)
             print(f"Diretório criado: {self.background_videos_dir}")
