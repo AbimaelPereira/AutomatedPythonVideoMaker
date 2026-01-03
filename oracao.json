@@ -1,0 +1,149 @@
+[
+    {
+        "slug": "04",
+        "output_ratio": "9:16",
+        "global_settings": {
+            "tts": {
+                "voice": "pt-BR-AntonioNeural"
+            },
+            "subtitle": {
+                "font_path": "./assets/fonts/CormorantGaramond/CormorantGaramond-Bold.ttf",
+                "font_size": 130,
+                "color": "white",
+                "stroke_color": "black",
+                "stroke_width": 1
+            },
+            "background": {
+                "visual": {
+                    "type": "directory",
+                    "source": "./assets/video/defaults/IA/JESUS"
+                }
+            }
+        },
+        "scenes": [
+            {
+                "id": "cena_1",
+                "narration": {
+                    "text": "Pare tudo o que está fazendo, pois esta oração vai mudar o seu dia. Senhor, eu entro na Tua presença agora para clamar por um milagre urgente neste 2026. Que as portas que o homem fechou, o Senhor abra com Tua mão poderosa. Eu não aceito menos do que a Tua vitória na minha vida financeira e familiar. Se você crê que o impossível vai acontecer, escreva 'Eu recebo' nos comentários e prepare-se para o testemunho. Amém.",
+                    "subtitles": true
+                }
+            }
+        ],
+        "youtube": {
+            "token_file_name": "vida_de_oracao.json",
+            "privacy_status": "private",
+            "category_id": "22",
+            "title": "A ORAÇÃO QUE ABRE PORTAS EM 2026! 🔑🙏 #shorts",
+            "tags": [
+                "oração",
+                "milagre",
+                "prosperidade",
+                "oração da manhã",
+                "deus",
+                "fé",
+                "2026",
+                "oraçãopoderosa"
+            ],
+            "description": "Você sente que as portas estão fechadas? Esta oração forte de 2026 foi feita para destravar sua vida! \n\nEscute com fé e tome posse da sua vitória. O segredo da virada está na sua constância com Deus.\n\n🙏 Digite 'EU RECEBO' para confirmar sua fé!\n\n#oração #fé #milagre #deus #shorts",
+            "publish_at": "2026-01-03 12:00:00"
+        }
+    },
+    {
+        "slug": "05",
+        "output_ratio": "9:16",
+        "global_settings": {
+            "tts": {
+                "voice": "pt-BR-AntonioNeural"
+            },
+            "subtitle": {
+                "font_path": "./assets/fonts/CormorantGaramond/CormorantGaramond-Bold.ttf",
+                "font_size": 130,
+                "color": "white",
+                "stroke_color": "black",
+                "stroke_width": 1
+            },
+            "background": {
+                "visual": {
+                    "type": "directory",
+                    "source": "./assets/video/defaults/IA/JESUS"
+                }
+            }
+        },
+        "scenes": [
+            {
+                "id": "cena_1",
+                "narration": {
+                    "text": "Deus mandou te dizer que o choro pode durar uma noite, mas a alegria vem agora. Pai, afasta toda angústia e ansiedade que tenta roubar a paz deste filho ou filha. Eu profetizo que 2026 será o ano da dupla honra na sua vida. O que te fez chorar ontem, será o seu motivo de sorrir amanhã. Curta este vídeo se você confia nos planos de Deus e envie para alguém que precisa de um abraço do Pai hoje. Amém.",
+                    "subtitles": true
+                }
+            }
+        ],
+        "youtube": {
+            "token_file_name": "vida_de_oracao.json",
+            "privacy_status": "private",
+            "category_id": "22",
+            "title": "DEUS MANDOU TE DIZER ISSO HOJE! 😭🙌 #shorts",
+            "tags": [
+                "mensagem de deus",
+                "oração",
+                "alívio",
+                "paz",
+                "espiritualidade",
+                "promessa",
+                "motivação",
+                "deusnocomando"
+            ],
+            "description": "Uma palavra profética para o seu coração em 2026. Se você está cansado, essa oração trará o descanso que você precisa.\n\nDeus conhece suas lutas e já preparou a recompensa.\n\n🙏 Compartilhe essa benção com um amigo!\n\n#deus #oração #paz #vitoria #shorts",
+            "publish_at": "2026-01-03 18:00:00"
+        }
+    },
+    {
+        "slug": "06",
+        "output_ratio": "9:16",
+        "global_settings": {
+            "tts": {
+                "voice": "pt-BR-AntonioNeural"
+            },
+            "subtitle": {
+                "font_path": "./assets/fonts/CormorantGaramond/CormorantGaramond-Bold.ttf",
+                "font_size": 130,
+                "color": "white",
+                "stroke_color": "black",
+                "stroke_width": 1
+            },
+            "background": {
+                "visual": {
+                    "type": "directory",
+                    "source": "./assets/video/defaults/IA/JESUS"
+                }
+            }
+        },
+        "scenes": [
+            {
+                "id": "cena_1",
+                "narration": {
+                    "text": "Cuidado! Não durma sem antes colocar sua casa debaixo do sangue de Jesus. Senhor, nesta noite, eu peço que o Teu anjo acampe ao redor do meu lar. Blindagem total contra inveja, doenças e ataques do inimigo. Que 2026 seja um ano cercado por Teu fogo consumidor. Se você aceita essa proteção, siga o canal para orarmos juntos todos os dias e durma no descanso do Senhor. Amém.",
+                    "subtitles": true
+                }
+            }
+        ],
+        "youtube": {
+            "token_file_name": "vida_de_oracao.json",
+            "privacy_status": "private",
+            "category_id": "22",
+            "title": "ORAÇÃO DE BLINDAGEM NOTURNA 🛡️🌙 #shorts",
+            "tags": [
+                "oração da noite",
+                "proteção divina",
+                "blindagem",
+                "família",
+                "jesus",
+                "oração forte",
+                "sono abençoado",
+                "canaldark"
+            ],
+            "description": "Proteja sua casa e sua família antes de dormir com esta oração de blindagem espiritual para 2026.\n\nNão deixe o inimigo tocar no que é seu. Clame o sangue de Jesus agora!\n\n🙏 Siga o canal para mais orações diárias poderosas.\n\n#proteção #oração #noitecomdeus #fé #shorts",
+            "publish_at": "2026-01-03 21:00:00"
+        }
+    }
+]
