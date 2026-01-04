@@ -1,0 +1,14 @@
+{
+    "slug": "oracao_da_manha_01",
+    "channel_name": "vida_de_oracao",
+    "output_ratio": "16:9",
+    "scenes": [
+        {
+            "id": "cena_1",
+            "narration": {
+                "text": "Senhor ao iniciar este dia eu desejo colocar minha vida em tuas mãos. Que eu possa sentir tua presença em cada momento, guiando meus passos e iluminando meu caminho. Que a paz que excede todo entendimento guarde meu coração e minha mente em Cristo Jesus. Amém.",
+                "subtitles": true
+            }
+        }
+    ]
+}

@@ -92,6 +92,130 @@ class UnifiedVideoEngine:
         
         return audio_clip, duration, word_boundaries, subtitle_file
 
+    # =========================================================================
+    # GERADOR DE OVERLAY BOKEH/LIGHT LEAK (ESTILO DAS IMAGENS)
+    # =========================================================================
+
+    # =========================================================================
+    # CORREÇÃO: GERADOR DE OVERLAY BOKEH (SEM BORDA QUADRADA)
+    # =========================================================================
+
+    def _create_radial_light_blob(self, size_px, color_rgb):
+        """
+        Cria uma bola de luz que desaparece TOTALMENTE nas bordas (sem quadrado visível).
+        """
+        import numpy as np # Garante que numpy está disponível
+        
+        # 1. Tamanho do grid (resolução da bola)
+        res = int(size_px)
+        # Garante tamanho ímpar para ter um centro perfeito (opcional, mas bom)
+        if res % 2 == 0: res += 1
+        
+        # 2. Cria coordenadas de -1 a 1
+        x = np.linspace(-1, 1, res)
+        y = np.linspace(-1, 1, res)
+        X, Y = np.meshgrid(x, y)
+        
+        # 3. Calcula distância do centro (Raio)
+        radius = np.sqrt(X**2 + Y**2)
+        
+        # 4. Máscara Suave (Correção do "Quadrado")
+        # - Usamos 'clip' para garantir que nada além do raio 1.0 seja desenhado
+        # - A função (1 - radius) cria um decaimento linear
+        # - Elevamos ao cubo (**3) para suavizar e parecer luz (decaimento exponencial visual)
+        alpha_mask = np.clip(1.0 - radius, 0, 1) # Corta tudo fora do círculo
+        alpha_mask = alpha_mask ** 3 # Suaviza a queda (quanto maior a potência, mais "focado" no centro)
+
+        # 5. Criar a Imagem RGBA diretamente (Melhor performance e mistura)
+        # Cria um array vazio com 4 canais (R, G, B, A)
+        img_array = np.zeros((res, res, 4), dtype=np.uint8)
+        
+        # Preenche as cores RGB
+        img_array[:, :, 0] = color_rgb[0]
+        img_array[:, :, 1] = color_rgb[1]
+        img_array[:, :, 2] = color_rgb[2]
+        
+        # Preenche o Alpha (escala 0-255)
+        img_array[:, :, 3] = (alpha_mask * 255).astype(np.uint8)
+        
+        # Cria o ImageClip a partir do array
+        blob_clip = ImageClip(img_array, transparent=True)
+        
+        return blob_clip
+
+    def _create_bokeh_overlay(self, duration, base_color=(255, 120, 50), overall_opacity=0.6, speed_factor=1.0, size_factor=1.5):
+        """
+        Gera bolas de luz que ORBITAM a tela passando pelas 4 bordas.
+        
+        Args:
+            speed_factor: Multiplicador de velocidade (1.0 = normal, 2.0 = dobro).
+            size_factor: Multiplicador de tamanho das bolas.
+        """
+        W, H = self.resolution_output
+        
+        # Definição das 4 bolas de luz (uma para cada "canto" inicial aproximado)
+        # Phase: define onde no círculo ela começa (0 a 2pi)
+        # Direction: 1 (horário) ou -1 (anti-horário)
+        blobs_config = [
+            # {"phase": 0,             "color_offset": (0, 0, 0),     "size": 1.0 * size_factor}, # Começa na Direita
+            # {"phase": np.pi,         "color_offset": (20, 20, 0),   "size": 0.8 * size_factor}, # Começa na Esquerda
+            {"phase": np.pi / 2,     "color_offset": (-10, -10, 0), "size": 1.2 * size_factor}, # Começa Em Baixo
+            {"phase": 3 * np.pi / 2, "color_offset": (10, 10, 10),  "size": 0.9 * size_factor}, # Começa Em Cima
+        ]
+
+        bokeh_clips = []
+
+        for config in blobs_config:
+            # 1. Tamanho
+            blob_size = int(W * config["size"])
+            
+            # 2. Cor
+            r = min(max(base_color[0] + config["color_offset"][0], 0), 255)
+            g = min(max(base_color[1] + config["color_offset"][1], 0), 255)
+            b = min(max(base_color[2] + config["color_offset"][2], 0), 255)
+            
+            # Gera a bola
+            blob = self._create_radial_light_blob(blob_size, (r, g, b))
+            blob = blob.set_duration(duration).set_opacity(overall_opacity)
+
+            # 3. MATEMÁTICA ORBITAL (ELIPSE)
+            # Para passar pelas 4 bordas, o raio da órbita deve ser metade da largura/altura
+            # Adicionamos um pequeno offset para garantir que o CENTRO da bola fique na borda
+            orbit_radius_x = W * 0.6 # Raio horizontal (um pouco maior que a meia tela)
+            orbit_radius_y = H * 0.6 # Raio vertical
+            
+            center_x = W / 2
+            center_y = H / 2
+            
+            # Velocidade angular: define quantas voltas completas por segundo?
+            # Vamos ajustar para que o movimento seja perceptível independente da duração
+            # 0.5 rad/s * speed_factor
+            angular_speed = 0.8 * speed_factor
+
+            # Função de posição orbital
+            # X = Center + Radius * cos(angle)
+            # Y = Center + Radius * sin(angle)
+            # Subtraímos blob_size/2 porque set_position usa o canto superior esquerdo
+            blob = blob.set_position(
+                lambda t, 
+                       cx=center_x, cy=center_y, 
+                       rx=orbit_radius_x, ry=orbit_radius_y, 
+                       bs=blob_size, 
+                       ph=config["phase"], 
+                       sp=angular_speed: 
+                (
+                    (cx + rx * np.cos(sp * t + ph)) - bs / 2,
+                    (cy + ry * np.sin(sp * t + ph)) - bs / 2
+                )
+            )
+            
+            bokeh_clips.append(blob)
+
+        if not bokeh_clips:
+            return None
+            
+        return CompositeVideoClip(bokeh_clips, size=self.resolution_output).set_duration(duration)
+
     def _create_background_clip(self, scene_data, scene_duration, scene_dir, video_dir):
         if "background" in scene_data:
             background_config = scene_data["background"]
@@ -330,7 +454,70 @@ class UnifiedVideoEngine:
 
             # 6. Composição
             final_scene_clip = [background_clip]
+
             if visual_clip: final_scene_clip.append(visual_clip)
+
+            particle_path = "assets/overlays/1.mp4" 
+
+            if os.path.exists(particle_path):
+                try:
+                    # Carrega o vídeo de partículas
+                    overlay_clip = VideoFileClip(particle_path)
+                    
+                    # --- CORREÇÃO DE DISTORÇÃO (Efeito Cover) ---
+                    # 1. Pega dimensões atuais do overlay e do alvo (fundo)
+                    w_ov, h_ov = overlay_clip.size
+                    W_tgt, H_tgt = background_clip.size 
+
+                    # 2. Lógica para preencher a tela sem distorcer
+                    # Se a razão do overlay for menor (mais estreito que o alvo), ajusta pela largura
+                    if (w_ov / h_ov) < (W_tgt / H_tgt):
+                        overlay_clip = overlay_clip.resize(width=W_tgt)
+                    # Se for maior (mais largo, ex: 16:9 em 9:16), ajusta pela altura
+                    else:
+                        overlay_clip = overlay_clip.resize(height=H_tgt)
+                    
+                    # 3. Centraliza e corta o excesso (Crop Center)
+                    overlay_clip = overlay_clip.crop(x_center=overlay_clip.w/2, y_center=overlay_clip.h/2, width=W_tgt, height=H_tgt)
+                    
+                    # 4. Faz o loop e ajusta duração
+                    overlay_clip = (overlay_clip.loop(duration=background_clip.duration)
+                                                .set_duration(background_clip.duration))
+                    
+                    # 5. Remove o fundo preto (Luma Key)
+                    # thr é o threshold de quão escuro considerar preto
+                    # s é a suavização da borda do mask
+                    overlay_clip = overlay_clip.fx(vfx.mask_color, color=[0, 0, 0], thr=20, s=5)
+                    
+                    # 6. Ajustes finais
+                    overlay_clip = overlay_clip.set_opacity(0.5).without_audio()
+                    
+                    final_scene_clip.append(overlay_clip)
+                    
+                    print(f"[Overlay] Partículas aplicadas na cena (Crop ajustado).")
+                except Exception as e:
+                    print(f"[ERRO Overlay] Não foi possível aplicar particulas: {e}")
+
+            
+            # --- NOVO OVERLAY: BOKEH LIGHT LEAKS (ESTILO DAS FOTOS) ---
+            # ... dentro do run ...
+            try:
+                bokeh_overlay = self._create_bokeh_overlay(
+                    duration=scene_duration,
+                    base_color=(255, 120, 50), # Laranja
+                    overall_opacity=0.8,       # Opacidade
+                    
+                    # --- AQUI ESTÃO OS AJUSTES QUE VOCÊ PEDIU ---
+                    speed_factor=0.5,  # Aumente para ir mais rápido (ex: 2.5 ou 3.0)
+                    size_factor=2.7   # Aumente para ficar maior (ex: 2.0 ou 2.5)
+                )
+                
+                if bokeh_overlay:
+                    final_scene_clip.append(bokeh_overlay)
+            except Exception as e:
+                print(f"Erro bokeh: {e}")
+            # ... (código das legendas e finalização) ...
+
             if subtitle_clip: final_scene_clip.append(subtitle_clip)
 
             # --- [INÍCIO] DEBUG_LAYOUT: Area Útil (Visuais + Legenda) ---

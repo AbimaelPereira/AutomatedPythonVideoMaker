@@ -1,14 +1,29 @@
 {
+    "output_ratio": "9:16",
     "global_settings": {
         "tts": {
             "voice": "pt-BR-AntonioNeural"
         },
         "subtitle": {
-            "font_path": "./assets/fonts/CormorantGaramond/CormorantGaramond-Light.ttf",
+            "font_path": "./assets/fonts/CormorantGaramond/CormorantGaramond-Bold.ttf",
             "font_size": 110,
             "color": "#E5C687",
             "stroke_color": "#A68A56",
             "stroke_width": 1
+        },
+        "background": {
+            "////": {
+                "type": "directory",
+                "source": "./assets/video/defaults/IA/JESUS"
+            },
+            "visual": {
+                "type": "color",
+                "source": "#000000"
+            },
+            "audio": {
+                "type": "directory",
+                "source": "./assets/audio/background/vidadeoracao"
+            }
         }
     },
     "youtube": {
