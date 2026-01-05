@@ -66,7 +66,7 @@ class BackgroundVideo:
             base = CompositeVideoClip([base, next_clip]).set_duration(base.duration + next_clip.duration - self.crossfade_duration)
         return base
 
-    def generate_background_video(self):
+    def generate_background_video(self, preloaded_clips=None):
         print("[DEBUG_BV: generate_background_video] INICIADO. Isto deve ser chamado apenas para fundos de vídeo.")
 
         clips = preloaded_clips if preloaded_clips is not None else self.get_processed_clips()

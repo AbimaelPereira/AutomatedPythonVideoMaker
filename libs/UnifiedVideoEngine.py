@@ -280,7 +280,7 @@ class UnifiedVideoEngine:
                 "max_total_video_duration": scene_duration,
                 "resolution_output": self.resolution_output,
                 "loop_background": True,
-                "shuffle_clips": bg_config.get("shuffle", True)
+                "shuffle_clips": background_config.get("shuffle", True)
             })
 
             # 3. CHAMADA CHAVE: Passamos o conteúdo do cache para a função
@@ -445,7 +445,8 @@ class UnifiedVideoEngine:
         print("[UVE] Iniciando processamento do vídeo...")
         all_scene_clips = []
 
-        bg_config = scene.get("background", {})
+        # bg_config = scene.get("background", {})
+        bg_config = self.global_settings.get("background", {})
             
         if bg_config.get("visual") == "directory":
             source_dir = bg_config.get("source")
@@ -504,65 +505,65 @@ class UnifiedVideoEngine:
 
             if visual_clip: final_scene_clip.append(visual_clip)
 
-            particle_path = "assets/overlays/1.mp4" 
+            # particle_path = "assets/overlays/1.mp4" 
 
-            if os.path.exists(particle_path):
-                try:
-                    # Carrega o vídeo de partículas
-                    overlay_clip = VideoFileClip(particle_path)
+            # if os.path.exists(particle_path):
+            #     try:
+            #         # Carrega o vídeo de partículas
+            #         overlay_clip = VideoFileClip(particle_path)
                     
-                    # --- CORREÇÃO DE DISTORÇÃO (Efeito Cover) ---
-                    # 1. Pega dimensões atuais do overlay e do alvo (fundo)
-                    w_ov, h_ov = overlay_clip.size
-                    W_tgt, H_tgt = background_clip.size 
+            #         # --- CORREÇÃO DE DISTORÇÃO (Efeito Cover) ---
+            #         # 1. Pega dimensões atuais do overlay e do alvo (fundo)
+            #         w_ov, h_ov = overlay_clip.size
+            #         W_tgt, H_tgt = background_clip.size 
 
-                    # 2. Lógica para preencher a tela sem distorcer
-                    # Se a razão do overlay for menor (mais estreito que o alvo), ajusta pela largura
-                    if (w_ov / h_ov) < (W_tgt / H_tgt):
-                        overlay_clip = overlay_clip.resize(width=W_tgt)
-                    # Se for maior (mais largo, ex: 16:9 em 9:16), ajusta pela altura
-                    else:
-                        overlay_clip = overlay_clip.resize(height=H_tgt)
+            #         # 2. Lógica para preencher a tela sem distorcer
+            #         # Se a razão do overlay for menor (mais estreito que o alvo), ajusta pela largura
+            #         if (w_ov / h_ov) < (W_tgt / H_tgt):
+            #             overlay_clip = overlay_clip.resize(width=W_tgt)
+            #         # Se for maior (mais largo, ex: 16:9 em 9:16), ajusta pela altura
+            #         else:
+            #             overlay_clip = overlay_clip.resize(height=H_tgt)
                     
-                    # 3. Centraliza e corta o excesso (Crop Center)
-                    overlay_clip = overlay_clip.crop(x_center=overlay_clip.w/2, y_center=overlay_clip.h/2, width=W_tgt, height=H_tgt)
+            #         # 3. Centraliza e corta o excesso (Crop Center)
+            #         overlay_clip = overlay_clip.crop(x_center=overlay_clip.w/2, y_center=overlay_clip.h/2, width=W_tgt, height=H_tgt)
                     
-                    # 4. Faz o loop e ajusta duração
-                    overlay_clip = (overlay_clip.loop(duration=background_clip.duration)
-                                                .set_duration(background_clip.duration))
+            #         # 4. Faz o loop e ajusta duração
+            #         overlay_clip = (overlay_clip.loop(duration=background_clip.duration)
+            #                                     .set_duration(background_clip.duration))
                     
-                    # 5. Remove o fundo preto (Luma Key)
-                    # thr é o threshold de quão escuro considerar preto
-                    # s é a suavização da borda do mask
-                    overlay_clip = overlay_clip.fx(vfx.mask_color, color=[0, 0, 0], thr=20, s=5)
+            #         # 5. Remove o fundo preto (Luma Key)
+            #         # thr é o threshold de quão escuro considerar preto
+            #         # s é a suavização da borda do mask
+            #         overlay_clip = overlay_clip.fx(vfx.mask_color, color=[0, 0, 0], thr=20, s=5)
                     
-                    # 6. Ajustes finais
-                    overlay_clip = overlay_clip.set_opacity(0.5).without_audio()
+            #         # 6. Ajustes finais
+            #         overlay_clip = overlay_clip.set_opacity(0.5).without_audio()
                     
-                    final_scene_clip.append(overlay_clip)
+            #         final_scene_clip.append(overlay_clip)
                     
-                    print(f"[Overlay] Partículas aplicadas na cena (Crop ajustado).")
-                except Exception as e:
-                    print(f"[ERRO Overlay] Não foi possível aplicar particulas: {e}")
+            #         print(f"[Overlay] Partículas aplicadas na cena (Crop ajustado).")
+            #     except Exception as e:
+            #         print(f"[ERRO Overlay] Não foi possível aplicar particulas: {e}")
 
             
-            # --- NOVO OVERLAY: BOKEH LIGHT LEAKS (ESTILO DAS FOTOS) ---
-            # ... dentro do run ...
-            try:
-                bokeh_overlay = self._create_bokeh_overlay(
-                    duration=scene_duration,
-                    base_color=(255, 120, 50), # Laranja
-                    overall_opacity=0.8,       # Opacidade
+            # # --- NOVO OVERLAY: BOKEH LIGHT LEAKS (ESTILO DAS FOTOS) ---
+            # # ... dentro do run ...
+            # try:
+            #     bokeh_overlay = self._create_bokeh_overlay(
+            #         duration=scene_duration,
+            #         base_color=(255, 120, 50), # Laranja
+            #         overall_opacity=0.8,       # Opacidade
                     
-                    # --- AQUI ESTÃO OS AJUSTES QUE VOCÊ PEDIU ---
-                    speed_factor=0.5,  # Aumente para ir mais rápido (ex: 2.5 ou 3.0)
-                    size_factor=2.7   # Aumente para ficar maior (ex: 2.0 ou 2.5)
-                )
+            #         # --- AQUI ESTÃO OS AJUSTES QUE VOCÊ PEDIU ---
+            #         speed_factor=0.5,  # Aumente para ir mais rápido (ex: 2.5 ou 3.0)
+            #         size_factor=2.7   # Aumente para ficar maior (ex: 2.0 ou 2.5)
+            #     )
                 
-                if bokeh_overlay:
-                    final_scene_clip.append(bokeh_overlay)
-            except Exception as e:
-                print(f"Erro bokeh: {e}")
+            #     if bokeh_overlay:
+            #         final_scene_clip.append(bokeh_overlay)
+            # except Exception as e:
+            #     print(f"Erro bokeh: {e}")
             # ... (código das legendas e finalização) ...
 
             if subtitle_clip: final_scene_clip.append(subtitle_clip)
