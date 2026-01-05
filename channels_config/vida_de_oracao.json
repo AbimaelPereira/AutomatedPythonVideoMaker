@@ -17,10 +17,14 @@
                 "source": "./assets/video/defaults/IA/JESUS"
             },
             "visual": {
+                "type": "directory",
+                "source": "./assets/video/defaults/paisagens"
+            },
+            "///": {
                 "type": "color",
                 "source": "#000000"
             },
-            "audio": {
+            "//audio": {
                 "type": "directory",
                 "source": "./assets/audio/background/vidadeoracao"
             }

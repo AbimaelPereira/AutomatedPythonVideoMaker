@@ -68,29 +68,20 @@ class BackgroundVideo:
 
     def generate_background_video(self):
         print("[DEBUG_BV: generate_background_video] INICIADO. Isto deve ser chamado apenas para fundos de vídeo.")
-        # Lista de vídeos válidos
-        video_files = [f for f in os.listdir(self.background_videos_dir)
-                    if any(f.lower().endswith(ext) for ext in self.valid_extensions)]
-        if not video_files:
-            print("[ERRO] Nenhum arquivo de vídeo válido encontrado.")
-            return None
 
-        if self.shuffle_clips:
-            random.shuffle(video_files)
-        if self.max_clips:
-            video_files = video_files[:self.max_clips]
-
-        # Carregar e redimensionar clipes
-        clips = []
-        for video_name in video_files:
-            path = os.path.join(self.background_videos_dir, video_name)
-            clip = self.load_and_resize_clip(path)
-            if clip:
-                clips.append(clip)
-            else:
-                print(f"[ERRO DEBUG_BV] Falha ao carregar clipe: {video_name}")
+        clips = preloaded_clips if preloaded_clips is not None else self.get_processed_clips()
 
         if not clips:
+            return None
+
+        # IMPORTANTE: Use uma cópia da lista para o shuffle não afetar o cache original
+        working_clips = list(clips)
+        if self.shuffle_clips:
+            random.shuffle(working_clips)
+        if self.max_clips:
+            working_clips = working_clips[:self.max_clips]
+
+        if not working_clips:
             print("[ERRO] Nenhum clipe pôde ser carregado.")
             return None
 
@@ -99,7 +90,7 @@ class BackgroundVideo:
             extended_clips = []
             idx = 0
             while True:
-                clip = clips[idx % len(clips)]
+                clip = working_clips[idx % len(working_clips)]
                 if extended_clips:
                     nova_duracao = final_duration + clip.duration - self.crossfade_duration
                 else:
@@ -117,17 +108,37 @@ class BackgroundVideo:
                     extended_clips.append(clip)
                     final_duration = nova_duracao
                     idx += 1
-            clips = extended_clips
+            working_clips = extended_clips
         elif self.loop_background:
-            clips = clips * 3
+            working_clips = working_clips * 3
 
         if self.enable_crossfade:
-            final_video = self.apply_crossfade_transition(clips)
+            final_video = self.apply_crossfade_transition(working_clips)
         else:
-            final_video = concatenate_videoclips(clips, method='compose')
+            final_video = concatenate_videoclips(working_clips, method='compose')
 
         if self.max_total_video_duration:
             final_video = final_video.subclip(0, self.max_total_video_duration)
         
         print("[DEBUG_BV: generate_background_video] FINALIZADO.")
         return final_video
+
+    def get_processed_clips(self):
+        """
+        Lê o diretório e retorna uma lista de clipes já redimensionados e cortados.
+        Esta função deve ser chamada apenas uma vez por diretório para alimentar o cache.
+        """
+        if not self.background_videos_dir or not os.path.exists(self.background_videos_dir):
+            print(f"[Aviso] Direitório não encontrado: {self.background_videos_dir}")
+            return []
+            
+        video_files = [f for f in os.listdir(self.background_videos_dir)
+                    if any(f.lower().endswith(ext) for ext in self.valid_extensions)]
+        
+        clips = []
+        for video_name in video_files:
+            path = os.path.join(self.background_videos_dir, video_name)
+            clip = self.load_and_resize_clip(path)
+            if clip:
+                clips.append(clip)
+        return clips

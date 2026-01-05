@@ -34,7 +34,8 @@ class UnifiedVideoEngine:
         self.output_ratio = data_config.get("output_ratio", "9:16")
         self.resolution_output = AVAILABLE_RESOLUTIONS.get(self.output_ratio, (1080, 1920))
         self.tts_config = self.global_settings.get("tts", {})
-        
+        self.bg_cache = {} # Dicionário para guardar os clipes: { "caminho": [lista_de_clips] }
+
         self.config_instance = Config()
         
         if "padding_bottom" in self.global_settings:
@@ -260,14 +261,32 @@ class UnifiedVideoEngine:
             else:
                  bg_clip = ColorClip(self.resolution_output, color=(0,0,0), duration=scene_duration)
 
-        elif bg_type == "directory" and bg_source:
-            bg_video_processor = BackgroundVideo(params={"background_videos_dir": bg_source, "resolution_output": self.resolution_output})
-            bg_clip = bg_video_processor.generate_background_video()
-            if bg_clip:
-                if bg_clip.duration < scene_duration:
-                    bg_clip = vfx.loop(bg_clip, duration=scene_duration)
-                else:
-                    bg_clip = bg_clip.subclip(0, scene_duration)
+        elif bg_type == "directory" and bg_source:           
+            # 1. Verificar se este diretório já está no cache
+            if bg_source not in self.bg_cache:
+                print(f"[UVE] Alimentando cache para o diretório: {bg_source}")
+                # Criamos um loader temporário apenas para processar os vídeos
+                loader = BackgroundVideo(params={
+                    "background_videos_dir": bg_source,
+                    "resolution_output": self.resolution_output,
+                    "max_clip_duration": 4, # ou seu valor padrão
+                })
+                self.bg_cache[bg_source] = loader.get_processed_clips()
+
+            # 2. Criar o processador para a cena ATUAL
+            # Ele vai usar os clipes que já estão na memória
+            bg_video_processor = BackgroundVideo(params={
+                "background_videos_dir": bg_source,
+                "max_total_video_duration": scene_duration,
+                "resolution_output": self.resolution_output,
+                "loop_background": True,
+                "shuffle_clips": bg_config.get("shuffle", True)
+            })
+
+            # 3. CHAMADA CHAVE: Passamos o conteúdo do cache para a função
+            bg_clip = bg_video_processor.generate_background_video(
+                preloaded_clips=self.bg_cache[bg_source]
+            )
         # video file
         elif bg_type == "video" and bg_source:
             video_path = bg_source
@@ -425,6 +444,34 @@ class UnifiedVideoEngine:
     def run(self, output_filename="final_video.mp4"):
         print("[UVE] Iniciando processamento do vídeo...")
         all_scene_clips = []
+
+        bg_config = scene.get("background", {})
+            
+        if bg_config.get("visual") == "directory":
+            source_dir = bg_config.get("source")
+            
+            # VERIFICAÇÃO DO CACHE:
+            if source_dir not in self.bg_cache:
+                print(f"[UVE] Cache vazio. Processando vídeos de: {source_dir}")
+                # Criamos um processador temporário apenas para extrair os clipes cortados/redimensionados
+                loader = BackgroundVideo({
+                    "background_videos_dir": source_dir,
+                    "resolution_output": self.resolution_output
+                })
+                # Guardamos no self para as próximas cenas usarem
+                self.bg_cache[source_dir] = loader.get_all_processed_clips()
+
+            # AGORA GERAMOS O BG DA CENA USANDO O CACHE:
+            bg_video_processor = BackgroundVideo({
+                "background_videos_dir": source_dir,
+                "max_total_video_duration": scene_duration, # Duração da cena atual
+                "resolution_output": self.resolution_output
+            })
+            
+            # Passamos os clipes que já estão na memória (self.bg_cache)
+            bg_clip = bg_video_processor.generate_background_video(
+                preloaded_clips=self.bg_cache[source_dir]
+            )
 
         for scene in self.data_config.get("scenes", []):
             scene_id = scene.get("id", "cena_desconhecida")
