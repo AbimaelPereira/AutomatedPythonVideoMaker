@@ -21,7 +21,7 @@ class ProxyCache:
     """
     
     def __init__(self, cache_dir="./cache/proxies", resolution="1280x720", 
-                 bitrate=None, regen_on_source_change=True):
+                 bitrate=None, regen_on_source_change=True, crf=28, timeout=300):
         """
         Initialize ProxyCache.
         
@@ -30,11 +30,15 @@ class ProxyCache:
             resolution: Target resolution for proxies (e.g., "1280x720")
             bitrate: Optional bitrate for proxy encoding (e.g., "2M")
             regen_on_source_change: If True, regenerate proxy when source mtime changes
+            crf: Constant Rate Factor for quality (0-51, higher = lower quality, default: 28)
+            timeout: Timeout in seconds for ffmpeg operations (default: 300)
         """
         self.cache_dir = Path(cache_dir)
         self.resolution = resolution
         self.bitrate = bitrate
         self.regen_on_source_change = regen_on_source_change
+        self.crf = crf
+        self.timeout = timeout
         
         # Create cache directory if it doesn't exist
         self.cache_dir.mkdir(parents=True, exist_ok=True)
@@ -173,7 +177,7 @@ class ProxyCache:
         Raises:
             RuntimeError: If ffmpeg fails to generate the proxy
         """
-        logger.info(f"🎬 Generating proxy for {os.path.basename(src_path)} "
+        logger.info(f"Generating proxy for {os.path.basename(src_path)} "
                    f"at resolution {self.resolution}")
         
         # Parse resolution
@@ -198,7 +202,7 @@ class ProxyCache:
                 '-vf', f'scale={width}:{height}:force_original_aspect_ratio=decrease',
                 '-c:v', 'libx264',
                 '-preset', 'fast',
-                '-crf', '28',  # Higher CRF = lower quality/size
+                '-crf', str(self.crf),
                 '-an',  # No audio for proxies
                 '-y',  # Overwrite output file
             ]
@@ -214,7 +218,7 @@ class ProxyCache:
                 cmd,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
-                timeout=300  # 5 minute timeout
+                timeout=self.timeout
             )
             
             if result.returncode != 0:
@@ -225,7 +229,7 @@ class ProxyCache:
             
             # Atomic rename from temp to final path
             os.replace(tmp_path, proxy_path)
-            logger.info(f"✅ Proxy created successfully: {proxy_path}")
+            logger.info(f"Proxy created successfully: {proxy_path}")
             
         except subprocess.TimeoutExpired:
             # Clean up temp file

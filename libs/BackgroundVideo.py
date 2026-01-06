@@ -64,14 +64,14 @@ class BackgroundVideo:
                 try:
                     actual_path = self.proxy_cache.get_or_create(video_path)
                     if actual_path != video_path:
-                        logger.info(f"📦 Using proxy for {os.path.basename(video_path)}")
+                        logger.info(f"Using proxy for {os.path.basename(video_path)}")
                 except Exception as e:
                     logger.warning(f"Failed to get proxy for {video_path}: {e}. Using original.")
                     actual_path = video_path
             else:
-                logger.debug(f"🎬 Using original file: {os.path.basename(video_path)}")
+                logger.debug(f"Using original file: {os.path.basename(video_path)}")
             
-            print(f"[DEBUG_BV: load_and_resize_clip] Carregando e redimensionando: {os.path.basename(actual_path)}")
+            print(f"[DEBUG_BV: load_and_resize_clip] Loading and resizing: {os.path.basename(actual_path)}")
             video = VideoFileClip(actual_path, audio=False)
             if video.duration > self.max_clip_duration:
                 video = video.subclip(0, self.max_clip_duration)

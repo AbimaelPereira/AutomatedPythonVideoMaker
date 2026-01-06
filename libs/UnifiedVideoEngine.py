@@ -272,21 +272,21 @@ class UnifiedVideoEngine:
                  bg_clip = ColorClip(self.resolution_output, color=(0,0,0), duration=scene_duration)
 
         elif bg_type == "directory" and bg_source:           
-            # 1. Verificar se este diretório já está no cache
+            # 1. Check if this directory is already in the cache
             if bg_source not in self.bg_cache:
-                print(f"[UVE] Alimentando cache para o diretório: {bg_source}")
-                # Criamos um loader temporário apenas para processar os vídeos
+                print(f"[UVE] Populating cache for directory: {bg_source}")
+                # Create a temporary loader just to process the videos
                 loader_params = {
                     "background_videos_dir": bg_source,
                     "resolution_output": self.resolution_output,
-                    "max_clip_duration": 4, # ou seu valor padrão
+                    "max_clip_duration": 4, # or its default value
                 }
                 loader_params.update(self._get_proxy_config())
                 loader = BackgroundVideo(params=loader_params)
                 self.bg_cache[bg_source] = loader.get_processed_clips()
 
-            # 2. Criar o processador para a cena ATUAL
-            # Ele vai usar os clipes que já estão na memória
+            # 2. Create the processor for the CURRENT scene
+            # It will use the clips that are already in memory
             processor_params = {
                 "background_videos_dir": bg_source,
                 "max_total_video_duration": scene_duration,
@@ -297,7 +297,7 @@ class UnifiedVideoEngine:
             processor_params.update(self._get_proxy_config())
             bg_video_processor = BackgroundVideo(params=processor_params)
 
-            # 3. CHAMADA CHAVE: Passamos o conteúdo do cache para a função
+            # 3. KEY CALL: Pass the cache content to the function
             bg_clip = bg_video_processor.generate_background_video(
                 preloaded_clips=self.bg_cache[bg_source]
             )
@@ -465,29 +465,29 @@ class UnifiedVideoEngine:
         if bg_config.get("visual") == "directory":
             source_dir = bg_config.get("source")
             
-            # VERIFICAÇÃO DO CACHE:
+            # CACHE CHECK:
             if source_dir not in self.bg_cache:
-                print(f"[UVE] Cache vazio. Processando vídeos de: {source_dir}")
-                # Criamos um processador temporário apenas para extrair os clipes cortados/redimensionados
+                print(f"[UVE] Cache empty. Processing videos from: {source_dir}")
+                # Create a temporary processor just to extract the cropped/resized clips
                 loader_params = {
                     "background_videos_dir": source_dir,
                     "resolution_output": self.resolution_output
                 }
                 loader_params.update(self._get_proxy_config())
                 loader = BackgroundVideo(loader_params)
-                # Guardamos no self para as próximas cenas usarem
+                # Store in self for use by subsequent scenes
                 self.bg_cache[source_dir] = loader.get_all_processed_clips()
 
-            # AGORA GERAMOS O BG DA CENA USANDO O CACHE:
+            # NOW GENERATE THE SCENE BG USING THE CACHE:
             processor_params = {
                 "background_videos_dir": source_dir,
-                "max_total_video_duration": scene_duration, # Duração da cena atual
+                "max_total_video_duration": scene_duration, # Current scene duration
                 "resolution_output": self.resolution_output
             }
             processor_params.update(self._get_proxy_config())
             bg_video_processor = BackgroundVideo(processor_params)
             
-            # Passamos os clipes que já estão na memória (self.bg_cache)
+            # Pass the clips that are already in memory (self.bg_cache)
             bg_clip = bg_video_processor.generate_background_video(
                 preloaded_clips=self.bg_cache[source_dir]
             )
