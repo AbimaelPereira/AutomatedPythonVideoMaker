@@ -22,3 +22,7 @@ assets/video/defaults/*
 
 /assets/gifs/*
 !/assets/gifs/.gitkeep
+
+# Proxy cache directory
+/cache/*
+!/cache/.gitkeep

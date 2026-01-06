@@ -63,6 +63,13 @@ class Config:
             "debug": self._to_bool(os.getenv("DEBUG", False)),
             "shuffle_clips": self._to_bool(os.getenv("SHUFFLE_CLIPS", True)),
             "max_clips": int(os.getenv("MAX_CLIPS", 0)) or None,
+            
+            # Proxy Cache Configuration
+            "proxy_enabled": self._to_bool(os.getenv("PROXY_ENABLED", True)),
+            "proxy_cache_dir": os.getenv("PROXY_CACHE_DIR", os.path.join(self.base_dir, "cache", "proxies")),
+            "proxy_resolution": os.getenv("PROXY_RESOLUTION", "1280x720"),
+            "proxy_bitrate": os.getenv("PROXY_BITRATE"),  # Optional, None by default
+            "proxy_regen_on_source_change": self._to_bool(os.getenv("PROXY_REGEN_ON_SOURCE_CHANGE", True)),
         }
 
         # --- 2. CARREGAR CONFIGURAÇÃO DO CANAL ---
@@ -120,6 +127,10 @@ class Config:
             os.makedirs(self.background_videos_dir, exist_ok=True)
         if not os.path.isdir(self.temp_dir):
             os.makedirs(self.temp_dir, exist_ok=True)
+        if self.config.get("proxy_enabled", True):
+            proxy_cache_dir = self.config.get("proxy_cache_dir")
+            if proxy_cache_dir and not os.path.isdir(proxy_cache_dir):
+                os.makedirs(proxy_cache_dir, exist_ok=True)
 
     # --- MÉTODOS DE COMPATIBILIDADE COM DICIONÁRIO ---
     # Estes métodos permitem que o UnifiedVideoEngine use config.get("chave")

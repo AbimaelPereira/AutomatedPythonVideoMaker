@@ -54,6 +54,16 @@ class UnifiedVideoEngine:
         self.final_clips = []
         self.total_duration = 0.0
 
+    def _get_proxy_config(self):
+        """Get proxy configuration from data_config."""
+        return {
+            "proxy_enabled": self.data_config.get("proxy_enabled", True),
+            "proxy_cache_dir": self.data_config.get("proxy_cache_dir", "./cache/proxies"),
+            "proxy_resolution": self.data_config.get("proxy_resolution", "1280x720"),
+            "proxy_bitrate": self.data_config.get("proxy_bitrate"),
+            "proxy_regen_on_source_change": self.data_config.get("proxy_regen_on_source_change", True),
+        }
+
     def _get_tts_engine(self):
         return EdgeTTS()
 
@@ -266,22 +276,26 @@ class UnifiedVideoEngine:
             if bg_source not in self.bg_cache:
                 print(f"[UVE] Alimentando cache para o diretório: {bg_source}")
                 # Criamos um loader temporário apenas para processar os vídeos
-                loader = BackgroundVideo(params={
+                loader_params = {
                     "background_videos_dir": bg_source,
                     "resolution_output": self.resolution_output,
                     "max_clip_duration": 4, # ou seu valor padrão
-                })
+                }
+                loader_params.update(self._get_proxy_config())
+                loader = BackgroundVideo(params=loader_params)
                 self.bg_cache[bg_source] = loader.get_processed_clips()
 
             # 2. Criar o processador para a cena ATUAL
             # Ele vai usar os clipes que já estão na memória
-            bg_video_processor = BackgroundVideo(params={
+            processor_params = {
                 "background_videos_dir": bg_source,
                 "max_total_video_duration": scene_duration,
                 "resolution_output": self.resolution_output,
                 "loop_background": True,
                 "shuffle_clips": background_config.get("shuffle", True)
-            })
+            }
+            processor_params.update(self._get_proxy_config())
+            bg_video_processor = BackgroundVideo(params=processor_params)
 
             # 3. CHAMADA CHAVE: Passamos o conteúdo do cache para a função
             bg_clip = bg_video_processor.generate_background_video(
@@ -455,19 +469,23 @@ class UnifiedVideoEngine:
             if source_dir not in self.bg_cache:
                 print(f"[UVE] Cache vazio. Processando vídeos de: {source_dir}")
                 # Criamos um processador temporário apenas para extrair os clipes cortados/redimensionados
-                loader = BackgroundVideo({
+                loader_params = {
                     "background_videos_dir": source_dir,
                     "resolution_output": self.resolution_output
-                })
+                }
+                loader_params.update(self._get_proxy_config())
+                loader = BackgroundVideo(loader_params)
                 # Guardamos no self para as próximas cenas usarem
                 self.bg_cache[source_dir] = loader.get_all_processed_clips()
 
             # AGORA GERAMOS O BG DA CENA USANDO O CACHE:
-            bg_video_processor = BackgroundVideo({
+            processor_params = {
                 "background_videos_dir": source_dir,
                 "max_total_video_duration": scene_duration, # Duração da cena atual
                 "resolution_output": self.resolution_output
-            })
+            }
+            processor_params.update(self._get_proxy_config())
+            bg_video_processor = BackgroundVideo(processor_params)
             
             # Passamos os clipes que já estão na memória (self.bg_cache)
             bg_clip = bg_video_processor.generate_background_video(
