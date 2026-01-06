@@ -26,8 +26,8 @@ class EdgeTTS:
             "output_basename": "narration",
             "text": None,
             "silence_thresh": -50,
-            "min_silence_len": 400,
-            "keep_silence": 295,
+            "min_silence_len": 600, # tempo mínimo de silêncio para considerar corte
+            "keep_silence": 295, # tempo de silêncio a manter após cada corte (em ms)
         }
         if params:
             defaults.update(params)

@@ -27,6 +27,22 @@ def hex_to_rgb(hex_value):
     except ValueError:
         return (0, 0, 0)
 
+def deep_merge(a, b):
+    """
+    Retorna um dicionário resultante da mescla de 'a' (base) com 'b' (overrides).
+    - Valores escalares são sobrescritos por b quando presentes.
+    - Dicionários aninhados são mesclados recursivamente.
+    """
+    if not isinstance(a, dict):
+        return b
+    result = dict(a)
+    for k, v in (b or {}).items():
+        if k in result and isinstance(result[k], dict) and isinstance(v, dict):
+            result[k] = deep_merge(result[k], v)
+        else:
+            result[k] = v
+    return result
+
 class UnifiedVideoEngine:
     def __init__(self, data_config):
         self.data_config = data_config
@@ -158,8 +174,6 @@ class UnifiedVideoEngine:
         # Phase: define onde no círculo ela começa (0 a 2pi)
         # Direction: 1 (horário) ou -1 (anti-horário)
         blobs_config = [
-            # {"phase": 0,             "color_offset": (0, 0, 0),     "size": 1.0 * size_factor}, # Começa na Direita
-            # {"phase": np.pi,         "color_offset": (20, 20, 0),   "size": 0.8 * size_factor}, # Começa na Esquerda
             {"phase": np.pi / 2,     "color_offset": (-10, -10, 0), "size": 1.2 * size_factor}, # Começa Em Baixo
             {"phase": 3 * np.pi / 2, "color_offset": (10, 10, 10),  "size": 0.9 * size_factor}, # Começa Em Cima
         ]
@@ -180,23 +194,14 @@ class UnifiedVideoEngine:
             blob = blob.set_duration(duration).set_opacity(overall_opacity)
 
             # 3. MATEMÁTICA ORBITAL (ELIPSE)
-            # Para passar pelas 4 bordas, o raio da órbita deve ser metade da largura/altura
-            # Adicionamos um pequeno offset para garantir que o CENTRO da bola fique na borda
-            orbit_radius_x = W * 0.6 # Raio horizontal (um pouco maior que a meia tela)
-            orbit_radius_y = H * 0.6 # Raio vertical
+            orbit_radius_x = W * 0.6
+            orbit_radius_y = H * 0.6
             
             center_x = W / 2
             center_y = H / 2
             
-            # Velocidade angular: define quantas voltas completas por segundo?
-            # Vamos ajustar para que o movimento seja perceptível independente da duração
-            # 0.5 rad/s * speed_factor
             angular_speed = 0.8 * speed_factor
 
-            # Função de posição orbital
-            # X = Center + Radius * cos(angle)
-            # Y = Center + Radius * sin(angle)
-            # Subtraímos blob_size/2 porque set_position usa o canto superior esquerdo
             blob = blob.set_position(
                 lambda t, 
                        cx=center_x, cy=center_y, 
@@ -218,12 +223,21 @@ class UnifiedVideoEngine:
         return CompositeVideoClip(bokeh_clips, size=self.resolution_output).set_duration(duration)
 
     def _create_background_clip(self, scene_data, scene_duration, scene_dir, video_dir):
-        if "background" in scene_data:
-            background_config = scene_data["background"]
+        # Faz merge entre global background e scene background (scene sobrescreve global),
+        # mas REGISTER se a cena explicitamente definiu `audio` para que não apliquemos
+        # o áudio global por cena (isso causaria restart da música).
+        global_background = self.global_settings.get("background", {}) or {}
+        scene_background = scene_data.get("background", None)
+
+        if scene_background is not None:
+            # merge: global <- scene (scene overrides)
+            background_config = deep_merge(global_background, scene_background)
             storage_dir = scene_dir
+            per_scene_audio_defined = "audio" in scene_background
         else:
-            background_config = self.global_settings.get("background", {})
+            background_config = dict(global_background)  # usar global como está
             storage_dir = video_dir
+            per_scene_audio_defined = False
 
         visual_config = background_config.get("visual", {})
         bg_clip = None
@@ -253,7 +267,6 @@ class UnifiedVideoEngine:
                         bg_clip = bg_clip.resize(height=target_h)
                         bg_clip = vfx.crop(bg_clip, x_center=target_w/2, y_center=target_h/2, width=target_w, height=target_h)
                     
-                    # aplica um leve zoom in ao longo do tempo
                     bg_clip = bg_clip.fx(vfx.resize, lambda t: 1.0 + 0.05 * t/scene_duration).set_pos("center")
                     bg_clip = bg_clip.subclip(0, scene_duration)
                 except Exception as e:
@@ -262,19 +275,15 @@ class UnifiedVideoEngine:
                  bg_clip = ColorClip(self.resolution_output, color=(0,0,0), duration=scene_duration)
 
         elif bg_type == "directory" and bg_source:           
-            # 1. Verificar se este diretório já está no cache
             if bg_source not in self.bg_cache:
                 print(f"[UVE] Alimentando cache para o diretório: {bg_source}")
-                # Criamos um loader temporário apenas para processar os vídeos
                 loader = BackgroundVideo(params={
                     "background_videos_dir": bg_source,
                     "resolution_output": self.resolution_output,
-                    "max_clip_duration": 4, # ou seu valor padrão
+                    "max_clip_duration": 4,
                 })
                 self.bg_cache[bg_source] = loader.get_processed_clips()
 
-            # 2. Criar o processador para a cena ATUAL
-            # Ele vai usar os clipes que já estão na memória
             bg_video_processor = BackgroundVideo(params={
                 "background_videos_dir": bg_source,
                 "max_total_video_duration": scene_duration,
@@ -283,11 +292,9 @@ class UnifiedVideoEngine:
                 "shuffle_clips": background_config.get("shuffle", True)
             })
 
-            # 3. CHAMADA CHAVE: Passamos o conteúdo do cache para a função
             bg_clip = bg_video_processor.generate_background_video(
                 preloaded_clips=self.bg_cache[bg_source]
             )
-        # video file
         elif bg_type == "video" and bg_source:
             video_path = bg_source
             if video_path.lower().startswith(("http:", "https:")):
@@ -317,9 +324,9 @@ class UnifiedVideoEngine:
         if bg_clip is None:
             bg_clip = ColorClip(self.resolution_output, color=(0,0,0), duration=scene_duration)
 
-        # Audio Fundo
-        audio_config = background_config.get("audio", self.global_settings.get("background", {}).get("audio", {}))
-        
+        # Aplicar áudio por cena somente se a cena explicitamente definiu audio.
+        audio_config = background_config.get("audio", {}) if per_scene_audio_defined else {}
+
         if audio_config.get("type") == "directory" and audio_config.get("source"):
              bg_music_dir = audio_config["source"]
              full_bg_music_dir = os.path.join(os.getcwd(), bg_music_dir) 
@@ -354,10 +361,6 @@ class UnifiedVideoEngine:
         if not visual_elements:
             return None
 
-        # -----------------------------------------------------------
-        # CORREÇÃO DE DISTORÇÃO (2-PASS LAYOUT)
-        # -----------------------------------------------------------
-        
         # PASSO 1: Gerar os clipes "crus" para descobrir seus tamanhos REAIS
         valid_clips_info = []
         valid_element_data_for_layout = []
@@ -371,15 +374,11 @@ class UnifiedVideoEngine:
                 "temp_dir": scene_dir, 
                 "duration": scene_duration
             }
-            # Instancia e gera o clip original
             processor = VisualClip(config)
             raw_clip = processor.generate()
             
             if raw_clip:
                 w, h = raw_clip.size
-                
-                # Atualiza o dicionário de dados com o tamanho real descoberto
-                # Isso garante que o LayoutEngine calcule a caixa com a proporção correta
                 element_data_copy = element_data.copy()
                 element_data_copy['original_size'] = (w, h)
                 
@@ -391,22 +390,17 @@ class UnifiedVideoEngine:
         if not valid_clips_info:
             return None
 
-        # PASSO 2: Rodar o LayoutEngine com os dados enriquecidos (tamanhos reais)
-        # O LayoutEngine agora vai criar caixas proporcionais ao 'original_size' que passamos
         layout_results = LayoutEngine.process_stack_layout(valid_element_data_for_layout, self.config_instance)
         
         final_clips = []
         
-        # PASSO 3: Aplicar o redimensionamento seguro
         for i, clip in enumerate(valid_clips_info):
             if i >= len(layout_results): break
             
             layout = layout_results[i]
-            final_size = layout['final_size']     # (w, h) calculado pelo LayoutEngine
-            final_pos = layout['final_position']  # (x, y)
+            final_size = layout['final_size']
+            final_pos = layout['final_position']
             
-            # Como o LayoutEngine calculou 'final_size' baseado no Aspect Ratio original do clip,
-            # podemos usar resize(newsize=final_size) sem medo de distorção (apenas arredondamento mínimo).
             try:
                 clip_resized = clip.resize(newsize=final_size)
                 clip_positioned = clip_resized.set_position(final_pos)
@@ -454,22 +448,19 @@ class UnifiedVideoEngine:
             # VERIFICAÇÃO DO CACHE:
             if source_dir not in self.bg_cache:
                 print(f"[UVE] Cache vazio. Processando vídeos de: {source_dir}")
-                # Criamos um processador temporário apenas para extrair os clipes cortados/redimensionados
                 loader = BackgroundVideo({
                     "background_videos_dir": source_dir,
                     "resolution_output": self.resolution_output
                 })
-                # Guardamos no self para as próximas cenas usarem
                 self.bg_cache[source_dir] = loader.get_all_processed_clips()
 
-            # AGORA GERAMOS O BG DA CENA USANDO O CACHE:
+            # NOTE: aqui bg_video_processor/scene_duration não é crítico — this block is legacy
             bg_video_processor = BackgroundVideo({
                 "background_videos_dir": source_dir,
-                "max_total_video_duration": scene_duration, # Duração da cena atual
+                "max_total_video_duration": None,
                 "resolution_output": self.resolution_output
             })
             
-            # Passamos os clipes que já estão na memória (self.bg_cache)
             bg_clip = bg_video_processor.generate_background_video(
                 preloaded_clips=self.bg_cache[source_dir]
             )
@@ -492,7 +483,7 @@ class UnifiedVideoEngine:
             # 3. Fundo
             background_clip = self._create_background_clip(scene, scene_duration, scene_dir, self.output_dir)
             
-            # 4. Elementos Visuais (Agora com Layout 2-Pass e Sem Distorção)
+            # 4. Elementos Visuais
             visual_clip = self._create_visual_elements_clip(scene, scene_duration, scene_dir)
             
             # 5. Legendas
@@ -504,93 +495,23 @@ class UnifiedVideoEngine:
             final_scene_clip = [background_clip]
 
             if visual_clip: final_scene_clip.append(visual_clip)
-
-            # particle_path = "assets/overlays/1.mp4" 
-
-            # if os.path.exists(particle_path):
-            #     try:
-            #         # Carrega o vídeo de partículas
-            #         overlay_clip = VideoFileClip(particle_path)
-                    
-            #         # --- CORREÇÃO DE DISTORÇÃO (Efeito Cover) ---
-            #         # 1. Pega dimensões atuais do overlay e do alvo (fundo)
-            #         w_ov, h_ov = overlay_clip.size
-            #         W_tgt, H_tgt = background_clip.size 
-
-            #         # 2. Lógica para preencher a tela sem distorcer
-            #         # Se a razão do overlay for menor (mais estreito que o alvo), ajusta pela largura
-            #         if (w_ov / h_ov) < (W_tgt / H_tgt):
-            #             overlay_clip = overlay_clip.resize(width=W_tgt)
-            #         # Se for maior (mais largo, ex: 16:9 em 9:16), ajusta pela altura
-            #         else:
-            #             overlay_clip = overlay_clip.resize(height=H_tgt)
-                    
-            #         # 3. Centraliza e corta o excesso (Crop Center)
-            #         overlay_clip = overlay_clip.crop(x_center=overlay_clip.w/2, y_center=overlay_clip.h/2, width=W_tgt, height=H_tgt)
-                    
-            #         # 4. Faz o loop e ajusta duração
-            #         overlay_clip = (overlay_clip.loop(duration=background_clip.duration)
-            #                                     .set_duration(background_clip.duration))
-                    
-            #         # 5. Remove o fundo preto (Luma Key)
-            #         # thr é o threshold de quão escuro considerar preto
-            #         # s é a suavização da borda do mask
-            #         overlay_clip = overlay_clip.fx(vfx.mask_color, color=[0, 0, 0], thr=20, s=5)
-                    
-            #         # 6. Ajustes finais
-            #         overlay_clip = overlay_clip.set_opacity(0.5).without_audio()
-                    
-            #         final_scene_clip.append(overlay_clip)
-                    
-            #         print(f"[Overlay] Partículas aplicadas na cena (Crop ajustado).")
-            #     except Exception as e:
-            #         print(f"[ERRO Overlay] Não foi possível aplicar particulas: {e}")
-
-            
-            # # --- NOVO OVERLAY: BOKEH LIGHT LEAKS (ESTILO DAS FOTOS) ---
-            # # ... dentro do run ...
-            # try:
-            #     bokeh_overlay = self._create_bokeh_overlay(
-            #         duration=scene_duration,
-            #         base_color=(255, 120, 50), # Laranja
-            #         overall_opacity=0.8,       # Opacidade
-                    
-            #         # --- AQUI ESTÃO OS AJUSTES QUE VOCÊ PEDIU ---
-            #         speed_factor=0.5,  # Aumente para ir mais rápido (ex: 2.5 ou 3.0)
-            #         size_factor=2.7   # Aumente para ficar maior (ex: 2.0 ou 2.5)
-            #     )
-                
-            #     if bokeh_overlay:
-            #         final_scene_clip.append(bokeh_overlay)
-            # except Exception as e:
-            #     print(f"Erro bokeh: {e}")
-            # ... (código das legendas e finalização) ...
-
             if subtitle_clip: final_scene_clip.append(subtitle_clip)
 
-            # --- [INÍCIO] DEBUG_LAYOUT: Area Útil (Visuais + Legenda) ---
+            # Debug layout area
             if os.getenv("DEBUG_LAYOUT") == "1":
-                # Pega as dimensões
                 W, H = self.resolution_output
                 pad_top = self.config_instance.padding_top
-                pad_bottom = self.config_instance.padding_bottom
                 pad_side = self.config_instance.padding_side
                 
-                # Largura = Tela inteira menos as laterais
                 debug_w = W - (2 * pad_side)
-                
-                # Altura = Tela inteira menos o topo 
-                # (Mantemos o fundo/legenda inclusos, pois padding_bottom é a altura da legenda)
                 debug_h = H - pad_top
                 
-                # Cria o retângulo semitransparente (Vermelho)
                 debug_area = ColorClip(
                     size=(int(debug_w), int(debug_h)), 
                     color=(255, 0, 0)
                 ).set_opacity(0.3).set_position((pad_side, pad_top)).set_duration(scene_duration)
                 
                 final_scene_clip.append(debug_area)
-            # --- [FIM] DEBUG_LAYOUT ---
 
             safe_clips = []
             for c in final_scene_clip:
@@ -617,6 +538,45 @@ class UnifiedVideoEngine:
         output_filename = f"{slug}.mp4"
         output_path = os.path.join(self.output_dir, output_filename)
         
+        # Aplicar o audio global uma única vez no final
+        global_bg_audio_config = self.global_settings.get("background", {}).get("audio", {}) or {}
+        try:
+            total_dur = self.total_duration if self.total_duration > 0 else final_video.duration
+        except Exception:
+            total_dur = final_video.duration
+
+        if global_bg_audio_config and global_bg_audio_config.get("type"):
+            try:
+                bg_audio_clip = None
+                if global_bg_audio_config.get("type") == "directory" and global_bg_audio_config.get("source"):
+                    bg_music_dir = global_bg_audio_config["source"]
+                    full_bg_music_dir = os.path.join(os.getcwd(), bg_music_dir)
+                    if os.path.isdir(full_bg_music_dir):
+                        music_files = [os.path.join(full_bg_music_dir, f) for f in os.listdir(full_bg_music_dir) if f.endswith(".mp3")]
+                        if music_files:
+                            bg_audio_clip = AudioFileClip(random.choice(music_files))
+                elif global_bg_audio_config.get("type") == "file" and global_bg_audio_config.get("source"):
+                    audio_source = MediaDownloader.resolve_source_path(global_bg_audio_config["source"], self.output_dir)
+                    if audio_source and os.path.exists(audio_source):
+                        bg_audio_clip = AudioFileClip(audio_source)
+
+                if bg_audio_clip:
+                    if bg_audio_clip.duration < total_dur:
+                        bg_audio_clip = afx.audio_loop(bg_audio_clip, duration=total_dur)
+                    else:
+                        bg_audio_clip = bg_audio_clip.subclip(0, total_dur)
+
+                    bg_audio_clip = bg_audio_clip.volumex(global_bg_audio_config.get("volume", 0.1))
+
+                    if final_video.audio:
+                        combined_audio = CompositeAudioClip([final_video.audio, bg_audio_clip])
+                    else:
+                        combined_audio = bg_audio_clip
+
+                    final_video = final_video.set_audio(combined_audio)
+            except Exception as e:
+                print(f"[UVE] Aviso: falha ao aplicar audio de fundo global: {e}")
+
         ffmpeg_audio_temp = os.path.join(self.output_dir, 'temp-audio-rendering.m4a')
         
         final_video.write_videofile(
@@ -629,7 +589,6 @@ class UnifiedVideoEngine:
             preset='medium'
         )
 
-        # e debug for false
         if self.data_config.get("youtube") and self.data_config.get("debug") is not True:
             print("[UVE] Iniciando upload para o YouTube...")
             youtube_params = self.data_config.get("youtube", {})

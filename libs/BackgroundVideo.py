@@ -18,16 +18,28 @@ class BackgroundVideo:
             "max_clip_duration": 4,
             "max_total_video_duration": None,
             "crossfade_duration": 0.8,
-            "enable_crossfade": False, 
+            "enable_crossfade": True,
             "max_clips": None,
             "shuffle_clips": True,
             "valid_extensions": ["mp4", "mkv", "avi", "mov", "flv", "webm"],
             "loop_background": True,
         }
+
+        # Mesclamos params (se houver)
         if params:
             defaults.update(params)
-        if defaults["output_ratio"] in defaults["available_resolutions"]:
+
+        # CORREÇÃO: Não sobrescrever resolution_output se foi fornecido explicitamente em params.
+        # Se o usuário passou 'resolution_output' em params, respeitamos esse valor.
+        # Caso contrário, tentamos derivar a partir de output_ratio disponível.
+        if (not params or "resolution_output" not in params) and defaults.get("output_ratio") in defaults.get("available_resolutions", {}):
             defaults["resolution_output"] = defaults["available_resolutions"][defaults["output_ratio"]]
+
+        # garante que seja uma tupla (width, height)
+        ro = defaults.get("resolution_output")
+        if isinstance(ro, list):
+            defaults["resolution_output"] = tuple(ro)
+
         for k, v in defaults.items():
             setattr(self, k, v)
 
@@ -44,15 +56,23 @@ class BackgroundVideo:
             target_ratio = target_w / target_h
 
             if original_ratio > target_ratio:
+                # video mais largo que o target -> crop horizontalmente
                 new_w = int(height * target_ratio)
                 x_center = width / 2
                 video = crop(video, x1=int(x_center - new_w / 2), x2=int(x_center + new_w / 2), y1=0, y2=height)
             elif original_ratio < target_ratio:
+                # video mais alto que o target -> crop verticalmente
                 new_h = int(width / target_ratio)
                 y_center = height / 2
                 video = crop(video, y1=int(y_center - new_h / 2), y2=int(y_center + new_h / 2), x1=0, x2=width)
 
-            return resize(video, newsize=(target_w, target_h))
+            resized = resize(video, newsize=(target_w, target_h))
+            # debug do tamanho final
+            try:
+                print(f"[DEBUG] Clip Processado: {os.path.basename(video_path)} -> Tamanho Final: {resized.size[0]}x{resized.size[1]}")
+            except Exception:
+                pass
+            return resized
         except Exception as e:
             print(f"[ERRO DEBUG_BV] Falha em load_and_resize_clip para {video_path}: {e}")
             return None
@@ -112,14 +132,25 @@ class BackgroundVideo:
         elif self.loop_background:
             working_clips = working_clips * 3
 
+        # DEBUG: imprimir tamanhos antes de qualquer junção
+        for i, c in enumerate(working_clips):
+            try:
+                print(f"[DEBUG_BV] pre-join clip {i} size={c.size} duration={c.duration}")
+            except Exception:
+                print(f"[DEBUG_BV] pre-join clip {i} size=unknown duration={getattr(c, 'duration', 'unknown')}")
+
         if self.enable_crossfade:
             final_video = self.apply_crossfade_transition(working_clips)
         else:
             final_video = concatenate_videoclips(working_clips, method='compose')
+            try:
+                final_video = final_video.resize(newsize=self.resolution_output)
+            except Exception:
+                pass
 
         if self.max_total_video_duration:
             final_video = final_video.subclip(0, self.max_total_video_duration)
-        
+
         print("[DEBUG_BV: generate_background_video] FINALIZADO.")
         return final_video
 
@@ -131,10 +162,10 @@ class BackgroundVideo:
         if not self.background_videos_dir or not os.path.exists(self.background_videos_dir):
             print(f"[Aviso] Direitório não encontrado: {self.background_videos_dir}")
             return []
-            
+
         video_files = [f for f in os.listdir(self.background_videos_dir)
-                    if any(f.lower().endswith(ext) for ext in self.valid_extensions)]
-        
+                       if any(f.lower().endswith(ext) for ext in self.valid_extensions)]
+
         clips = []
         for video_name in video_files:
             path = os.path.join(self.background_videos_dir, video_name)

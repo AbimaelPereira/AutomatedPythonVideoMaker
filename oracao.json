@@ -5,78 +5,400 @@
         "output_ratio": "16:9",
         "scenes": [
             {
-                "id": "cena_1",
+                "id": "cena_1a",
                 "narration": {
-                    "text": "Você já acordou sentindo que o peso do mundo estava sobre seus ombros? Que suas próprias forças não seriam suficientes para enfrentar mais um dia? Eu preciso te revelar algo que pode transformar cada manhã da sua vida. Existe uma fonte de poder sobrenatural disponível para você agora mesmo, neste exato momento. Não é um segredo guardado, não é privilégio de alguns escolhidos. É uma promessa viva, pulsante, esperando que você estenda suas mãos e receba. A Palavra de Deus em Salmos vinte e nove, versículo onze, proclama com autoridade: o Senhor dará força ao seu povo, o Senhor abençoará o seu povo com paz. Esta não é apenas uma bela frase religiosa. É um decreto celestial, um contrato espiritual entre você e o Criador do universo. A força que você precisa para vencer este dia já foi liberada. A paz para caminhar com confiança já está ao seu alcance. Mas há um segredo para acessar esse poder. Se você crê que Deus pode fazer a diferença na sua vida hoje, continue comigo até o final. Vou orar uma oração poderosa com você, no nome que está acima de todo nome. Declare agora: eu creio no poder de Deus sobre minha vida.",
+                    "text": "Você já acordou sentindo que o peso do mundo estava sobre seus ombros? Que suas próprias forças não seriam suficientes para enfrentar mais um dia? Eu preciso te revelar algo que pode transformar cada manhã da sua vida.",
                     "subtitles": true
                 }
             },
             {
-                "id": "cena_2",
+                "id": "cena_1b",
                 "narration": {
-                    "text": "Muitos começam o dia correndo, arrastados pela urgência, sufocados pelas demandas que ainda nem chegaram. Mas existe uma sabedoria ancestral que poucos praticam: reconhecer a soberania de Deus antes mesmo de dar o primeiro passo. Quando você abre os olhos pela manhã e a primeira coisa que faz é declarar que Deus está no controle, algo profundo acontece no mundo espiritual. Você não está apenas repetindo palavras vazias. Você está realinhando sua alma com o trono celestial. Está dizendo ao inimigo que hoje não será ele quem ditará as regras. As Escrituras nos ensinam em Provérbios dezenove, versículo vinte e um: muitos são os planos no coração do homem, mas o que prevalece é o propósito do Senhor. Quantas vezes você já planejou seu dia perfeitamente, apenas para ver tudo desmoronar? Isso acontece quando tentamos construir sem a base certa. Reconhecer a soberania divina é admitir humildemente: Senhor, eu não sei o melhor caminho, mas Tu sabes. Meus planos podem falhar, mas os Teus jamais falham. Responda com fé: glória a Deus, Ele está no controle.",
+                    "text": "Existe uma fonte de poder sobrenatural disponível para você agora mesmo, neste exato momento. Não é um segredo guardado, não é privilégio de alguns escolhidos. É uma promessa viva, pulsante, esperando que você estenda suas mãos e receba.",
                     "subtitles": true
                 }
             },
             {
-                "id": "cena_3",
+                "id": "cena_1c",
                 "narration": {
-                    "text": "A oração matinal não é um ritual religioso vazio. É um ato de rendição revolucionário. Quando você dobra seus joelhos e declara que Deus é sua força, sua sabedoria e seu guia, você não está apenas falando ao ar. Você está movendo montanhas no reino invisível. Está ativando promessas eternas. Está abrindo portais de bênçãos sobre sua vida. Lembra da história poderosa de Asa, registrada em segundo Crônicas catorze? Ele estava diante de um exército imenso, uma batalha impossível de vencer humanamente. Mas ao invés de confiar em suas estratégias militares ou na quantidade de soldados, ele clamou: Senhor, não há quem possa ajudar senão Tu. Em Ti confiamos, em Teu nome viemos contra esta multidão. E o que aconteceu? Deus entregou a vitória nas mãos dele. A batalha não foi vencida pela força de Asa, mas pela força do Deus em quem ele confiou. Cada manhã, quando você se levanta e entrega seu dia nas mãos do Senhor, você está fazendo a mesma declaração de fé. Está dizendo: hoje não lutarei sozinho. Proclame agora: o Senhor é minha força e meu escudo.",
+                    "text": "A Palavra de Deus em Salmos vinte e nove, versículo onze, proclama com autoridade: o Senhor dará força ao seu povo, o Senhor abençoará o seu povo com paz.",
                     "subtitles": true
                 }
             },
             {
-                "id": "cena_4",
+                "id": "cena_1d",
                 "narration": {
-                    "text": "Reconhecer Deus pela manhã é apenas o começo. O verdadeiro desafio é mantê-Lo como centro durante todo o dia. Quantas vezes você já orou de manhã e à tarde já tinha assumido o controle novamente? É tão fácil começar bem e terminar em caos. Mas existe um caminho diferente. A Bíblia nos revela em Isaías trinta, versículo vinte e um: os teus ouvidos ouvirão atrás de ti uma palavra, dizendo: este é o caminho, andai nele. Quando você desenvolve sensibilidade espiritual, aprende a ouvir aquela voz suave que te guia em cada encruzilhada. Não é uma voz audível, é um conhecimento profundo, uma paz que confirma ou uma inquietação que alerta. Depender da direção divina significa pausar antes de agir, perguntar antes de decidir, buscar antes de escolher. Veja o servo de Abraão em Gênesis vinte e quatro. Ele tinha uma missão crucial: encontrar esposa para Isaque. Não confiou apenas na sorte ou em sua própria sabedoria. Orou especificamente pedindo um sinal claro de Deus. E antes mesmo de terminar a oração, Deus já estava respondendo. Declare em voz alta: Senhor, guia cada passo que eu der hoje.",
+                    "text": "Esta não é apenas uma bela frase religiosa. É um decreto celestial, um contrato espiritual entre você e o Criador do universo. A força que você precisa para vencer este dia já foi liberada. A paz para caminhar com confiança já está ao seu alcance.",
                     "subtitles": true
                 }
             },
             {
-                "id": "cena_5",
+                "id": "cena_1e",
                 "narration": {
-                    "text": "Deus nunca quis que você navegasse a vida sozinho. Ele prometeu instrução constante, orientação permanente. Em Salmos trinta e dois, versículo oito, Ele declara: Eu te instruirei e te ensinarei o caminho que deves seguir. Sobre ti fixarei os meus olhos. Pense nessa promessa extraordinária. Os olhos de Deus estão fixos sobre você. Não é um Deus distante, indiferente. Ele está ativamente envolvido em cada detalhe da sua jornada. Quando você enfrenta aquela decisão difícil no trabalho, Ele está ali. Quando surge aquela conversa complicada em casa, Ele te guia. Quando você não sabe qual direção tomar, Ele ilumina o caminho. Mas isso exige algo de você: disposição para esperar, humildade para ouvir, coragem para obedecer. Muitos perdem a direção divina porque não conseguem ficar quietos o suficiente para ouvir. Querem respostas instantâneas, mas Deus muitas vezes fala no silêncio. Crie momentos durante o dia para pausar e perguntar: Senhor, o que Tu queres que eu faça agora? Essa simples prática transformará completamente seu caminhar. Responda com convicção: eu ouço e obedeço a voz de Deus.",
+                    "text": "Mas há um segredo para acessar esse poder. Se você crê que Deus pode fazer a diferença na sua vida hoje, continue comigo até o final. Vou orar uma oração poderosa com você, no nome que está acima de todo nome. Declare agora: eu creio no poder de Deus sobre minha vida.",
                     "subtitles": true
                 }
             },
             {
-                "id": "cena_6",
+                "id": "cena_2a",
                 "narration": {
-                    "text": "Agora chegamos ao coração da questão. Não basta reconhecer a soberania de Deus ou buscar Sua direção. É preciso caminhar diariamente em Sua força. E aqui está a verdade libertadora: a força que você precisa não vem de você. Nunca veio e nunca virá. Todas as vezes que você tentou ser forte sozinho, acabou exausto. Isso não é falha sua. Foi Deus quem projetou assim. Ele quer que sua fraqueza seja o canal onde Sua força se manifesta. Isaías quarenta, versículo trinta e um, traz uma das promessas mais lindas da Bíblia: os que esperam no Senhor renovam suas forças, sobem com asas como águias, correm e não se cansam, caminham e não se fatigam. Preste atenção no segredo: esperar no Senhor. Não é força pelo esforço, mas força pela dependência. Quando você para de tentar ser super-herói e admite sua necessidade de Deus, algo sobrenatural acontece. O poder divino flui através da sua rendição. Sua fraqueza se torna o ponto de encontro com a força ilimitada do Todo-Poderoso. Declare com ousadia: na minha fraqueza, Deus me fortalece.",
+                    "text": "Muitos começam o dia correndo, arrastados pela urgência, sufocados pelas demandas que ainda nem chegaram. Mas existe uma sabedoria ancestral que poucos praticam: reconhecer a soberania de Deus antes mesmo de dar o primeiro passo.",
                     "subtitles": true
                 }
             },
             {
-                "id": "cena_7",
+                "id": "cena_2b",
                 "narration": {
-                    "text": "Pense na história impressionante de Jônatas e seu escudeiro em primeiro Samuel catorze. Eles estavam diante de uma guarnição militar poderosa dos filisteus. A lógica dizia que dois homens não teriam chance contra um exército inteiro. Mas Jônatas declarou algo que revela o segredo da força divina: para o Senhor não há limitação. Ele pode salvar com muitos ou com poucos. Então eles avançaram, não confiando em suas próprias habilidades ou armamentos, mas na capacidade de Deus de agir através deles. E o resultado? Vitória completa. Deus abalou a terra, causou confusão no acampamento inimigo, e o impossível aconteceu. Quando você caminha na força de Deus, números não importam, circunstâncias não definem o resultado, impossibilidades se tornam oportunidades para milagres. Todo dia, ao acordar, você precisa fazer uma declaração intencional: Senhor, eu não posso fazer isso sem Ti. Seja minha força hoje. Durante o dia, quando o cansaço vier, quando os desafios parecerem grandes demais, pare e ore novamente. Proclame agora: eu sou forte no Senhor e na força do Seu poder.",
+                    "text": "Quando você abre os olhos pela manhã e a primeira coisa que faz é declarar que Deus está no controle, algo profundo acontece no mundo espiritual. Você não está apenas repetindo palavras vazias. Você está realinhando sua alma com o trono celestial.",
                     "subtitles": true
                 }
             },
             {
-                "id": "cena_8",
+                "id": "cena_2c",
                 "narration": {
-                    "text": "Efésios seis, versículo dez, traz uma ordem clara: sede fortalecidos no Senhor e na força do Seu poder. Não é força emprestada que acaba no fim do dia. Não é motivação temporária que desaparece quando as coisas ficam difíceis. É força enraizada no poder eterno de Deus, que nunca se esgota, nunca diminui, nunca falha. Quando você caminha nesta força, você está equipado para enfrentar qualquer coisa. As circunstâncias podem ser adversas, mas você permanece firme. As pessoas podem te decepcionar, mas você não desmorona. Os planos podem mudar, mas você se adapta com confiança. Por quê? Porque sua força não depende do que acontece ao seu redor, mas de Quem habita dentro de você. O Espírito Santo que vive em você é o mesmo poder que ressuscitou Jesus dentre os mortos. Deixe isso penetrar em seu coração. O mesmo poder que venceu a morte está disponível para você vencer as batalhas de hoje. Faça disso sua prática diária: acordar e beber da fonte inesgotável da força divina. Responda com fé: eu recebo a força de Deus sobre minha vida.",
+                    "text": "Está dizendo ao inimigo que hoje não será ele quem ditará as regras. As Escrituras nos ensinam em Provérbios dezenove, versículo vinte e um: muitos são os planos no coração do homem, mas o que prevalece é o propósito do Senhor.",
                     "subtitles": true
                 }
             },
             {
-                "id": "cena_9",
+                "id": "cena_2d",
                 "narration": {
-                    "text": "Agora chegou o momento que você estava esperando. Vamos juntos diante do trono da graça. Se você acredita que esta oração pode transformar seu dia, se você crê que Deus pode mudar sua história, então una sua fé com a minha agora. Não importa onde você esteja, Deus te vê e te ouve. Vamos orar: Pai celestial, Deus Todo-Poderoso, eu Te exalto neste dia como Rei dos reis e Senhor dos senhores. Tu és o Alfa e o Ômega, o princípio e o fim, Aquele que era, que é e que há de vir. Todo poder está em Tuas mãos e Tua sabedoria é insondável. Eu Te louvo como criador de todas as coisas, sustentador da vida e doador de toda boa dádiva. Tu és minha rocha, meu refúgio e minha fortaleza. Eu me prostro diante de Ti em adoração à Tua majestade. Senhor, eu Te agradeço por me acordar hoje e me conceder o presente de mais um dia para caminhar em Teu propósito. Obrigado pelo ar que respiro, pelo coração que bate, pela provisão que generosamente me dás. Sou grato pela Tua misericórdia que se renova a cada manhã e por Tua fidelidade que nunca falha. Diga comigo: obrigado Senhor pela vida que me deste hoje.",
+                    "text": "Quantas vezes você já planejou seu dia perfeitamente, apenas para ver tudo desmoronar? Isso acontece quando tentamos construir sem a base certa. Reconhecer a soberania divina é admitir humildemente: Senhor, eu não sei o melhor caminho, mas Tu sabes.",
                     "subtitles": true
                 }
             },
             {
-                "id": "cena_10",
+                "id": "cena_2e",
                 "narration": {
-                    "text": "Pai, eu peço perdão por cada pecado que cometi, seja em palavra, pensamento ou ação. Purifica-me, Senhor, limpa meu coração para que eu possa andar em retidão diante de Ti. Assim como recebo Teu perdão, eu também escolho perdoar aqueles que me machucaram, liberando-os em Tuas mãos. Pai, eu entrego este dia a Ti, reconhecendo Tua soberania sobre cada aspecto da minha vida. Guia-me em cada decisão que eu tomar e em cada passo que eu der. Em nome de Jesus, eu amarro todo espírito que tenta trazer distração e declaro que Tua sabedoria direcionará meus caminhos. Fortalece-me, Senhor, quando eu me sentir fraco e lembra-me de que Tua graça é suficiente. Eu repreendo toda mentira do inimigo que busca trazer desânimo, dúvida ou desespero. Em nome de Jesus, declaro que nenhuma arma forjada contra mim prosperará e toda língua que se levantar contra mim em juízo será condenada. Senhor, derrama Tuas bênçãos sobre minha vida e sobre aqueles que amo. Abençoa-nos com clareza de propósito, paz de espírito e força divina para superar todo obstáculo. Livra-nos da tentação e protege-nos de todo ataque do inimigo, incluindo enfermidades, medo e qualquer plano maligno. Eu oro por cura, confiando em Teu poder para restaurar saúde e plenitude. Cobre-nos com Teu sangue precioso e cerca-nos com Teus anjos para que nenhum mal se aproxime de nós. Senhor, enquanto oro junto com todos que estão ouvindo esta mensagem agora, sou grato por cada coração que se abre diante de Ti. Viemos em concordância orando uns pelos outros, pedindo Tua força, Tua direção e Tua proteção. Declaramos vitória em nome de Jesus sobre todo esquema do inimigo. Protege-nos em nossas entradas e saídas. Guarda-nos de todo acidente e incidente negativo. Em nome de Jesus, declaramos que tudo está cooperando a nosso favor e não contra nós. Obrigado pelo Teu Espírito Santo que nos guia, consola e capacita a andar em Tua vontade. Teu é o reino, o poder e a glória para sempre. Obrigado, Senhor, por ouvir e responder minha oração. Em o poderoso nome de Jesus eu oro, amém. Se você foi abençoado por esta oração, eu quero te convidar para algo importante. Compartilhe este vídeo com alguém que precisa de força hoje. Pode ser aquele amigo passando por dificuldades, aquele familiar que está desanimado, aquele colega que perdeu a esperança. Quando você compartilha, você se torna instrumento de Deus para levar fé a outras vidas. Deixe seu amém nos comentários, declare sua vitória, testemunhe o que Deus está fazendo. Escreva seus pedidos de oração para que possamos interceder juntos. Esta comunidade é poderosa quando oramos unidos. Inscreva-se no canal para receber mais orações que fortalecerão sua caminhada diária com Deus. Você foi abençoado para ser bênção. A graça e a paz do nosso Senhor Jesus Cristo estejam com todos vocês. Amém e amém.",
+                    "text": "Meus planos podem falhar, mas os Teus jamais falham. Responda com fé: glória a Deus, Ele está no controle.",
+                    "subtitles": true
+                }
+            },
+            {
+                "id": "cena_3a",
+                "narration": {
+                    "text": "A oração matinal não é um ritual religioso vazio. É um ato de rendição revolucionário. Quando você dobra seus joelhos e declara que Deus é sua força, sua sabedoria e seu guia, você não está apenas falando ao ar.",
+                    "subtitles": true
+                }
+            },
+            {
+                "id": "cena_3b",
+                "narration": {
+                    "text": "Você está movendo montanhas no reino invisível. Está ativando promessas eternas. Está abrindo portais de bênçãos sobre sua vida.",
+                    "subtitles": true
+                }
+            },
+            {
+                "id": "cena_3c",
+                "narration": {
+                    "text": "Lembra da história poderosa de Asa, registrada em segundo Crônicas catorze? Ele estava diante de um exército imenso, uma batalha impossível de vencer humanamente. Mas ao invés de confiar em suas estratégias militares ou na quantidade de soldados, ele clamou:",
+                    "subtitles": true
+                }
+            },
+            {
+                "id": "cena_3d",
+                "narration": {
+                    "text": "Senhor, não há quem possa ajudar senão Tu. Em Ti confiamos, em Teu nome viemos contra esta multidão. E o que aconteceu? Deus entregou a vitória nas mãos dele. A batalha não foi vencida pela força de Asa, mas pela força do Deus em quem ele confiou.",
+                    "subtitles": true
+                }
+            },
+            {
+                "id": "cena_3e",
+                "narration": {
+                    "text": "Cada manhã, quando você se levanta e entrega seu dia nas mãos do Senhor, você está fazendo a mesma declaração de fé. Está dizendo: hoje não lutarei sozinho. Proclame agora: o Senhor é minha força e meu escudo.",
+                    "subtitles": true
+                }
+            },
+            {
+                "id": "cena_4a",
+                "narration": {
+                    "text": "Reconhecer Deus pela manhã é apenas o começo. O verdadeiro desafio é mantê-Lo como centro durante todo o dia. Quantas vezes você já orou de manhã e à tarde já tinha assumido o controle novamente?",
+                    "subtitles": true
+                }
+            },
+            {
+                "id": "cena_4b",
+                "narration": {
+                    "text": "É tão fácil começar bem e terminar em caos. Mas existe um caminho diferente. A Bíblia nos revela em Isaías trinta, versículo vinte e um: os teus ouvidos ouvirão atrás de ti uma palavra, dizendo: este é o caminho, andai nele.",
+                    "subtitles": true
+                }
+            },
+            {
+                "id": "cena_4c",
+                "narration": {
+                    "text": "Quando você desenvolve sensibilidade espiritual, aprende a ouvir aquela voz suave que te guia em cada encruzilhada. Não é uma voz audível, é um conhecimento profundo, uma paz que confirma ou uma inquietação que alerta.",
+                    "subtitles": true
+                }
+            },
+            {
+                "id": "cena_4d",
+                "narration": {
+                    "text": "Depender da direção divina significa pausar antes de agir, perguntar antes de decidir, buscar antes de escolher. Veja o servo de Abraão em Gênesis vinte e quatro. Ele tinha uma missão crucial: encontrar esposa para Isaque.",
+                    "subtitles": true
+                }
+            },
+            {
+                "id": "cena_4e",
+                "narration": {
+                    "text": "Não confiou apenas na sorte ou em sua própria sabedoria. Orou especificamente pedindo um sinal claro de Deus. E antes mesmo de terminar a oração, Deus já estava respondendo. Declare em voz alta: Senhor, guia cada passo que eu der hoje.",
+                    "subtitles": true
+                }
+            },
+            {
+                "id": "cena_5a",
+                "narration": {
+                    "text": "Deus nunca quis que você navegasse a vida sozinho. Ele prometeu instrução constante, orientação permanente. Em Salmos trinta e dois, versículo oito, Ele declara: Eu te instruirei e te ensinarei o caminho que deves seguir. Sobre ti fixarei os meus olhos.",
+                    "subtitles": true
+                }
+            },
+            {
+                "id": "cena_5b",
+                "narration": {
+                    "text": "Pense nessa promessa extraordinária. Os olhos de Deus estão fixos sobre você. Não é um Deus distante, indiferente. Ele está ativamente envolvido em cada detalhe da sua jornada.",
+                    "subtitles": true
+                }
+            },
+            {
+                "id": "cena_5c",
+                "narration": {
+                    "text": "Quando você enfrenta aquela decisão difícil no trabalho, Ele está ali. Quando surge aquela conversa complicada em casa, Ele te guia. Quando você não sabe qual direção tomar, Ele ilumina o caminho.",
+                    "subtitles": true
+                }
+            },
+            {
+                "id": "cena_5d",
+                "narration": {
+                    "text": "Mas isso exige algo de você: disposição para esperar, humildade para ouvir, coragem para obedecer. Muitos perdem a direção divina porque não conseguem ficar quietos o suficiente para ouvir. Querem respostas instantâneas, mas Deus muitas vezes fala no silêncio.",
+                    "subtitles": true
+                }
+            },
+            {
+                "id": "cena_5e",
+                "narration": {
+                    "text": "Crie momentos durante o dia para pausar e perguntar: Senhor, o que Tu queres que eu faça agora? Essa simples prática transformará completamente seu caminhar. Responda com convicção: eu ouço e obedeço a voz de Deus.",
+                    "subtitles": true
+                }
+            },
+            {
+                "id": "cena_6a",
+                "narration": {
+                    "text": "Agora chegamos ao coração da questão. Não basta reconhecer a soberania de Deus ou buscar Sua direção. É preciso caminhar diariamente em Sua força. E aqui está a verdade libertadora: a força que você precisa não vem de você.",
+                    "subtitles": true
+                }
+            },
+            {
+                "id": "cena_6b",
+                "narration": {
+                    "text": "Nunca veio e nunca virá. Todas as vezes que você tentou ser forte sozinho, acabou exausto. Isso não é falha sua. Foi Deus quem projetou assim. Ele quer que sua fraqueza seja o canal onde Sua força se manifesta.",
+                    "subtitles": true
+                }
+            },
+            {
+                "id": "cena_6c",
+                "narration": {
+                    "text": "Isaías quarenta, versículo trinta e um, traz uma das promessas mais lindas da Bíblia: os que esperam no Senhor renovam suas forças, sobem com asas como águias, correm e não se cansam, caminham e não se fatigam.",
+                    "subtitles": true
+                }
+            },
+            {
+                "id": "cena_6d",
+                "narration": {
+                    "text": "Preste atenção no segredo: esperar no Senhor. Não é força pelo esforço, mas força pela dependência. Quando você para de tentar ser super-herói e admite sua necessidade de Deus, algo sobrenatural acontece.",
+                    "subtitles": true
+                }
+            },
+            {
+                "id": "cena_6e",
+                "narration": {
+                    "text": "O poder divino flui através da sua rendição. Sua fraqueza se torna o ponto de encontro com a força ilimitada do Todo-Poderoso. Declare com ousadia: na minha fraqueza, Deus me fortalece.",
+                    "subtitles": true
+                }
+            },
+            {
+                "id": "cena_7a",
+                "narration": {
+                    "text": "Pense na história impressionante de Jônatas e seu escudeiro em primeiro Samuel catorze. Eles estavam diante de uma guarnição militar poderosa dos filisteus. A lógica dizia que dois homens não teriam chance contra um exército inteiro.",
+                    "subtitles": true
+                }
+            },
+            {
+                "id": "cena_7b",
+                "narration": {
+                    "text": "Mas Jônatas declarou algo que revela o segredo da força divina: para o Senhor não há limitação. Ele pode salvar com muitos ou com poucos. Então eles avançaram, não confiando em suas próprias habilidades ou armamentos, mas na capacidade de Deus de agir através deles.",
+                    "subtitles": true
+                }
+            },
+            {
+                "id": "cena_7c",
+                "narration": {
+                    "text": "E o resultado? Vitória completa. Deus abalou a terra, causou confusão no acampamento inimigo, e o impossível aconteceu. Quando você caminha na força de Deus, números não importam, circunstâncias não definem o resultado, impossibilidades se tornam oportunidades para milagres.",
+                    "subtitles": true
+                }
+            },
+            {
+                "id": "cena_7d",
+                "narration": {
+                    "text": "Todo dia, ao acordar, você precisa fazer uma declaração intencional: Senhor, eu não posso fazer isso sem Ti. Seja minha força hoje. Durante o dia, quando o cansaço vier, quando os desafios parecerem grandes demais, pare e ore novamente.",
+                    "subtitles": true
+                }
+            },
+            {
+                "id": "cena_7e",
+                "narration": {
+                    "text": "Proclame agora: eu sou forte no Senhor e na força do Seu poder.",
+                    "subtitles": true
+                }
+            },
+            {
+                "id": "cena_8a",
+                "narration": {
+                    "text": "Efésios seis, versículo dez, traz uma ordem clara: sede fortalecidos no Senhor e na força do Seu poder. Não é força emprestada que acaba no fim do dia. Não é motivação temporária que desaparece quando as coisas ficam difíceis.",
+                    "subtitles": true
+                }
+            },
+            {
+                "id": "cena_8b",
+                "narration": {
+                    "text": "É força enraizada no poder eterno de Deus, que nunca se esgota, nunca diminui, nunca falha. Quando você caminha nesta força, você está equipado para enfrentar qualquer coisa.",
+                    "subtitles": true
+                }
+            },
+            {
+                "id": "cena_8c",
+                "narration": {
+                    "text": "As circunstâncias podem ser adversas, mas você permanece firme. As pessoas podem te decepcionar, mas você não desmorona. Os planos podem mudar, mas você se adapta com confiança.",
+                    "subtitles": true
+                }
+            },
+            {
+                "id": "cena_8d",
+                "narration": {
+                    "text": "Por quê? Porque sua força não depende do que acontece ao seu redor, mas de Quem habita dentro de você. O Espírito Santo que vive em você é o mesmo poder que ressuscitou Jesus dentre os mortos.",
+                    "subtitles": true
+                }
+            },
+            {
+                "id": "cena_8e",
+                "narration": {
+                    "text": "Deixe isso penetrar em seu coração. O mesmo poder que venceu a morte está disponível para você vencer as batalhas de hoje. Faça disso sua prática diária: acordar e beber da fonte inesgotável da força divina. Responda com fé: eu recebo a força de Deus sobre minha vida.",
+                    "subtitles": true
+                }
+            },
+            {
+                "id": "cena_9a",
+                "narration": {
+                    "text": "Agora chegou o momento que você estava esperando. Vamos juntos diante do trono da graça. Se você acredita que esta oração pode transformar seu dia, se você crê que Deus pode mudar sua história, então una sua fé com a minha agora. Não importa onde você esteja, Deus te vê e te ouve.",
+                    "subtitles": true
+                }
+            },
+            {
+                "id": "cena_9b",
+                "narration": {
+                    "text": "Vamos orar: Pai celestial, Deus Todo-Poderoso, eu Te exalto neste dia como Rei dos reis e Senhor dos senhores. Tu és o Alfa e o Ômega, o princípio e o fim, Aquele que era, que é e que há de vir.",
+                    "subtitles": true
+                }
+            },
+            {
+                "id": "cena_9c",
+                "narration": {
+                    "text": "Todo poder está em Tuas mãos e Tua sabedoria é insondável. Eu Te louvo como criador de todas as coisas, sustentador da vida e doador de toda boa dádiva. Tu és minha rocha, meu refúgio e minha fortaleza. Eu me prostro diante de Ti em adoração à Tua majestade.",
+                    "subtitles": true
+                }
+            },
+            {
+                "id": "cena_9d",
+                "narration": {
+                    "text": "Senhor, eu Te agradeço por me acordar hoje e me conceder o presente de mais um dia para caminhar em Teu propósito. Obrigado pelo ar que respiro, pelo coração que bate, pela provisão que generosamente me dás.",
+                    "subtitles": true
+                }
+            },
+            {
+                "id": "cena_9e",
+                "narration": {
+                    "text": "Sou grato pela Tua misericórdia que se renova a cada manhã e por Tua fidelidade que nunca falha. Diga comigo: obrigado Senhor pela vida que me deste hoje.",
+                    "subtitles": true
+                }
+            },
+            {
+                "id": "cena_10a",
+                "narration": {
+                    "text": "Pai, eu peço perdão por cada pecado que cometi, seja em palavra, pensamento ou ação. Purifica-me, Senhor, limpa meu coração para que eu possa andar em retidão diante de Ti. Assim como recebo Teu perdão, eu também escolho perdoar aqueles que me machucaram, liberando-os em Tuas mãos.",
+                    "subtitles": true
+                }
+            },
+            {
+                "id": "cena_10b",
+                "narration": {
+                    "text": "Pai, eu entrego este dia a Ti, reconhecendo Tua soberania sobre cada aspecto da minha vida. Guia-me em cada decisão que eu tomar e em cada passo que eu der. Em nome de Jesus, eu amarro todo espírito que tenta trazer distração e declaro que Tua sabedoria direcionará meus caminhos.",
+                    "subtitles": true
+                }
+            },
+            {
+                "id": "cena_10c",
+                "narration": {
+                    "text": "Fortalece-me, Senhor, quando eu me sentir fraco e lembra-me de que Tua graça é suficiente. Eu repreendo toda mentira do inimigo que busca trazer desânimo, dúvida ou desespero. Em nome de Jesus, declaro que nenhuma arma forjada contra mim prosperará e toda língua que se levantar contra mim em juízo será condenada.",
+                    "subtitles": true
+                }
+            },
+            {
+                "id": "cena_10d",
+                "narration": {
+                    "text": "Senhor, derrama Tuas bênçãos sobre minha vida e sobre aqueles que amo. Abençoa-nos com clareza de propósito, paz de espírito e força divina para superar todo obstáculo. Livra-nos da tentação e protege-nos de todo ataque do inimigo, incluindo enfermidades, medo e qualquer plano maligno.",
+                    "subtitles": true
+                }
+            },
+            {
+                "id": "cena_10e",
+                "narration": {
+                    "text": "Eu oro por cura, confiando em Teu poder para restaurar saúde e plenitude. Cobre-nos com Teu sangue precioso e cerca-nos com Teus anjos para que nenhum mal se aproxime de nós.",
+                    "subtitles": true
+                }
+            },
+            {
+                "id": "cena_10f",
+                "narration": {
+                    "text": "Senhor, enquanto oro junto com todos que estão ouvindo esta mensagem agora, sou grato por cada coração que se abre diante de Ti. Viemos em concordância orando uns pelos outros, pedindo Tua força, Tua direção e Tua proteção.",
+                    "subtitles": true
+                }
+            },
+            {
+                "id": "cena_10g",
+                "narration": {
+                    "text": "Declaramos vitória em nome de Jesus sobre todo esquema do inimigo. Protege-nos em nossas entradas e saídas. Guarda-nos de todo acidente e incidente negativo. Em nome de Jesus, declaramos que tudo está cooperando a nosso favor e não contra nós.",
+                    "subtitles": true
+                }
+            },
+            {
+                "id": "cena_10h",
+                "narration": {
+                    "text": "Obrigado pelo Teu Espírito Santo que nos guia, consola e capacita a andar em Tua vontade. Teu é o reino, o poder e a glória para sempre. Obrigado, Senhor, por ouvir e responder minha oração. Em o poderoso nome de Jesus eu oro, amém.",
+                    "subtitles": true
+                }
+            },
+            {
+                "id": "cena_10i",
+                "narration": {
+                    "text": "Se você foi abençoado por esta oração, eu quero te convidar para algo importante. Compartilhe este vídeo com alguém que precisa de força hoje. Pode ser aquele amigo passando por dificuldades, aquele familiar que está desanimado, aquele colega que perdeu a esperança.",
+                    "subtitles": true
+                }
+            },
+            {
+                "id": "cena_10j",
+                "narration": {
+                    "text": "Quando você compartilha, você se torna instrumento de Deus para levar fé a outras vidas. Deixe seu amém nos comentários, declare sua vitória, testemunhe o que Deus está fazendo. Escreva seus pedidos de oração para que possamos interceder juntos.",
+                    "subtitles": true
+                }
+            },
+            {
+                "id": "cena_10k",
+                "narration": {
+                    "text": "Esta comunidade é poderosa quando oramos unidos. Inscreva-se no canal para receber mais orações que fortalecerão sua caminhada diária com Deus. Você foi abençoado para ser bênção. A graça e a paz do nosso Senhor Jesus Cristo estejam com todos vocês. Amém e amém.",
                     "subtitles": true
                 }
             }
         ],
         "youtube": {
-            "title": "ORAÇÃO MATINAL PODEROSA PARA TER FORÇA E DIREÇÃO DIVINA! 🙏✨",
+            "title": "ORAÇÃO MATINAL PODEROSA PARA TER FORÇA E DIREÇÃO DIVINA! �✨",
             "tags": [
                 "oração da manhã",
                 "oração poderosa",
@@ -94,7 +416,7 @@
                 "proteção divina",
                 "sabedoria de Deus"
             ],
-            "description": "🌅 Comece seu dia com FORÇA SOBRENATURAL! Esta oração matinal vai transformar sua vida em 2026! 💪🙏\n\nVocê já acordou sentindo que suas forças não são suficientes? Esta oração foi feita para você que precisa:\n✨ Força divina para enfrentar o dia\n✨ Direção clara de Deus\n✨ Proteção contra todo mal\n✨ Paz que excede todo entendimento\n✨ Vitória sobre cada desafio\n\nBaseada em:\n📖 Salmos 29:11 - 'O Senhor dará força ao seu povo'\n📖 Isaías 40:31 - 'Os que esperam no Senhor renovam suas forças'\n📖 Efésios 6:10 - 'Sede fortalecidos no Senhor'\n\n🔥 ORE COM FÉ e veja Deus agir poderosamente em sua vida!\n\n💬 Digite 'AMÉM' nos comentários para ativar suas bênçãos!\n💬 Escreva 'EU RECEBO' para declarar sua fé!\n\n📌 Compartilhe com quem precisa de força hoje!\n🔔 INSCREVA-SE e ative o sininho para mais orações poderosas!\n\n🙏 Deixe seu pedido de oração nos comentários - vamos orar juntos!\n\n#oração #oraçãodamanhã #oraçãopoderosa #fé #deus #jesus #forçadivina #direçãodivina #bênção #milagre #vitória #proteçãodivina #oração2026 #shorts #fyp #viral",
+            "description": "🌅 Comece seu dia com FORÇA SOBRENATURAL! Esta oração matinal vai transformar sua vida em 2026! 💪�\n\nVocê já acordou sentindo que suas forças não são suficientes? Esta oração foi feita para você que precisa:\n✨ Força divina para enfrentar o dia\n✨ Direção clara de Deus\n✨ Proteção contra todo mal\n✨ Paz que excede todo entendimento\n✨ Vitória sobre cada desafio\n\nBaseada em:\n📖 Salmos 29:11 - 'O Senhor dará força ao seu povo'\n📖 Isaías 40:31 - 'Os que esperam no Senhor renovam suas forças'\n📖 Efésios 6:10 - 'Sede fortalecidos no Senhor'\n\n🔥 ORE COM FÉ e veja Deus agir poderosamente em sua vida!\n\n💬 Digite 'AMÉM' nos comentários para ativar suas bênçãos!\n💬 Escreva 'EU RECEBO' para declarar sua fé!\n\n📌 Compartilhe com quem precisa de força hoje!\n🔔 INSCREVA-SE e ative o sininho para mais orações poderosas!\n\n� Deixe seu pedido de oração nos comentários - vamos orar juntos!\n\n#oração #oraçãodamanhã #oraçãopoderosa #fé #deus #jesus #forçadivina #direçãodivina #bênção #milagre #vitória #proteçãodivina #oração2026 #shorts #fyp #viral",
             "publish_at": "2026-01-05 09:00:00"
         }
     }

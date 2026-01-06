@@ -1,20 +1,20 @@
 [
     {
-        "slug": "oracao_da_manha_01",
+        "slug": "oracao_da_manha_012",
         "channel_name": "vida_de_oracao",
         "output_ratio": "16:9",
         "scenes": [
             {
                 "id": "cena_1",
                 "narration": {
-                    "text": "Senhor ao iniciar",
+                    "text": "Senhor, ao iniciar",
                     "subtitles": true
                 }
             },
             {
                 "id": "cena_2",
                 "narration": {
-                    "text": "este teste quero",
+                    "text": "este teste, quero",
                     "subtitles": true
                 }
             },
