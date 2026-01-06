@@ -183,13 +183,13 @@ class ProxyCache:
             raise ValueError(f"Invalid resolution format: {self.resolution}")
         
         # Build ffmpeg command
-        # Use a temp file for atomic write
-        with tempfile.NamedTemporaryFile(
+        # Use a temp file for atomic write - create with .mp4 extension for ffmpeg
+        tmp_fd, tmp_path = tempfile.mkstemp(
             dir=self.cache_dir,
-            suffix='.mp4.tmp',
-            delete=False
-        ) as tmp_file:
-            tmp_path = tmp_file.name
+            suffix='.mp4',
+            prefix='tmp_proxy_'
+        )
+        os.close(tmp_fd)  # Close the file descriptor, ffmpeg will write to it
         
         try:
             cmd = [
