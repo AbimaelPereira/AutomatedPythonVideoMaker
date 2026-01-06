@@ -63,6 +63,13 @@ class Config:
             "debug": self._to_bool(os.getenv("DEBUG", False)),
             "shuffle_clips": self._to_bool(os.getenv("SHUFFLE_CLIPS", True)),
             "max_clips": int(os.getenv("MAX_CLIPS", 0)) or None,
+            
+            # Proxy Configuration for Background Videos
+            "proxy_enabled": self._to_bool(os.getenv("PROXY_ENABLED", True)),
+            "proxy_resolution": os.getenv("PROXY_RESOLUTION", "1280x720"),
+            "proxy_bitrate": os.getenv("PROXY_BITRATE", None),
+            "proxy_cache_dir": os.getenv("PROXY_CACHE_DIR", os.path.join(self.base_dir, "cache", "proxies")),
+            "proxy_regen_on_source_change": self._to_bool(os.getenv("PROXY_REGEN_ON_SOURCE_CHANGE", True)),
         }
 
         # --- 2. CARREGAR CONFIGURAÇÃO DO CANAL ---

@@ -270,6 +270,12 @@ class UnifiedVideoEngine:
                     "background_videos_dir": bg_source,
                     "resolution_output": self.resolution_output,
                     "max_clip_duration": 4, # ou seu valor padrão
+                    # Pass proxy configuration
+                    "proxy_enabled": self.data_config.get("proxy_enabled", True),
+                    "proxy_resolution": self.data_config.get("proxy_resolution", "1280x720"),
+                    "proxy_bitrate": self.data_config.get("proxy_bitrate", None),
+                    "proxy_cache_dir": self.data_config.get("proxy_cache_dir", "./cache/proxies"),
+                    "proxy_regen_on_source_change": self.data_config.get("proxy_regen_on_source_change", True),
                 })
                 self.bg_cache[bg_source] = loader.get_processed_clips()
 
@@ -280,7 +286,13 @@ class UnifiedVideoEngine:
                 "max_total_video_duration": scene_duration,
                 "resolution_output": self.resolution_output,
                 "loop_background": True,
-                "shuffle_clips": background_config.get("shuffle", True)
+                "shuffle_clips": background_config.get("shuffle", True),
+                # Pass proxy configuration
+                "proxy_enabled": self.data_config.get("proxy_enabled", True),
+                "proxy_resolution": self.data_config.get("proxy_resolution", "1280x720"),
+                "proxy_bitrate": self.data_config.get("proxy_bitrate", None),
+                "proxy_cache_dir": self.data_config.get("proxy_cache_dir", "./cache/proxies"),
+                "proxy_regen_on_source_change": self.data_config.get("proxy_regen_on_source_change", True),
             })
 
             # 3. CHAMADA CHAVE: Passamos o conteúdo do cache para a função

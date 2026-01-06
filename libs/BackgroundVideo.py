@@ -3,6 +3,7 @@ import random
 import PIL.Image
 from moviepy.editor import VideoFileClip, CompositeVideoClip, concatenate_videoclips
 from moviepy.video.fx.all import crop, resize
+from libs.ProxyCache import ProxyCache
 
 if not hasattr(PIL.Image, 'ANTIALIAS'):
     PIL.Image.ANTIALIAS = PIL.Image.Resampling.LANCZOS
@@ -23,6 +24,12 @@ class BackgroundVideo:
             "shuffle_clips": True,
             "valid_extensions": ["mp4", "mkv", "avi", "mov", "flv", "webm"],
             "loop_background": True,
+            # Proxy settings
+            "proxy_enabled": True,
+            "proxy_resolution": "1280x720",
+            "proxy_bitrate": None,
+            "proxy_cache_dir": "./cache/proxies",
+            "proxy_regen_on_source_change": True,
         }
         if params:
             defaults.update(params)
@@ -30,11 +37,23 @@ class BackgroundVideo:
             defaults["resolution_output"] = defaults["available_resolutions"][defaults["output_ratio"]]
         for k, v in defaults.items():
             setattr(self, k, v)
+        
+        # Initialize proxy cache
+        self.proxy_cache = ProxyCache({
+            "proxy_enabled": self.proxy_enabled,
+            "proxy_resolution": self.proxy_resolution,
+            "proxy_bitrate": self.proxy_bitrate,
+            "proxy_cache_dir": self.proxy_cache_dir,
+            "proxy_regen_on_source_change": self.proxy_regen_on_source_change,
+        })
 
     def load_and_resize_clip(self, video_path):
         try:
-            print(f"[DEBUG_BV: load_and_resize_clip] Carregando e redimensionando: {os.path.basename(video_path)}")
-            video = VideoFileClip(video_path, audio=False)
+            # Use proxy if enabled
+            actual_path = self.proxy_cache.get_or_create_proxy(video_path)
+            
+            print(f"[DEBUG_BV: load_and_resize_clip] Carregando e redimensionando: {os.path.basename(actual_path)}")
+            video = VideoFileClip(actual_path, audio=False)
             if video.duration > self.max_clip_duration:
                 video = video.subclip(0, self.max_clip_duration)
 
