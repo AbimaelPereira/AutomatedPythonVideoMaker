@@ -274,13 +274,17 @@ class UnifiedVideoEngine:
             else:
                  bg_clip = ColorClip(self.resolution_output, color=(0,0,0), duration=scene_duration)
 
-        elif bg_type == "directory" and bg_source:           
+        elif bg_type == "directory" and bg_source:
+            # Get proxy_enabled setting from background config
+            proxy_enabled = background_config.get("proxy_enabled", True)
+            
             if bg_source not in self.bg_cache:
                 print(f"[UVE] Alimentando cache para o diretório: {bg_source}")
                 loader = BackgroundVideo(params={
                     "background_videos_dir": bg_source,
                     "resolution_output": self.resolution_output,
                     "max_clip_duration": 4,
+                    "proxy_enabled": proxy_enabled,
                 })
                 self.bg_cache[bg_source] = loader.get_processed_clips()
 
@@ -289,7 +293,8 @@ class UnifiedVideoEngine:
                 "max_total_video_duration": scene_duration,
                 "resolution_output": self.resolution_output,
                 "loop_background": True,
-                "shuffle_clips": background_config.get("shuffle", True)
+                "shuffle_clips": background_config.get("shuffle", True),
+                "proxy_enabled": proxy_enabled,
             })
 
             bg_clip = bg_video_processor.generate_background_video(
@@ -444,13 +449,15 @@ class UnifiedVideoEngine:
             
         if bg_config.get("visual") == "directory":
             source_dir = bg_config.get("source")
+            proxy_enabled = bg_config.get("proxy_enabled", True)
             
             # VERIFICAÇÃO DO CACHE:
             if source_dir not in self.bg_cache:
                 print(f"[UVE] Cache vazio. Processando vídeos de: {source_dir}")
                 loader = BackgroundVideo({
                     "background_videos_dir": source_dir,
-                    "resolution_output": self.resolution_output
+                    "resolution_output": self.resolution_output,
+                    "proxy_enabled": proxy_enabled,
                 })
                 self.bg_cache[source_dir] = loader.get_all_processed_clips()
 
@@ -458,7 +465,8 @@ class UnifiedVideoEngine:
             bg_video_processor = BackgroundVideo({
                 "background_videos_dir": source_dir,
                 "max_total_video_duration": None,
-                "resolution_output": self.resolution_output
+                "resolution_output": self.resolution_output,
+                "proxy_enabled": proxy_enabled,
             })
             
             bg_clip = bg_video_processor.generate_background_video(

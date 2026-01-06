@@ -3,6 +3,10 @@ __pycache__/
 
 .env
 
+# Proxy cache
+/cache/*
+!/cache/.gitkeep
+
 # Ignorar conteúdo, mas manter a pasta no repo
 /audios_vozes_ptbr/*
 /output/*

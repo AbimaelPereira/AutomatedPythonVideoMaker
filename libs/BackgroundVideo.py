@@ -1,11 +1,14 @@
 import os
 import random
+import logging
 import PIL.Image
 from moviepy.editor import VideoFileClip, CompositeVideoClip, concatenate_videoclips
 from moviepy.video.fx.all import crop, resize
 
 if not hasattr(PIL.Image, 'ANTIALIAS'):
     PIL.Image.ANTIALIAS = PIL.Image.Resampling.LANCZOS
+
+logger = logging.getLogger(__name__)
 
 
 class BackgroundVideo:
@@ -23,6 +26,7 @@ class BackgroundVideo:
             "shuffle_clips": True,
             "valid_extensions": ["mp4", "mkv", "avi", "mov", "flv", "webm"],
             "loop_background": True,
+            "proxy_enabled": True,
         }
 
         # Mesclamos params (se houver)
@@ -42,11 +46,30 @@ class BackgroundVideo:
 
         for k, v in defaults.items():
             setattr(self, k, v)
+        
+        # Initialize proxy cache if proxy is enabled
+        self.proxy_cache = None
+        if self.proxy_enabled:
+            try:
+                from video.proxy_cache import ProxyCache
+                self.proxy_cache = ProxyCache()
+                logger.info("ProxyCache enabled for background videos")
+            except Exception as e:
+                logger.warning(f"Failed to initialize ProxyCache: {e}. Proxies disabled.")
+                self.proxy_enabled = False
 
     def load_and_resize_clip(self, video_path):
         try:
-            print(f"[DEBUG_BV: load_and_resize_clip] Carregando e redimensionando: {os.path.basename(video_path)}")
-            video = VideoFileClip(video_path, audio=False)
+            # Use proxy if enabled
+            actual_path = video_path
+            if self.proxy_enabled and self.proxy_cache:
+                actual_path = self.proxy_cache.get_or_create(video_path)
+                if actual_path != video_path:
+                    logger.info(f"Using proxy for: {os.path.basename(video_path)} -> {os.path.basename(actual_path)}")
+                    print(f"[DEBUG_BV: load_and_resize_clip] Using proxy: {os.path.basename(actual_path)}")
+            
+            print(f"[DEBUG_BV: load_and_resize_clip] Carregando e redimensionando: {os.path.basename(actual_path)}")
+            video = VideoFileClip(actual_path, audio=False)
             if video.duration > self.max_clip_duration:
                 video = video.subclip(0, self.max_clip_duration)
 

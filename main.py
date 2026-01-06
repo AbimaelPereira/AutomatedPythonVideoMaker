@@ -8,6 +8,7 @@ def main():
     # 1. Configurar Argumentos da Linha de Comando
     parser = argparse.ArgumentParser(description="Automated Python Video Maker")
     parser.add_argument("json_file", help="Caminho para o arquivo JSON de geração do vídeo")
+    parser.add_argument("--no-proxy", action="store_true", help="Desabilitar uso de proxies para vídeos de fundo")
     args = parser.parse_args()
 
     # 2. Validar Arquivo de Entrada
@@ -32,6 +33,15 @@ def main():
     # Iterar sobre cada vídeo da lista
     for index, video_data in enumerate(video_list):
         print(f"\n🎬 Iniciando processamento do vídeo {index + 1}/{len(video_list)}...")
+        
+        # Add proxy configuration if --no-proxy flag is set
+        if args.no_proxy:
+            if "global_settings" not in video_data:
+                video_data["global_settings"] = {}
+            if "background" not in video_data["global_settings"]:
+                video_data["global_settings"]["background"] = {}
+            video_data["global_settings"]["background"]["proxy_enabled"] = False
+            print("⚠️ Proxies desabilitados para este vídeo")
         
         try:
             # 4. Inicializar Configuração para o vídeo atual
