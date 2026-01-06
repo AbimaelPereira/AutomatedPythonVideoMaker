@@ -10,6 +10,15 @@ if not hasattr(PIL.Image, 'ANTIALIAS'):
 
 logger = logging.getLogger(__name__)
 
+# Import ProxyCache at module level
+try:
+    from libs.ProxyCache import ProxyCache
+    PROXYCACHE_AVAILABLE = True
+except ImportError:
+    ProxyCache = None
+    PROXYCACHE_AVAILABLE = False
+    logger.warning("ProxyCache module not available. Proxy functionality disabled.")
+
 
 class BackgroundVideo:
     def __init__(self, params=None):
@@ -42,9 +51,8 @@ class BackgroundVideo:
         
         # Initialize ProxyCache if enabled
         self.proxy_cache = None
-        if self.proxy_enabled:
+        if self.proxy_enabled and PROXYCACHE_AVAILABLE:
             try:
-                from libs.ProxyCache import ProxyCache
                 self.proxy_cache = ProxyCache(
                     cache_dir=self.proxy_cache_dir,
                     resolution=self.proxy_resolution,
@@ -55,6 +63,9 @@ class BackgroundVideo:
             except Exception as e:
                 logger.warning(f"Failed to initialize ProxyCache: {e}. Proxies disabled.")
                 self.proxy_enabled = False
+        elif self.proxy_enabled and not PROXYCACHE_AVAILABLE:
+            logger.warning("ProxyCache requested but not available. Proxies disabled.")
+            self.proxy_enabled = False
 
     def load_and_resize_clip(self, video_path):
         try:
@@ -71,7 +82,7 @@ class BackgroundVideo:
             else:
                 logger.debug(f"Using original file: {os.path.basename(video_path)}")
             
-            print(f"[DEBUG_BV: load_and_resize_clip] Loading and resizing: {os.path.basename(actual_path)}")
+            logger.debug(f"[BackgroundVideo] Loading and resizing: {os.path.basename(actual_path)}")
             video = VideoFileClip(actual_path, audio=False)
             if video.duration > self.max_clip_duration:
                 video = video.subclip(0, self.max_clip_duration)

@@ -476,7 +476,7 @@ class UnifiedVideoEngine:
                 loader_params.update(self._get_proxy_config())
                 loader = BackgroundVideo(loader_params)
                 # Store in self for use by subsequent scenes
-                self.bg_cache[source_dir] = loader.get_all_processed_clips()
+                self.bg_cache[source_dir] = loader.get_processed_clips()
 
             # NOW GENERATE THE SCENE BG USING THE CACHE:
             processor_params = {

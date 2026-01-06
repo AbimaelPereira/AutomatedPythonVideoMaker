@@ -199,6 +199,8 @@ class ProxyCache:
             cmd = [
                 'ffmpeg',
                 '-i', src_path,
+                # Scale with 'decrease' to ensure video fits within target resolution
+                # while maintaining aspect ratio (may result in smaller dimensions)
                 '-vf', f'scale={width}:{height}:force_original_aspect_ratio=decrease',
                 '-c:v', 'libx264',
                 '-preset', 'fast',
@@ -270,7 +272,7 @@ class ProxyCache:
         
         # Check if valid proxy exists
         if self._is_proxy_valid(proxy_path, metadata_path, src_path):
-            logger.debug(f"📦 Using cached proxy for {os.path.basename(src_path)}")
+            logger.debug(f"Using cached proxy for {os.path.basename(src_path)}")
             return str(proxy_path)
         
         # Generate new proxy
