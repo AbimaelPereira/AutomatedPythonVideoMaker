@@ -3,6 +3,9 @@ import json
 import numpy as np
 import random
 from moviepy.editor import *
+import subprocess
+import shutil
+import gc
 
 from libs.Config import Config
 from libs.BackgroundVideo import BackgroundVideo
@@ -108,119 +111,6 @@ class UnifiedVideoEngine:
             return None, 4.0, None, None
         
         return audio_clip, duration, word_boundaries, subtitle_file
-
-    # =========================================================================
-    # GERADOR DE OVERLAY BOKEH/LIGHT LEAK (ESTILO DAS IMAGENS)
-    # =========================================================================
-
-    # =========================================================================
-    # CORREÇÃO: GERADOR DE OVERLAY BOKEH (SEM BORDA QUADRADA)
-    # =========================================================================
-
-    def _create_radial_light_blob(self, size_px, color_rgb):
-        """
-        Cria uma bola de luz que desaparece TOTALMENTE nas bordas (sem quadrado visível).
-        """
-        import numpy as np # Garante que numpy está disponível
-        
-        # 1. Tamanho do grid (resolução da bola)
-        res = int(size_px)
-        # Garante tamanho ímpar para ter um centro perfeito (opcional, mas bom)
-        if res % 2 == 0: res += 1
-        
-        # 2. Cria coordenadas de -1 a 1
-        x = np.linspace(-1, 1, res)
-        y = np.linspace(-1, 1, res)
-        X, Y = np.meshgrid(x, y)
-        
-        # 3. Calcula distância do centro (Raio)
-        radius = np.sqrt(X**2 + Y**2)
-        
-        # 4. Máscara Suave (Correção do "Quadrado")
-        # - Usamos 'clip' para garantir que nada além do raio 1.0 seja desenhado
-        # - A função (1 - radius) cria um decaimento linear
-        # - Elevamos ao cubo (**3) para suavizar e parecer luz (decaimento exponencial visual)
-        alpha_mask = np.clip(1.0 - radius, 0, 1) # Corta tudo fora do círculo
-        alpha_mask = alpha_mask ** 3 # Suaviza a queda (quanto maior a potência, mais "focado" no centro)
-
-        # 5. Criar a Imagem RGBA diretamente (Melhor performance e mistura)
-        # Cria um array vazio com 4 canais (R, G, B, A)
-        img_array = np.zeros((res, res, 4), dtype=np.uint8)
-        
-        # Preenche as cores RGB
-        img_array[:, :, 0] = color_rgb[0]
-        img_array[:, :, 1] = color_rgb[1]
-        img_array[:, :, 2] = color_rgb[2]
-        
-        # Preenche o Alpha (escala 0-255)
-        img_array[:, :, 3] = (alpha_mask * 255).astype(np.uint8)
-        
-        # Cria o ImageClip a partir do array
-        blob_clip = ImageClip(img_array, transparent=True)
-        
-        return blob_clip
-
-    def _create_bokeh_overlay(self, duration, base_color=(255, 120, 50), overall_opacity=0.6, speed_factor=1.0, size_factor=1.5):
-        """
-        Gera bolas de luz que ORBITAM a tela passando pelas 4 bordas.
-        
-        Args:
-            speed_factor: Multiplicador de velocidade (1.0 = normal, 2.0 = dobro).
-            size_factor: Multiplicador de tamanho das bolas.
-        """
-        W, H = self.resolution_output
-        
-        # Definição das 4 bolas de luz (uma para cada "canto" inicial aproximado)
-        # Phase: define onde no círculo ela começa (0 a 2pi)
-        # Direction: 1 (horário) ou -1 (anti-horário)
-        blobs_config = [
-            {"phase": np.pi / 2,     "color_offset": (-10, -10, 0), "size": 1.2 * size_factor}, # Começa Em Baixo
-            {"phase": 3 * np.pi / 2, "color_offset": (10, 10, 10),  "size": 0.9 * size_factor}, # Começa Em Cima
-        ]
-
-        bokeh_clips = []
-
-        for config in blobs_config:
-            # 1. Tamanho
-            blob_size = int(W * config["size"])
-            
-            # 2. Cor
-            r = min(max(base_color[0] + config["color_offset"][0], 0), 255)
-            g = min(max(base_color[1] + config["color_offset"][1], 0), 255)
-            b = min(max(base_color[2] + config["color_offset"][2], 0), 255)
-            
-            # Gera a bola
-            blob = self._create_radial_light_blob(blob_size, (r, g, b))
-            blob = blob.set_duration(duration).set_opacity(overall_opacity)
-
-            # 3. MATEMÁTICA ORBITAL (ELIPSE)
-            orbit_radius_x = W * 0.6
-            orbit_radius_y = H * 0.6
-            
-            center_x = W / 2
-            center_y = H / 2
-            
-            angular_speed = 0.8 * speed_factor
-
-            blob = blob.set_position(
-                lambda t, 
-                       cx=center_x, cy=center_y, 
-                       rx=orbit_radius_x, ry=orbit_radius_y, 
-                       bs=blob_size, 
-                       ph=config["phase"], 
-                       sp=angular_speed: 
-                (
-                    (cx + rx * np.cos(sp * t + ph)) - bs / 2,
-                    (cy + ry * np.sin(sp * t + ph)) - bs / 2
-                )
-            )
-            
-            bokeh_clips.append(blob)
-
-        if not bokeh_clips:
-            return None
-            
-        return CompositeVideoClip(bokeh_clips, size=self.resolution_output).set_duration(duration)
 
     def _create_background_clip(self, scene_data, scene_duration, scene_dir, video_dir):
         # Faz merge entre global background e scene background (scene sobrescreve global),
@@ -436,6 +326,10 @@ class UnifiedVideoEngine:
             return None
 
     def run(self, output_filename="final_video.mp4"):
+        """
+        Render engine updated to avoid OOM: renderiza cada cena em disco e concatena via ffmpeg.
+        Após concat, abre o output_path e aplica áudio global (se configurado), conforme solicitado.
+        """
         print("[UVE] Iniciando processamento do vídeo...")
         all_scene_clips = []
 
@@ -453,7 +347,7 @@ class UnifiedVideoEngine:
                     "resolution_output": self.resolution_output
                 })
                 self.bg_cache[source_dir] = loader.get_all_processed_clips()
-
+ 
             # NOTE: aqui bg_video_processor/scene_duration não é crítico — this block is legacy
             bg_video_processor = BackgroundVideo({
                 "background_videos_dir": source_dir,
@@ -464,6 +358,11 @@ class UnifiedVideoEngine:
             bg_clip = bg_video_processor.generate_background_video(
                 preloaded_clips=self.bg_cache[source_dir]
             )
+
+        # Preparar diretório temporário para cenas
+        temp_dir = os.path.join(self.output_dir, "temp_scenes")
+        os.makedirs(temp_dir, exist_ok=True)
+        scene_files = []
 
         for scene in self.data_config.get("scenes", []):
             scene_id = scene.get("id", "cena_desconhecida")
@@ -527,36 +426,111 @@ class UnifiedVideoEngine:
             if audio_clip:
                 composed_clip.audio = CompositeAudioClip([composed_clip.audio, audio_clip]) if composed_clip.audio else audio_clip
 
-            all_scene_clips.append(composed_clip)
+            # Ao invés de armazenar o clip na memória, renderizamos cada cena para arquivo temporário
+            scene_index = len(scene_files)
+            temp_scene_path = os.path.join(temp_dir, f"scene_{scene_index:04d}.mp4")
+            temp_audiofile = os.path.join(temp_dir, f"temp-audio-{scene_index}.m4a")
+            try:
+                print(f"[UVE] Renderizando cena {scene_index} para {temp_scene_path} ...")
+                composed_clip.write_videofile(
+                    temp_scene_path,
+                    codec='libx264',
+                    audio_codec='aac',
+                    temp_audiofile=temp_audiofile,
+                    remove_temp=True,
+                    fps=24,
+                    preset='medium',
+                    threads=1
+                )
+                scene_files.append(temp_scene_path)
+                print(f"[UVE] Cena {scene_index} renderizada: {temp_scene_path}")
+            except Exception as e:
+                print(f"[UVE] Erro ao renderizar cena {scene_index}: {e}")
+            finally:
+                try:
+                    composed_clip.close()
+                except Exception:
+                    pass
+                del composed_clip
+                gc.collect()
+
             self.total_duration += scene_duration
 
-        if not all_scene_clips:
+        if not scene_files:
+            print("[UVE] Nenhum arquivo de cena foi gerado. Abortando.")
+            shutil.rmtree(temp_dir, ignore_errors=True)
             return None
             
-        final_video = concatenate_videoclips(all_scene_clips, method="compose")
         slug = self.data_config.get("slug", "final_video")
         output_filename = f"{slug}.mp4"
         output_path = os.path.join(self.output_dir, output_filename)
         
-        # Aplicar o audio global uma única vez no final
-        global_bg_audio_config = self.global_settings.get("background", {}).get("audio", {}) or {}
-        try:
-            total_dur = self.total_duration if self.total_duration > 0 else final_video.duration
-        except Exception:
-            total_dur = final_video.duration
+        # Arquivo de lista para ffmpeg concat demuxer
+        concat_list_path = os.path.join(temp_dir, "concat_list.txt")
+        with open(concat_list_path, "w", encoding="utf-8") as f:
+            for p in scene_files:
+                f.write(f"file '{os.path.abspath(p)}'\n")
 
-        if global_bg_audio_config and global_bg_audio_config.get("type"):
+        # Tenta concat rápido (copy) primeiro; se falhar, re-encode
+        ffmpeg_cmd_copy = [
+            "ffmpeg", "-y", "-f", "concat", "-safe", "0",
+            "-i", concat_list_path, "-c", "copy", output_path
+        ]
+
+        ffmpeg_cmd_reencode = [
+            "ffmpeg", "-y", "-f", "concat", "-safe", "0",
+            "-i", concat_list_path,
+            "-c:v", "libx264", "-preset", "medium", "-crf", "18",
+            "-c:a", "aac", "-b:a", "128k",
+            output_path
+        ]
+
+        concat_succeeded = False
+        try:
+            print("[UVE] Tentando concatenar cenas via ffmpeg (copy)...")
+            subprocess.run(ffmpeg_cmd_copy, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            concat_succeeded = True
+            print("[UVE] Concat (copy) concluído.")
+        except Exception:
+            print("[UVE] Concat (copy) falhou; tentando re-encode (mais lento)...")
             try:
+                subprocess.run(ffmpeg_cmd_reencode, check=True)
+                concat_succeeded = True
+                print("[UVE] Concat (re-encode) concluído.")
+            except Exception as e:
+                print(f"[UVE] Falha ao concatenar cenas com ffmpeg: {e}")
+                concat_succeeded = False
+
+        if not concat_succeeded:
+            print("[UVE] Falha ao gerar vídeo final. Limpando temporários.")
+            shutil.rmtree(temp_dir, ignore_errors=True)
+            return None
+
+        # Aplicar o audio global APÓS a concat (conforme pedido) — abrimos output_path e setamos audio
+        global_bg_audio_config = self.global_settings.get("background", {}).get("audio", {}) or {}
+        if global_bg_audio_config and global_bg_audio_config.get("type"):
+            print("[UVE] Aplicando áudio global ao vídeo final (MoviePy).")
+            try:
+                final_video = VideoFileClip(output_path)
+                try:
+                    total_dur = self.total_duration if self.total_duration > 0 else final_video.duration
+                except Exception:
+                    total_dur = final_video.duration
+
                 bg_audio_clip = None
                 if global_bg_audio_config.get("type") == "directory" and global_bg_audio_config.get("source"):
                     bg_music_dir = global_bg_audio_config["source"]
                     full_bg_music_dir = os.path.join(os.getcwd(), bg_music_dir)
                     if os.path.isdir(full_bg_music_dir):
-                        music_files = [os.path.join(full_bg_music_dir, f) for f in os.listdir(full_bg_music_dir) if f.endswith(".mp3")]
+                        music_files = [os.path.join(full_bg_music_dir, f) for f in os.listdir(full_bg_music_dir) if f.lower().endswith(".mp3")]
                         if music_files:
                             bg_audio_clip = AudioFileClip(random.choice(music_files))
                 elif global_bg_audio_config.get("type") == "file" and global_bg_audio_config.get("source"):
-                    audio_source = MediaDownloader.resolve_source_path(global_bg_audio_config["source"], self.output_dir)
+                    audio_source = None
+                    try:
+                        audio_source = MediaDownloader.resolve_source_path(global_bg_audio_config["source"], self.output_dir)
+                    except Exception:
+                        audio_source = global_bg_audio_config.get("source")
                     if audio_source and os.path.exists(audio_source):
                         bg_audio_clip = AudioFileClip(audio_source)
 
@@ -574,21 +548,34 @@ class UnifiedVideoEngine:
                         combined_audio = bg_audio_clip
 
                     final_video = final_video.set_audio(combined_audio)
+
+                    # Re-encode final with audio applied
+                    temp_final_with_audio = os.path.join(self.output_dir, f"{slug}_with_audio.mp4")
+                    final_video.write_videofile(
+                        temp_final_with_audio,
+                        codec='libx264',
+                        audio_codec='aac',
+                        fps=24,
+                        preset='medium'
+                    )
+                    final_video.close()
+                    try:
+                        os.replace(temp_final_with_audio, output_path)
+                    except Exception:
+                        shutil.move(temp_final_with_audio, output_path)
+                    print("[UVE] Áudio global aplicado e arquivo final atualizado.")
+                else:
+                    print("[UVE] Nenhum arquivo de áudio de fundo encontrado/paletado para aplicar.")
             except Exception as e:
                 print(f"[UVE] Aviso: falha ao aplicar audio de fundo global: {e}")
 
-        ffmpeg_audio_temp = os.path.join(self.output_dir, 'temp-audio-rendering.m4a')
-        
-        final_video.write_videofile(
-            output_path,
-            codec='libx264',
-            audio_codec='aac',
-            temp_audiofile=ffmpeg_audio_temp,
-            remove_temp=True,
-            fps=24,
-            preset='medium'
-        )
+        # Limpa temporários de cenas
+        try:
+            shutil.rmtree(temp_dir, ignore_errors=True)
+        except Exception:
+            pass
 
+        # Upload opcional para YouTube
         if self.data_config.get("youtube") and self.data_config.get("debug") is not True:
             print("[UVE] Iniciando upload para o YouTube...")
             youtube_params = self.data_config.get("youtube", {})
@@ -597,4 +584,17 @@ class UnifiedVideoEngine:
             youtube_uploader = YouTube(params=youtube_params)
             youtube_uploader.upload()
 
+        # se debug true abrir o vídeo no final
+        if self.data_config.get("debug") is True:
+            try:
+                if os.name == 'nt':
+                    os.startfile(output_path)
+                elif os.uname().sysname == 'Darwin':
+                    subprocess.run(['open', output_path])
+                else:
+                    subprocess.run(['xdg-open', output_path])
+            except Exception:
+                pass
+
+        print(f"[UVE] Render final concluído: {output_path}")
         return output_path

@@ -1,5 +1,4 @@
 {
-    "output_ratio": "9:16",
     "global_settings": {
         "tts": {
             "voice": "pt-BR-AntonioNeural"
@@ -8,8 +7,19 @@
             "font_path": "./assets/fonts/CormorantGaramond/CormorantGaramond-Bold.ttf",
             "font_size": 110,
             "color": "#E5C687",
+
+            "stroke_enabled": false,
             "stroke_color": "#A68A56",
-            "stroke_width": 1
+            "stroke_width": 4,
+
+            "shadow_enabled": true,
+            "shadow_color": "#A68A56",
+            "shadow_opacity": 0.85,
+            "blur_radius": 6.0,
+            "shadow_offset": [
+                4,
+                4
+            ]
         },
         "background": {
             "visual": {

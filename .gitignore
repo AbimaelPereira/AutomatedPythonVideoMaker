@@ -4,7 +4,7 @@ __pycache__/
 .env
 
 # Ignorar conteúdo, mas manter a pasta no repo
-/audios_vozes_ptbr/*
+/development/audios_vozes_ptbr/*
 /output/*
 !/output/.gitkeep
 
