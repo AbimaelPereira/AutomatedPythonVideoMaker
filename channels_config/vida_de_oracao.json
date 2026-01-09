@@ -7,11 +7,9 @@
             "font_path": "./assets/fonts/CormorantGaramond/CormorantGaramond-Bold.ttf",
             "font_size": 110,
             "color": "#E5C687",
-
             "stroke_enabled": false,
             "stroke_color": "#A68A56",
             "stroke_width": 4,
-
             "shadow_enabled": true,
             "shadow_color": "#A68A56",
             "shadow_opacity": 0.85,
@@ -24,11 +22,28 @@
         "background": {
             "visual": {
                 "type": "directory",
+                "source": "./assets/video/defaults/IA/CEU"
+            },
+            "//visual": {
+                "type": "directory",
                 "source": "./assets/video/defaults/vidadeoracao"
             },
             "audio": {
                 "type": "directory",
                 "source": "./assets/audio/background/vidadeoracao"
+            }
+        },
+        "///overlays": {
+            "enabled": true,
+            "bokeh": {
+                "enabled": true,
+                "opacity": 0.8,
+                "intensity": 0.8
+            },
+            "particles": {
+                "enabled": true,
+                "opacity": 0.8,
+                "intensity": 0.8
             }
         }
     },
