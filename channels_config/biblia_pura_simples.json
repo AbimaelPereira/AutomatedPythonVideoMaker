@@ -1,0 +1,55 @@
+{
+    "ignore": {
+        "primary_color": "#121212",
+        "secondary_color": "#E8E4DD",
+        "font_family": "Montserrat"
+    },
+    "global_settings": {
+        "tts": {
+            "voice": "pt-BR-AntonioNeural"
+        },
+        "subtitle": {
+            "font_path": "./assets/fonts/Montserrat/Montserrat-Bold.ttf",
+            "font_size": 110,
+            "color": "#E8E4DD",
+
+            "stroke_enabled": false,
+            "shadow_enabled": true,
+            "shadow_color": "#121212",
+            "shadow_opacity": 0.85,
+            "blur_radius": 6.0,
+            "shadow_offset": [
+                4,
+                4
+            ]
+        },
+        "background": {
+            "visual": {
+                "type": "color",
+                "source": "#121212"
+            },
+            "audio": {
+                "type": "directory",
+                "source": "./assets/audio/background/vidadeoracao"
+            }
+        },
+        "///overlays": {
+            "enabled": true,
+            "bokeh": {
+                "enabled": true,
+                "opacity": 0.8,
+                "intensity": 0.8
+            },
+            "particles": {
+                "enabled": true,
+                "opacity": 0.8,
+                "intensity": 0.8
+            }
+        }
+    },
+    "youtube": {
+        "token_file_name": "biblia_pura_simples.json",
+        "privacy_status": "private",
+        "category_id": "22"
+    }
+}
