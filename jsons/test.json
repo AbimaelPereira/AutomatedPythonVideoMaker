@@ -1,7 +1,64 @@
 [
     {
-        "slug": "aviso-espiritual-urgente",
+        "slug": "1",
         "channel_name": "vida_de_oracao",
+        "output_ratio": "9:16",
+        "youtube": {
+            "title": "⚠️ ALGO ESTÁ PARA ACONTECER: NÃO IGNORE ESTE AVISO! 🙏",
+            "tags": [
+                "oração",
+                "aviso espiritual",
+                "salmos 91",
+                "proteção",
+                "deus",
+                "shorts cristão"
+            ],
+            "description": "⚠️ Existem sinais que você não pode ignorar. Assista até o fim para entender o que o Salmo 91 revela sobre sua proteção hoje. 🛡️✨\n\n#oração #fé #proteção #shorts",
+            "publish_at": "2026-01-07 15:00:00"
+        },
+        "scenes": [
+            {
+                "id": "hook",
+                "narration": {
+                    "text": "Pare tudo. Se este vídeo chegou até você agora, não é algoritmo, é um livramento que você quase deixou passar.",
+                    "subtitles": true
+                }
+            },
+            {
+                "id": "desenvolvimento",
+                "narration": {
+                    "text": "O Salmo 91 diz que mil cairão ao teu lado, mas você não será atingido. Existe uma seta que voa de dia e você nem percebeu, mas a mão de Deus acaba de entrar na frente.",
+                    "subtitles": true
+                }
+            },
+            {
+                "id": "cta",
+                "narration": {
+                    "text": "Se você sente que essa proteção é real, confirme sua aliança nos comentários. Não quebre esse ciclo de guarda agora.",
+                    "subtitles": true
+                },
+                "background": {
+                    "visual": {
+                        "type": "image",
+                        "source": "./assets/image/vida_de_oracao/background-9:16.png"
+                    }
+                },
+                "visual_elements": [
+                    {
+                        "type": "image",
+                        "source": "./assets/image/vida_de_oracao/logo-transparent.png",
+                        "animation": {
+                            "type": "fade_in",
+                            "duration": 0.2
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "slug": "2",
+        "channel_name": "biblia_pura_simples",
         "output_ratio": "9:16",
         "youtube": {
             "title": "⚠️ ALGO ESTÁ PARA ACONTECER: NÃO IGNORE ESTE AVISO! 🙏",

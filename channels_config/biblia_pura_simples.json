@@ -1,7 +1,7 @@
 {
     "ignore": {
-        "primary_color": "#121212",
-        "secondary_color": "#E8E4DD",
+        "primary_color": "#0a121d",
+        "secondary_color": "#f8f4da",
         "font_family": "Montserrat"
     },
     "global_settings": {
@@ -11,12 +11,12 @@
         "subtitle": {
             "font_path": "./assets/fonts/Montserrat/Montserrat-Bold.ttf",
             "font_size": 110,
-            "color": "#E8E4DD",
+            "color": "#f8f4da",
             "uppercase": false,
 
             "stroke_enabled": false,
             "shadow_enabled": true,
-            "shadow_color": "#121212",
+            "shadow_color": "#0a121d",
             "shadow_opacity": 0.85,
             "blur_radius": 6.0,
             "shadow_offset": [
