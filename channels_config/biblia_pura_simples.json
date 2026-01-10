@@ -12,6 +12,7 @@
             "font_path": "./assets/fonts/Montserrat/Montserrat-Bold.ttf",
             "font_size": 110,
             "color": "#E8E4DD",
+            "uppercase": false,
 
             "stroke_enabled": false,
             "shadow_enabled": true,
@@ -31,19 +32,6 @@
             "audio": {
                 "type": "directory",
                 "source": "./assets/audio/background/vidadeoracao"
-            }
-        },
-        "///overlays": {
-            "enabled": true,
-            "bokeh": {
-                "enabled": true,
-                "opacity": 0.8,
-                "intensity": 0.8
-            },
-            "particles": {
-                "enabled": true,
-                "opacity": 0.8,
-                "intensity": 0.8
             }
         }
     },

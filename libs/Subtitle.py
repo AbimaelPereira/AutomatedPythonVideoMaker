@@ -19,6 +19,9 @@ class Subtitle:
             "font_size": 70,
             "color": "white",
 
+            "uppercase": True,
+            "has_visual_elements": False,
+
             # Contorno (stroke)
             "stroke_enabled": True,
             "stroke_color": "black",
@@ -120,7 +123,10 @@ class Subtitle:
 
         subtitle_clips = []
         for sub in subtitles:
-            txt = sub.content.replace("\n", " ").strip().upper()
+            txt = sub.content.replace("\n", " ").strip()
+            if self.uppercase:   # nova propriedade
+                txt = txt. upper()
+
             if not txt:
                 continue
 
@@ -131,7 +137,10 @@ class Subtitle:
                 comps = []
 
                 # Posição base da caixa de legenda
-                box_y_pos = screen_height - self.padding_bottom
+                if self.has_visual_elements:
+                    box_y_pos = screen_height - self.padding_bottom  # posição atual (embaixo)
+                else:
+                    box_y_pos = (screen_height - box_height) // 2    # centro vertical
                 left_x = int((screen_width - safe_width) / 2)
                 base_position = (left_x, box_y_pos)
                 box_size = (safe_width, box_height)

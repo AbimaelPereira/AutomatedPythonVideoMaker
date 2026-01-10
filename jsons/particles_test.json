@@ -1,103 +1,142 @@
 [
   {
     "slug": "experimentos_particulas",
-    "channel_name": "biblia_pura_simples",
+    "channel_name": "vida_de_oracao",
     "output_ratio": "9:16",
     "scenes": [
       {
         "id": "cfg_01_low_dense_slow_small",
-        "narration": { "text": "Baixa densidade, lento, pequeno.", "subtitles": true },
-        "//overlays": {
+        "narration": {
+          "text": "Baixa densidade, lento, pequeno.",
+          "subtitles": true
+        },
+        "overlays": {
           "particles": {
             "density": 0.2,
             "speed": 0.2,
             "size": 0.2,
             "movement": "float",
             "blur_radius": 4.0,
-            "axis_ratio_range": [0.9, 1.4],
+            "axis_ratio_range": [
+              0.9,
+              1.4
+            ],
             "color": "#FFEEDD"
           }
         }
       },
       {
         "id": "cfg_02_med_dense_slow_large",
-        "narration": { "text": "Média densidade, lento, grande.", "subtitles": true },
-        "//overlays": {
+        "narration": {
+          "text": "Média densidade, lento, grande.",
+          "subtitles": true
+        },
+        "overlays": {
           "particles": {
             "density": 0.5,
             "speed": 0.2,
             "size": 0.8,
             "movement": "float",
             "blur_radius": 6.0,
-            "axis_ratio_range": [0.7, 1.4],
+            "axis_ratio_range": [
+              0.7,
+              1.4
+            ],
             "color": "#FFF6D5"
           }
         }
       },
       {
         "id": "cfg_03_high_dense_mid_speed_small",
-        "narration": { "text": "Alta densidade, velocidade média, pequeno.", "subtitles": true },
-        "//overlays": {
+        "narration": {
+          "text": "Alta densidade, velocidade média, pequeno.",
+          "subtitles": true
+        },
+        "overlays": {
           "particles": {
             "density": 0.9,
             "speed": 0.5,
             "size": 0.3,
             "movement": "scatter",
             "blur_radius": 3.0,
-            "axis_ratio_range": [0.8, 1.2],
+            "axis_ratio_range": [
+              0.8,
+              1.2
+            ],
             "color": "#FFFFFF"
           }
         }
       },
       {
         "id": "cfg_04_high_dense_fast_medium",
-        "narration": { "text": "Alta densidade, rápido, tamanho médio.", "subtitles": true },
-        "//overlays": {
+        "narration": {
+          "text": "Alta densidade, rápido, tamanho médio.",
+          "subtitles": true
+        },
+        "overlays": {
           "particles": {
             "density": 0.9,
             "speed": 0.9,
             "size": 0.5,
             "movement": "scatter",
             "blur_radius": 2.0,
-            "axis_ratio_range": [0.8, 1.3],
+            "axis_ratio_range": [
+              0.8,
+              1.3
+            ],
             "color": "#FFFFFF"
           }
         }
       },
       {
         "id": "cfg_05_snow_like_fall",
-        "narration": { "text": "Efeito neve: queda suave, tamanho maior.", "subtitles": true },
-        "//overlays": {
+        "narration": {
+          "text": "Efeito neve: queda suave, tamanho maior.",
+          "subtitles": true
+        },
+        "overlays": {
           "particles": {
             "density": 0.6,
             "speed": 0.4,
             "size": 0.7,
             "movement": "fall",
             "blur_radius": 1.5,
-            "axis_ratio_range": [0.9, 1.1],
+            "axis_ratio_range": [
+              0.9,
+              1.1
+            ],
             "color": "#FFFFFF"
           }
         }
       },
       {
         "id": "cfg_06_fireflies",
-        "narration": { "text": "Vagalumes: poucas, rápidas, pequenas, ovais.", "subtitles": true },
-        "//overlays": {
+        "narration": {
+          "text": "Vagalumes: poucas, rápidas, pequenas, ovais.",
+          "subtitles": true
+        },
+        "overlays": {
           "particles": {
             "density": 0.4,
             "speed": 0.8,
             "size": 0.4,
             "movement": "float",
             "blur_radius": 5.0,
-            "axis_ratio_range": [0.6, 1.8],
+            "axis_ratio_range": [
+              0.6,
+              1.8
+            ],
             "color": "#FFD27A"
           }
         }
       },
       {
         "id": "cfg_07_soft_bokehish",
-        "narration": { "text": "Bokeh-like: poucas, lentas, bem grandes e suaves.", "subtitles": true },
-        "//overlays": {
+        "narration": {
+          "text": "Bokeh-like: poucas, lentas, bem grandes e suaves.",
+          "subtitles": true
+        },
+        "overlays": {
           "particles": {
             "opacity": 0.35,
             "density": 0.3,
@@ -105,22 +144,31 @@
             "size": 1.0,
             "movement": "float",
             "blur_radius": 8.0,
-            "axis_ratio_range": [0.7, 1.3],
+            "axis_ratio_range": [
+              0.7,
+              1.3
+            ],
             "color": "#FFEEDD"
           }
         }
       },
       {
         "id": "cfg_08_energetic_confetti",
-        "narration": { "text": "Energia: muitas, muito rápidas, tamanho médio.", "subtitles": true },
-        "//overlays": {
+        "narration": {
+          "text": "Energia: muitas, muito rápidas, tamanho médio.",
+          "subtitles": true
+        },
+        "overlays": {
           "particles": {
             "density": 0.8,
             "speed": 1.0,
             "size": 0.6,
             "movement": "scatter",
             "blur_radius": 1.0,
-            "axis_ratio_range": [0.8, 1.2],
+            "axis_ratio_range": [
+              0.8,
+              1.2
+            ],
             "color": "#FFFFFF"
           }
         }

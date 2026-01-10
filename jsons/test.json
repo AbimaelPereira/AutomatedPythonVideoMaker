@@ -39,14 +39,14 @@
                 },
                 "background": {
                     "visual": {
-                        "type": "image",
-                        "source": "./assets/image/vida_de_oracao/background-9:16.jpeg"
+                        "type": "color",
+                        "source": "#121212"
                     }
                 },
                 "visual_elements": [
                     {
                         "type": "image",
-                        "source": "./assets/image/vida_de_oracao/logo-transparent.png",
+                        "source": "./assets/image/biblia_pura_simples/logo-transparent.png",
                         "animation": {
                             "type": "fade_in",
                             "duration": 0.2

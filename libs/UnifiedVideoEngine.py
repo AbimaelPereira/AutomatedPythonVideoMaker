@@ -85,10 +85,33 @@ class UnifiedVideoEngine:
             print("[UVE] Cena sem narração. Duração será fixa.")
             return None, 0.0, None, None
 
-        # Mantém a implementação existente do projeto real (omissa aqui).
-        # Retorne (audio_clip, duration_from_tts, word_timing, subtitle_file) conforme o projeto.
-        # Para não quebrar, usamos fallback simples:
-        return None, narration_config.get("duration", 4.0), None, None
+        voice = scene_data.get("tts", {}).get("voice", self.tts_config.get("voice"))
+        audio_basename = os.path.join(target_dir, f"audio_{scene_data['id']}")
+        
+        print(f"[UVE] Gerando áudio para cena {scene_data['id']} em {target_dir}...")
+        
+        try:
+            tts_params = {
+                "text": text,
+                "voice_id": voice,
+                "output_basename": audio_basename,
+            }
+            
+            tts_engine = EdgeTTS(params=tts_params)
+            tts_result = tts_engine.generate_audio_and_subtitles()
+            
+            final_audio_path = tts_result.get("audio_file")
+            word_boundaries = tts_result.get("word_boundaries")
+            subtitle_file = tts_result.get("subtitle_file")
+            
+            audio_clip = AudioFileClip(final_audio_path)
+            duration = audio_clip.duration
+            
+        except Exception as e:
+            print(f"[ERRO UVE] Falha ao gerar TTS: {e}")
+            return None, 4.0, None, None
+        
+        return audio_clip, duration, word_boundaries, subtitle_file
 
     def _create_background_clip(self, scene_data, scene_duration, scene_dir, video_dir):
         """
@@ -112,7 +135,7 @@ class UnifiedVideoEngine:
 
         try:
             if bg_type == "color":
-                color = visual_config.get("color", "#000000")
+                color = visual_config.get("source", "#000000")
                 if isinstance(color, str):
                     color = hex_to_rgb(color)
                 bg_clip = ColorClip(size=self.resolution_output, color=color).set_duration(scene_duration)
@@ -202,14 +225,17 @@ class UnifiedVideoEngine:
             return None
         return CompositeVideoClip(clips, size=self.resolution_output).set_duration(scene_duration).fl_image(force_rgb)
 
-    def _create_subtitle_clip(self, scene_duration, subtitle_file):
+    def _create_subtitle_clip(self, scene_duration, subtitle_file, has_visual_elements=False):  # ADICIONAR parâmetro
         try:
-            if not subtitle_file or not os.path.exists(subtitle_file):
+            if not subtitle_file or not os.path. exists(subtitle_file):
                 return None
             sub = Subtitle({
                 "subtitle_file": subtitle_file,
                 "duration": scene_duration,
-                "resolution_output": self.resolution_output
+                "resolution_output": self.resolution_output,
+                "has_visual_elements": has_visual_elements,  # ADICIONAR
+                # Pegar configurações do global_settings se existirem
+                **self.global_settings.get("subtitle", {})  # ADICIONAR
             })
             return sub.generate()
         except Exception as e:
@@ -238,8 +264,9 @@ class UnifiedVideoEngine:
             visual_clip = self._create_visual_elements_clip(scene, scene_duration, scene_dir)
 
             subtitle_clip = None
-            if scene.get("narration", {}).get("subtitles", False):
-                subtitle_clip = self._create_subtitle_clip(scene_duration, subtitle_file)
+            if scene. get("narration", {}).get("subtitles", False):
+                has_visuals = bool(scene.get("visual_elements"))  # verificar se há elementos visuais
+                subtitle_clip = self._create_subtitle_clip(scene_duration, subtitle_file, has_visuals)
 
             final_scene_clip = [background_clip]
             if visual_clip: final_scene_clip.append(visual_clip)
