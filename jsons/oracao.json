@@ -1,89 +1,88 @@
 [
     {
-        "slug": "16_corrente_dia1",
+        "slug": "24_alento_meio_dia",
         "channel_name": "vida_de_oracao",
         "output_ratio": "9:16",
         "scenes": [
             {
-                "id": "scene_1",
+                "id": "cena_1",
                 "narration": {
-                    "text": "Atenção: Você acaba de entrar no Dia 1 da Corrente do Destrave Espiritual. Se a sua vida parece amarrada e nada prospera, esta oração é o início da sua libertação. Senhor, eu quebro agora toda corrente de escassez e desânimo sobre este filho. Antes de continuarmos, escreva seu maior pedido de oração nos comentários para que eu possa interceder por você pessoalmente. Creia, o que estava travado começa a se mover agora. Curta este vídeo se você aceita o desafio de 7 dias.",
+                    "text": "Eu sei que você começou o dia com força, mas agora o cansaço bateu e o coração parece pesado. A Bíblia diz: Vinde a mim todos os que estais cansados, e eu vos aliviarei. Deus não quer que você carregue o mundo nas costas. Ele quer ser o seu descanso agora. Se você sente que precisa desse abraço do Pai para continuar, não guarde isso para você. Escreva aqui nos comentários: 'Senhor, renova as minhas forças', e sinta o fôlego da vida voltando. Você não está sozinho nessa jornada.",
                     "subtitles": true
                 }
             }
         ],
         "youtube": {
-            "title": "DIA 1: ORAÇÃO PARA DESTRAVAR SUA VIDA URGENTE! 🔥🙏 #shorts",
+            "title": "LEIA ISSO SE VOCÊ ESTÁ CANSADO DE LUTAR SOZINHO 🕊️🙏 #shorts",
             "tags": [
-                "oração",
+                "oração da tarde",
+                "descanso em deus",
+                "alívio",
+                "força",
+                "fé",
+                "mensagem bíblica",
+                "vidadeoracao",
+                "palavra de deus"
+            ],
+            "description": "Uma pausa para o seu espírito. Se o peso do dia está grande demais, entregue-o a quem pode carregar por você.\n\n🙏 Deixe seu comentário e sinta a renovação divina.\n\n#oração #descanso #fé #deus #paz #shorts",
+            "publish_at": "2026-01-12 12:30:00"
+        }
+    },
+    {
+        "slug": "25_corrente_dia4",
+        "channel_name": "vida_de_oracao",
+        "output_ratio": "9:16",
+        "scenes": [
+            {
+                "id": "cena_1",
+                "narration": {
+                    "text": "Chegamos ao Dia 4 da nossa Corrente de Destrave, e a Bíblia é clara: a perseverança produz a esperança. Muitos pararam no caminho, mas você continua aqui porque sabe que algo grande está sendo gerado no mundo espiritual. Pai, no quarto dia, eu peço que toda dúvida seja dissipada. Que o coração deste filho se firme na promessa, não na circunstância. Se você aceita o desafio de ir até o fim, escreva 'Minha vitória está chegando' e compartilhe com alguém que precisa de um milagre. A persistência é o caminho do testemunho!",
+                    "subtitles": true
+                }
+            }
+        ],
+        "youtube": {
+            "title": "DIA 4: A PERSISTÊNCIA QUE GERA O MILAGRE! 🔥🙌 #shorts",
+            "tags": [
                 "corrente de oração",
+                "dia 4",
                 "destrave espiritual",
-                "milagre",
-                "prosperidade",
-                "dia 1",
-                "vidadeoracao",
-                "fé"
-            ],
-            "description": "Começamos hoje a Corrente do Destrave Espiritual (Dia 1). Se você sente que sua vida não sai do lugar, esta oração é para você!\n\n⚠️ DESAFIO: Escreva seu pedido de oração nos comentários. Vamos interceder juntos por 7 dias.\n\n🙏 Siga o canal para não perder o DIA 2 ainda hoje!\n\n#oração #fé #milagre #deus #shorts #vidadeoracao",
-            "publish_at": "2026-01-10 14:00:00"
-        }
-    },
-    {
-        "slug": "17_corrente_dia2",
-        "channel_name": "vida_de_oracao",
-        "output_ratio": "9:16",
-        "scenes": [
-            {
-                "id": "scene_1",
-                "narration": {
-                    "text": "Não ignore o Dia 2! Se você chegou até aqui, é porque Deus está separando você para uma grande virada. Pai, no segundo dia desta corrente, eu peço que as portas que o inimigo tentou selar sejam abertas com Tua mão poderosa. Eu profetizo abundância na sua mesa e paz na sua mente. Se você crê na palavra profética, envie este vídeo para 3 pessoas que também precisam de um milagre e escreva 'Eu recebo o Dia 2'. Sua persistência vai gerar o seu testemunho.",
-                    "subtitles": true
-                }
-            }
-        ],
-        "youtube": {
-            "title": "DIA 2: A PORTA VAI SE ABRIR! NÃO IGNORE ESTE SINAL 🚪🙌 #shorts",
-            "tags": [
-                "corrente de oração",
-                "dia 2",
                 "oração forte",
+                "perseverança",
                 "milagre",
-                "prosperidade",
-                "deus",
-                "vidadeoracao",
-                "shorts"
+                "vidadeoracao"
             ],
-            "description": "Você está no DIA 2 da nossa Corrente de Destrave. A persistência é a chave para o milagre.\n\n🙏 Compartilhe com 3 pessoas e declare sua vitória nos comentários.\n\n#deus #oração #milagre #fé #prosperidade #shorts",
-            "publish_at": "2026-01-10 18:00:00"
+            "description": "DIA 4: O meio da jornada é onde a fé é testada. Não desista agora, o seu destrave está acontecendo!\n\n⚠️ DESAFIO: Escreva sua declaração de fé nos comentários e não quebre a corrente.\n\n🙏 Amanhã teremos o DIA 5. Inscreva-se para não perder.\n\n#oração #fé #vitoria #corrente #deus #shorts",
+            "publish_at": "2026-01-12 18:45:00"
         }
     },
     {
-        "slug": "18_blindagem_sono",
+        "slug": "26_protecao_noturna",
         "channel_name": "vida_de_oracao",
         "output_ratio": "9:16",
         "scenes": [
             {
-                "id": "scene_1",
+                "id": "cena_1",
                 "narration": {
-                    "text": "Pare! Existe algo tentando roubar sua paz nesta noite, mas o Sangue de Jesus tem poder. Senhor, eu blindo agora o sono desta pessoa. Afasta todo espírito de insônia, medo e pesadelos. Que Teus anjos de guerra montem guarda em cada porta e janela desta casa. Você não vai apenas dormir, você vai descansar no colo do Pai. Se você aceita essa blindagem, siga o canal agora para orarmos juntos todos os dias e durma em paz. Amém.",
+                    "text": "Antes de você deitar, lembre-se do que diz o Salmo 91: Aquele que habita no esconderijo do Altíssimo, à sombra do Onipotente descansará. Não tema o terror da noite, pois os anjos do Senhor estão acampados ao redor da sua casa agora. Senhor, derrama Tua paz sobrenatural sobre este lar. Se você deseja que essa proteção blinde sua família, escreva o nome de quem você ama nos comentários para que possamos cobri-los em oração. Durma em paz, o guarda de Israel não dorme. Amém.",
                     "subtitles": true
                 }
             }
         ],
         "youtube": {
-            "title": "BLINDAGEM CONTRA O MAL: Ouça antes de fechar os olhos 🛡️🌙 #shorts",
+            "title": "DURMA SOB A SOMBRA DO ONIPOTENTE 🛡️🌙 #shorts",
             "tags": [
                 "oração da noite",
-                "proteção divina",
-                "blindagem",
+                "salmo 91",
+                "proteção",
+                "família",
                 "sono abençoado",
-                "oração forte",
+                "paz",
                 "vidadeoracao",
-                "deus",
-                "paz"
+                "deus"
             ],
-            "description": "Nenhum mal tocará sua tenda enquanto você dorme. Esta oração de blindagem espiritual traz a paz que você precisa para descansar.\n\n🙏 Siga @vida_de_oracao e faça parte da nossa família de fé.\n\n#proteção #oração #noitecomdeus #fé #shorts #vidadeoracao",
-            "publish_at": "2026-01-10 21:00:00"
+            "description": "Nesta noite, o medo não tem lugar. Receba a proteção do Salmo 91 sobre sua vida e seus entes queridos.\n\n🙏 Coloque os nomes da sua família nos comentários para intercessão.\n\n#proteção #oração #salmo91 #noite #paz #vidadeoracao #shorts",
+            "publish_at": "2026-01-12 19:15:00"
         }
     }
 ]

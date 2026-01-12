@@ -22,3 +22,8 @@ assets/video/defaults/*
 
 /assets/gifs/*
 !/assets/gifs/.gitkeep
+
+/cache/ai_generated/*
+!/cache/ai_generated/.gitkeep
+/cache/ai_generated/*
+!/cache/ai_generated/.gitkeep
