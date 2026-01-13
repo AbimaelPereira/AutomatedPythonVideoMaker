@@ -1,0 +1,53 @@
+[
+  {
+    "slug": "baseline_test_video",
+    "channel_name": "test_channel",
+    "output_ratio": "9:16",
+    "debug": false,
+    "global_settings": {
+      "tts": {
+        "voice": "pt-BR-AntonioNeural"
+      },
+      "subtitle": {
+        "font_size": 70,
+        "color": "white",
+        "stroke_color": "black",
+        "stroke_width": 3
+      },
+      "background": {
+        "visual": {
+          "type": "color",
+          "source": "#000000"
+        }
+      }
+    },
+    "scenes": [
+      {
+        "id": "scene_01_test",
+        "narration": {
+          "text": "Este é um teste de baseline para validação de paridade funcional.",
+          "subtitles": true
+        },
+        "background": {
+          "visual": {
+            "type": "color",
+            "source": "#1a1a1a"
+          }
+        }
+      },
+      {
+        "id": "scene_02_test",
+        "narration": {
+          "text": "A segunda cena valida a concatenação de múltiplas cenas.",
+          "subtitles": true
+        },
+        "background": {
+          "visual": {
+            "type": "color",
+            "source": "#2a2a2a"
+          }
+        }
+      }
+    ]
+  }
+]

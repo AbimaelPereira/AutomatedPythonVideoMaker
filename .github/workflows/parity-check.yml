@@ -1,0 +1,62 @@
+name: Parity Check
+
+on:
+  pull_request:
+    branches:
+      - develop
+      - main
+  push:
+    branches:
+      - develop
+
+jobs:
+  parity-check:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+    
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y ffmpeg
+    
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+        pip install moviepy edge-tts python-dotenv
+    
+    - name: Run baseline test
+      run: |
+        python main.py fixtures/baseline_test.json
+    
+    - name: Verify parity
+      run: |
+        chmod +x tests/verify_parity.py
+        # Se houver um baseline salvo, compare. Caso contrário, apenas salve.
+        if [ -f fixtures/baseline_video_metadata.json ]; then
+          python tests/verify_parity.py --mode compare \
+            --baseline fixtures/baseline_video_metadata.json \
+            --test output/baseline_test_video/baseline_test_video.mp4
+        else
+          python tests/verify_parity.py --mode save \
+            --baseline output/baseline_test_video/baseline_test_video.mp4
+          echo "⚠️ Baseline criado pela primeira vez. Próximas execuções farão comparação."
+        fi
+    
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: test-videos
+        path: |
+          output/**/*.mp4
+          output/**/*.json
+        retention-days: 7
