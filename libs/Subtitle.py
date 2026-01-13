@@ -125,7 +125,7 @@ class Subtitle:
         for sub in subtitles:
             txt = sub.content.replace("\n", " ").strip()
             if self.uppercase:   # nova propriedade
-                txt = txt. upper()
+                txt = txt.upper()
 
             if not txt:
                 continue

@@ -23,7 +23,7 @@ class AICache:
         self.cache_dir = Path(cache_dir)
         self.cache_dir.mkdir(parents=True, exist_ok=True)
         
-        self.metadata_file = self. cache_dir / "cache_metadata.json"
+        self.metadata_file = self.cache_dir / "cache_metadata.json"
         self.max_age_days = max_age_days
         
         # Carregar ou criar metadata
@@ -37,7 +37,7 @@ class AICache:
         if self.metadata_file.exists():
             try: 
                 with open(self.metadata_file, 'r', encoding='utf-8') as f:
-                    return json. load(f)
+                    return json.load(f)
             except Exception as e:
                 print(f"[AICache] ⚠️ Erro ao carregar metadata: {e}")
         
@@ -52,7 +52,7 @@ class AICache:
         try:
             self.metadata["last_updated"] = datetime.now().isoformat()
             with open(self.metadata_file, 'w', encoding='utf-8') as f:
-                json. dump(self.metadata, f, indent=2, ensure_ascii=False)
+                json.dump(self.metadata, f, indent=2, ensure_ascii=False)
         except Exception as e: 
             print(f"[AICache] ❌ Erro ao salvar metadata: {e}")
     
@@ -63,20 +63,20 @@ class AICache:
         
         entries_to_remove = []
         
-        for cache_key, entry in self. metadata. get("entries", {}).items():
+        for cache_key, entry in self.metadata.get("entries", {}).items():
             try:
-                created_date = datetime. fromisoformat(entry. get("created", ""))
+                created_date = datetime.fromisoformat(entry.get("created", ""))
                 if created_date < cutoff_date:
                     # Remover arquivo físico
-                    file_path = Path(entry. get("file_path", ""))
+                    file_path = Path(entry.get("file_path", ""))
                     if file_path.exists():
                         file_path.unlink()
                         removed_count += 1
                     
-                    entries_to_remove. append(cache_key)
+                    entries_to_remove.append(cache_key)
             except Exception as e:
                 print(f"[AICache] ⚠️ Erro ao limpar entrada {cache_key}: {e}")
-                entries_to_remove. append(cache_key)
+                entries_to_remove.append(cache_key)
         
         # Remover entradas do metadata
         for key in entries_to_remove:
@@ -90,7 +90,7 @@ class AICache:
         """Gera caminho do arquivo baseado na chave e tipo"""
         extension = "png" if content_type == "image" else "mp4"
         filename = f"{cache_key}.{extension}"
-        return self. cache_dir / filename
+        return self.cache_dir / filename
     
     def get(self, cache_key: str, content_type: str) -> Optional[str]:
         """
@@ -103,14 +103,14 @@ class AICache:
         Returns: 
             Caminho do arquivo se encontrado, None caso contrário
         """
-        entry = self.metadata. get("entries", {}).get(cache_key)
+        entry = self.metadata.get("entries", {}).get(cache_key)
         if not entry:
             return None
         
         file_path = Path(entry.get("file_path", ""))
         
         # Verificar se arquivo ainda existe
-        if not file_path. exists():
+        if not file_path.exists():
             print(f"[AICache] ⚠️ Arquivo cache perdido: {cache_key}")
             # Remover entrada inválida
             del self.metadata["entries"][cache_key]
@@ -140,7 +140,7 @@ class AICache:
         """
         try:
             source_path = Path(source_file_path)
-            if not source_path. exists():
+            if not source_path.exists():
                 print(f"[AICache] ❌ Arquivo fonte não existe: {source_file_path}")
                 return False
             
@@ -157,16 +157,16 @@ class AICache:
                 "file_path": str(dest_path),
                 "original_path": str(source_path),
                 "created": datetime.now().isoformat(),
-                "last_accessed": datetime. now().isoformat(),
+                "last_accessed": datetime.now().isoformat(),
                 "access_count": 1,
                 "file_size": dest_path.stat().st_size,
                 "metadata":  metadata or {}
             }
             
-            self.metadata. setdefault("entries", {})[cache_key] = entry
+            self.metadata.setdefault("entries", {})[cache_key] = entry
             self._save_metadata()
             
-            print(f"[AICache] 💾 Arquivo cacheado: {cache_key} -> {dest_path. name}")
+            print(f"[AICache] 💾 Arquivo cacheado: {cache_key} -> {dest_path.name}")
             return True
             
         except Exception as e: 
@@ -179,12 +179,12 @@ class AICache:
     
     def remove(self, cache_key: str) -> bool:
         """Remove entrada específica do cache"""
-        entry = self.metadata. get("entries", {}).get(cache_key)
+        entry = self.metadata.get("entries", {}).get(cache_key)
         if not entry:
             return False
         
         try:
-            file_path = Path(entry. get("file_path", ""))
+            file_path = Path(entry.get("file_path", ""))
             if file_path.exists():
                 file_path.unlink()
             
@@ -211,8 +211,8 @@ class AICache:
     
     def get_stats(self) -> Dict[str, Any]:
         """Retorna estatísticas do cache"""
-        entries = self.metadata. get("entries", {})
-        total_size = sum(entry. get("file_size", 0) for entry in entries.values())
+        entries = self.metadata.get("entries", {})
+        total_size = sum(entry.get("file_size", 0) for entry in entries.values())
         
         stats = {
             "total_entries": len(entries),
@@ -237,7 +237,7 @@ class AICache:
     
     def list_entries(self, content_type: Optional[str] = None) -> Dict[str, Dict[str, Any]]:
         """Lista entradas do cache"""
-        entries = self. metadata.get("entries", {})
+        entries = self.metadata.get("entries", {})
         
         if content_type:
             return {k: v for k, v in entries.items() if v.get("content_type") == content_type}

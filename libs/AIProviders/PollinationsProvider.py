@@ -61,7 +61,7 @@ class PollinationsProvider:
         Returns:
             Dict com informações da imagem gerada
         """
-        url = f"{self. BASE_URL}/image/{quote(prompt)}"
+        url = f"{self.BASE_URL}/image/{quote(prompt)}"
         
         params = {
             "model": model,
@@ -79,7 +79,7 @@ class PollinationsProvider:
             
         try:
             response = self.session.get(url, params=params, timeout=timeout)
-            response. raise_for_status()
+            response.raise_for_status()
             
             # Verifica se é realmente uma imagem
             content_type = response.headers.get("content-type", "")
@@ -90,7 +90,7 @@ class PollinationsProvider:
                 "success": True,
                 "content": response.content,
                 "content_type": content_type,
-                "size": len(response. content),
+                "size": len(response.content),
                 "parameters": params,
                 "prompt": prompt
             }
@@ -139,7 +139,7 @@ class PollinationsProvider:
             Dict com informações do vídeo gerado
         """
         # CORRIGIDO: Usar o mesmo endpoint /image/ para vídeos
-        url = f"{self. BASE_URL}/image/{quote(prompt)}"
+        url = f"{self.BASE_URL}/image/{quote(prompt)}"
         
         params = {
             "model": model,
@@ -161,11 +161,11 @@ class PollinationsProvider:
             
         try: 
             print(f"[Pollinations] 🎬 Gerando vídeo com modelo '{model}', duração {duration}s...")
-            response = self.session. get(url, params=params, timeout=timeout)
-            response. raise_for_status()
+            response = self.session.get(url, params=params, timeout=timeout)
+            response.raise_for_status()
             
             # Verifica se é realmente um vídeo
-            content_type = response. headers.get("content-type", "")
+            content_type = response.headers.get("content-type", "")
             if not content_type.startswith("video"):
                 # Log para debug
                 print(f"[Pollinations] ⚠️ Content-Type inesperado: {content_type}")
@@ -175,7 +175,7 @@ class PollinationsProvider:
             print(f"[Pollinations] ✅ Vídeo gerado:  {len(response.content)} bytes")
             return {
                 "success": True,
-                "content": response. content,
+                "content": response.content,
                 "content_type": content_type,
                 "size": len(response.content),
                 "parameters": params,
@@ -201,8 +201,8 @@ class PollinationsProvider:
         Returns:
             True se salvo com sucesso, False caso contrário
         """
-        if not media_data. get("success"):
-            print(f"❌ Erro:  {media_data. get('error', 'Erro desconhecido')}")
+        if not media_data.get("success"):
+            print(f"❌ Erro:  {media_data.get('error', 'Erro desconhecido')}")
             return False
             
         try:

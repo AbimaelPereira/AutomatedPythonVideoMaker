@@ -9,7 +9,6 @@
             "color": "#E5C687",
             "uppercase": true,
             "stroke_enabled": false,
-
             "shadow_enabled": true,
             "shadow_color": "#A68A56",
             "shadow_opacity": 0.85,
@@ -27,6 +26,25 @@
             "audio": {
                 "type": "directory",
                 "source": "./assets/audio/background/vidadeoracao"
+            }
+        },
+        "//transition_effect_audio": {
+            "type": "directory",
+            "source": "./assets/audio/effects/transitions",
+            "volume": 1.0
+        },
+        "overlays": {
+            "particles": {
+                "density": 0.4,
+                "speed": 0.8,
+                "size": 0.4,
+                "movement": "float",
+                "blur_radius": 5.0,
+                "axis_ratio_range": [
+                    0.6,
+                    1.8
+                ],
+                "color": "#FFD27A"
             }
         }
     },

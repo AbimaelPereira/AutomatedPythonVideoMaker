@@ -1,27 +1,381 @@
 [
     {
-        "slug": "slug-video",
+        "slug": "video-1-declaracao-provisao",
         "channel_name": "biblia_pura_simples",
         "output_ratio": "9:16",
         "scenes": [
             {
-                "id": "hook",
+                "id": "cena-1",
                 "narration": {
-                    "text": "Narração do hook aqui",
+                    "text": "OUÇA COM ATENÇÃO, PORQUE ESSA PALAVRA NÃO É PARA TODOS.",
                     "subtitles": true
+                },
+                "background": {
+                    "visual": {
+                        "type": "ai",
+                        "provider": "pollinations",
+                        "content_type": "image",
+                        "prompt": "[VISUAL STYLE]: Cinematic photorealistic render with divine atmospheric lighting and ethereal glow effects. [COLOR PALETTE]: Deep celestial blues #1a2332, warm golden accents #d4af37, soft white highlights #f5f5f0, subtle amber tones #ffa726. [LINES AND FORM]: Smooth volumetric light rays, defined geometric composition with clear focal points, balanced proportions with 60-40 visual weight distribution. [LIGHTING]: Dramatic top-down divine light with soft rim lighting, creating sacred ambiance with 5600K color temperature, no harsh shadows. [BACKGROUND]: Gradient sky transitioning from deep blue to golden horizon, atmospheric depth with layered clouds. [COMPOSITION]: Centered vertical framing, low-angle perspective creating elevation sense, rule of thirds applied. [EMOTIONAL CLIMATE]: Reverent, powerful, awakening, spiritually charged atmosphere. [RESTRICTIONS]: no people, no text overlays, no modern objects, no urban elements, no darkness, no chaos. [VARIABLE ELEMENT]: Open ancient bible with glowing pages radiating golden light upward.",
+                        "parameters": {
+                            "model": "zimage",
+                            "safe": "false"
+                        },
+                        "cache_key": "v1_c1_bible_glowing"
+                    }
                 }
             },
             {
-                "id": "desenvolvimento",
+                "id": "cena-2",
                 "narration": {
-                    "text": "Texto do desenvolvimento aqui",
+                    "text": "Você foi chamado de fraco, esquecido, enquanto as contas apertam e a ansiedade corrói.",
                     "subtitles": true
+                },
+                "background": {
+                    "visual": {
+                        "type": "ai",
+                        "provider": "pollinations",
+                        "content_type": "image",
+                        "prompt": "[VISUAL STYLE]: Cinematic photorealistic render with divine atmospheric lighting and ethereal glow effects. [COLOR PALETTE]: Deep celestial blues #1a2332, warm golden accents #d4af37, soft white highlights #f5f5f0, subtle amber tones #ffa726. [LINES AND FORM]: Smooth volumetric light rays, defined geometric composition with clear focal points, balanced proportions with 60-40 visual weight distribution. [LIGHTING]: Dramatic top-down divine light with soft rim lighting, creating sacred ambiance with 5600K color temperature, no harsh shadows. [BACKGROUND]: Gradient sky transitioning from deep blue to golden horizon, atmospheric depth with layered clouds. [COMPOSITION]: Centered vertical framing, low-angle perspective creating elevation sense, rule of thirds applied. [EMOTIONAL CLIMATE]: Reverent, powerful, awakening, spiritually charged atmosphere. [RESTRICTIONS]: no people, no text overlays, no modern objects, no urban elements, no darkness, no chaos. [VARIABLE ELEMENT]: Silhouette of person kneeling in prayer with divine light beam breaking through storm clouds above.",
+                        "parameters": {
+                            "model": "zimage",
+                            "safe": "false"
+                        },
+                        "cache_key": "v1_c2_prayer_silhouette"
+                    }
+                }
+            },
+            {
+                "id": "cena-3",
+                "narration": {
+                    "text": "O mundo grita derrota, mas você faz o que poucos fazem: se coloca diante do altar.",
+                    "subtitles": true
+                },
+                "background": {
+                    "visual": {
+                        "type": "ai",
+                        "provider": "pollinations",
+                        "content_type": "image",
+                        "prompt": "[VISUAL STYLE]: Cinematic photorealistic render with divine atmospheric lighting and ethereal glow effects. [COLOR PALETTE]: Deep celestial blues #1a2332, warm golden accents #d4af37, soft white highlights #f5f5f0, subtle amber tones #ffa726. [LINES AND FORM]: Smooth volumetric light rays, defined geometric composition with clear focal points, balanced proportions with 60-40 visual weight distribution. [LIGHTING]: Dramatic top-down divine light with soft rim lighting, creating sacred ambiance with 5600K color temperature, no harsh shadows. [BACKGROUND]: Gradient sky transitioning from deep blue to golden horizon, atmospheric depth with layered clouds. [COMPOSITION]: Centered vertical framing, low-angle perspective creating elevation sense, rule of thirds applied. [EMOTIONAL CLIMATE]: Reverent, powerful, awakening, spiritually charged atmosphere. [RESTRICTIONS]: no people, no text overlays, no modern objects, no urban elements, no darkness, no chaos. [VARIABLE ELEMENT]: Sacred stone altar with golden light emanating from center, surrounded by soft ethereal mist.",
+                        "parameters": {
+                            "model": "zimage",
+                            "safe": "false"
+                        },
+                        "cache_key": "v1_c3_sacred_altar"
+                    }
+                }
+            },
+            {
+                "id": "cena-4",
+                "narration": {
+                    "text": "Você declara: 'O Senhor é o meu pastor', Salmo 23, e o medo recua.",
+                    "subtitles": true
+                },
+                "background": {
+                    "visual": {
+                        "type": "ai",
+                        "provider": "pollinations",
+                        "content_type": "image",
+                        "prompt": "[VISUAL STYLE]: Cinematic photorealistic render with divine atmospheric lighting and ethereal glow effects. [COLOR PALETTE]: Deep celestial blues #1a2332, warm golden accents #d4af37, soft white highlights #f5f5f0, subtle amber tones #ffa726. [LINES AND FORM]: Smooth volumetric light rays, defined geometric composition with clear focal points, balanced proportions with 60-40 visual weight distribution. [LIGHTING]: Dramatic top-down divine light with soft rim lighting, creating sacred ambiance with 5600K color temperature, no harsh shadows. [BACKGROUND]: Gradient sky transitioning from deep blue to golden horizon, atmospheric depth with layered clouds. [COMPOSITION]: Centered vertical framing, low-angle perspective creating elevation sense, rule of thirds applied. [EMOTIONAL CLIMATE]: Reverent, powerful, awakening, spiritually charged atmosphere. [RESTRICTIONS]: no people, no text overlays, no modern objects, no urban elements, no darkness, no chaos. [VARIABLE ELEMENT]: Shepherd's wooden staff planted in ground with golden divine light radiating outward in circular waves.",
+                        "parameters": {
+                            "model": "zimage",
+                            "safe": "false"
+                        },
+                        "cache_key": "v1_c4_shepherd_staff"
+                    }
+                }
+            },
+            {
+                "id": "cena-5",
+                "narration": {
+                    "text": "Declare na sua vida: não me faltará provisão.",
+                    "subtitles": true
+                },
+                "background": {
+                    "visual": {
+                        "type": "ai",
+                        "provider": "pollinations",
+                        "content_type": "image",
+                        "prompt": "[VISUAL STYLE]: Cinematic photorealistic render with divine atmospheric lighting and ethereal glow effects. [COLOR PALETTE]: Deep celestial blues #1a2332, warm golden accents #d4af37, soft white highlights #f5f5f0, subtle amber tones #ffa726. [LINES AND FORM]: Smooth volumetric light rays, defined geometric composition with clear focal points, balanced proportions with 60-40 visual weight distribution. [LIGHTING]: Dramatic top-down divine light with soft rim lighting, creating sacred ambiance with 5600K color temperature, no harsh shadows. [BACKGROUND]: Gradient sky transitioning from deep blue to golden horizon, atmospheric depth with layered clouds. [COMPOSITION]: Centered vertical framing, low-angle perspective creating elevation sense, rule of thirds applied. [EMOTIONAL CLIMATE]: Reverent, powerful, awakening, spiritually charged atmosphere. [RESTRICTIONS]: no people, no text overlays, no modern objects, no urban elements, no darkness, no chaos. [VARIABLE ELEMENT]: Overflowing golden wheat field with abundant harvest under divine light rays breaking through clouds.",
+                        "parameters": {
+                            "model": "zimage",
+                            "safe": "false"
+                        },
+                        "cache_key": "v1_c5_abundant_harvest"
+                    }
                 }
             },
             {
                 "id": "cta",
                 "narration": {
-                    "text": "Aqui deve vir o texto do CTA",
+                    "text": "Comente 'EU CONFIO'.",
+                    "subtitles": true
+                },
+                "visual_elements": [
+                    {
+                        "type": "image",
+                        "source": "./assets/image/biblia_pura_simples/logo.png",
+                        "animation": {
+                            "type": "fade_in",
+                            "duration": 0.2
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "slug": "video-2-fe-permanece",
+        "channel_name": "biblia_pura_simples",
+        "output_ratio": "9:16",
+        "scenes": [
+            {
+                "id": "cena-1",
+                "narration": {
+                    "text": "VOCÊ NÃO ERROU POR SENTIR MEDO, ERROU SE PARAR.",
+                    "subtitles": true
+                },
+                "background": {
+                    "visual": {
+                        "type": "ai",
+                        "provider": "pollinations",
+                        "content_type": "image",
+                        "prompt": "[VISUAL STYLE]: Cinematic photorealistic render with divine atmospheric lighting and ethereal glow effects. [COLOR PALETTE]: Deep celestial blues #1a2332, warm golden accents #d4af37, soft white highlights #f5f5f0, subtle amber tones #ffa726. [LINES AND FORM]: Smooth volumetric light rays, defined geometric composition with clear focal points, balanced proportions with 60-40 visual weight distribution. [LIGHTING]: Dramatic top-down divine light with soft rim lighting, creating sacred ambiance with 5600K color temperature, no harsh shadows. [BACKGROUND]: Gradient sky transitioning from deep blue to golden horizon, atmospheric depth with layered clouds. [COMPOSITION]: Centered vertical framing, low-angle perspective creating elevation sense, rule of thirds applied. [EMOTIONAL CLIMATE]: Reverent, powerful, awakening, spiritually charged atmosphere. [RESTRICTIONS]: no people, no text overlays, no modern objects, no urban elements, no darkness, no chaos. [VARIABLE ELEMENT]: Ancient stone path leading upward into golden light, with footprints glowing in divine illumination.",
+                        "parameters": {
+                            "model": "zimage",
+                            "safe": "false"
+                        },
+                        "cache_key": "v2_c1_path_forward"
+                    }
+                }
+            },
+            {
+                "id": "cena-2",
+                "narration": {
+                    "text": "Disseram que a doença venceu e que não há saída.",
+                    "subtitles": true
+                },
+                "background": {
+                    "visual": {
+                        "type": "ai",
+                        "provider": "pollinations",
+                        "content_type": "image",
+                        "prompt": "[VISUAL STYLE]: Cinematic photorealistic render with divine atmospheric lighting and ethereal glow effects. [COLOR PALETTE]: Deep celestial blues #1a2332, warm golden accents #d4af37, soft white highlights #f5f5f0, subtle amber tones #ffa726. [LINES AND FORM]: Smooth volumetric light rays, defined geometric composition with clear focal points, balanced proportions with 60-40 visual weight distribution. [LIGHTING]: Dramatic top-down divine light with soft rim lighting, creating sacred ambiance with 5600K color temperature, no harsh shadows. [BACKGROUND]: Gradient sky transitioning from deep blue to golden horizon, atmospheric depth with layered clouds. [COMPOSITION]: Centered vertical framing, low-angle perspective creating elevation sense, rule of thirds applied. [EMOTIONAL CLIMATE]: Reverent, powerful, awakening, spiritually charged atmosphere. [RESTRICTIONS]: no people, no text overlays, no modern objects, no urban elements, no darkness, no chaos. [VARIABLE ELEMENT]: Closed heavy door with divine golden light seeping through cracks and keyhole, symbolizing breakthrough.",
+                        "parameters": {
+                            "model": "zimage",
+                            "safe": "false"
+                        },
+                        "cache_key": "v2_c2_breakthrough_door"
+                    }
+                }
+            },
+            {
+                "id": "cena-3",
+                "narration": {
+                    "text": "A mente acelera, o coração pesa, o caos pressiona.",
+                    "subtitles": true
+                },
+                "background": {
+                    "visual": {
+                        "type": "ai",
+                        "provider": "pollinations",
+                        "content_type": "image",
+                        "prompt": "[VISUAL STYLE]: Cinematic photorealistic render with divine atmospheric lighting and ethereal glow effects. [COLOR PALETTE]: Deep celestial blues #1a2332, warm golden accents #d4af37, soft white highlights #f5f5f0, subtle amber tones #ffa726. [LINES AND FORM]: Smooth volumetric light rays, defined geometric composition with clear focal points, balanced proportions with 60-40 visual weight distribution. [LIGHTING]: Dramatic top-down divine light with soft rim lighting, creating sacred ambiance with 5600K color temperature, no harsh shadows. [BACKGROUND]: Gradient sky transitioning from deep blue to golden horizon, atmospheric depth with layered clouds. [COMPOSITION]: Centered vertical framing, low-angle perspective creating elevation sense, rule of thirds applied. [EMOTIONAL CLIMATE]: Reverent, powerful, awakening, spiritually charged atmosphere. [RESTRICTIONS]: no people, no text overlays, no modern objects, no urban elements, no darkness, no chaos. [VARIABLE ELEMENT]: Turbulent storm clouds parting in center with powerful divine light beam piercing through to calm ground.",
+                        "parameters": {
+                            "model": "zimage",
+                            "safe": "false"
+                        },
+                        "cache_key": "v2_c3_storm_parting"
+                    }
+                }
+            },
+            {
+                "id": "cena-4",
+                "narration": {
+                    "text": "Mesmo assim, você confia como Jó: 'N'Ele esperarei'.",
+                    "subtitles": true
+                },
+                "background": {
+                    "visual": {
+                        "type": "ai",
+                        "provider": "pollinations",
+                        "content_type": "image",
+                        "prompt": "[VISUAL STYLE]: Cinematic photorealistic render with divine atmospheric lighting and ethereal glow effects. [COLOR PALETTE]: Deep celestial blues #1a2332, warm golden accents #d4af37, soft white highlights #f5f5f0, subtle amber tones #ffa726. [LINES AND FORM]: Smooth volumetric light rays, defined geometric composition with clear focal points, balanced proportions with 60-40 visual weight distribution. [LIGHTING]: Dramatic top-down divine light with soft rim lighting, creating sacred ambiance with 5600K color temperature, no harsh shadows. [BACKGROUND]: Gradient sky transitioning from deep blue to golden horizon, atmospheric depth with layered clouds. [COMPOSITION]: Centered vertical framing, low-angle perspective creating elevation sense, rule of thirds applied. [EMOTIONAL CLIMATE]: Reverent, powerful, awakening, spiritually charged atmosphere. [RESTRICTIONS]: no people, no text overlays, no modern objects, no urban elements, no darkness, no chaos. [VARIABLE ELEMENT]: Solid rock foundation with divine pillar of golden light descending upon it, representing unwavering faith.",
+                        "parameters": {
+                            "model": "zimage",
+                            "safe": "false"
+                        },
+                        "cache_key": "v2_c4_rock_foundation"
+                    }
+                }
+            },
+            {
+                "id": "cena-5",
+                "narration": {
+                    "text": "A fé se levanta e o invisível se move.",
+                    "subtitles": true
+                },
+                "background": {
+                    "visual": {
+                        "type": "ai",
+                        "provider": "pollinations",
+                        "content_type": "image",
+                        "prompt": "[VISUAL STYLE]: Cinematic photorealistic render with divine atmospheric lighting and ethereal glow effects. [COLOR PALETTE]: Deep celestial blues #1a2332, warm golden accents #d4af37, soft white highlights #f5f5f0, subtle amber tones #ffa726. [LINES AND FORM]: Smooth volumetric light rays, defined geometric composition with clear focal points, balanced proportions with 60-40 visual weight distribution. [LIGHTING]: Dramatic top-down divine light with soft rim lighting, creating sacred ambiance with 5600K color temperature, no harsh shadows. [BACKGROUND]: Gradient sky transitioning from deep blue to golden horizon, atmospheric depth with layered clouds. [COMPOSITION]: Centered vertical framing, low-angle perspective creating elevation sense, rule of thirds applied. [EMOTIONAL CLIMATE]: Reverent, powerful, awakening, spiritually charged atmosphere. [RESTRICTIONS]: no people, no text overlays, no modern objects, no urban elements, no darkness, no chaos. [VARIABLE ELEMENT]: Ethereal golden particles rising upward in spiral formation through divine light beams, creating supernatural movement.",
+                        "parameters": {
+                            "model": "zimage",
+                            "safe": "false"
+                        },
+                        "cache_key": "v2_c5_faith_rising"
+                    }
+                }
+            },
+            {
+                "id": "cena-6",
+                "narration": {
+                    "text": "Diga em voz alta: o Senhor sustenta minha vida.",
+                    "subtitles": true
+                },
+                "background": {
+                    "visual": {
+                        "type": "ai",
+                        "provider": "pollinations",
+                        "content_type": "image",
+                        "prompt": "[VISUAL STYLE]: Cinematic photorealistic render with divine atmospheric lighting and ethereal glow effects. [COLOR PALETTE]: Deep celestial blues #1a2332, warm golden accents #d4af37, soft white highlights #f5f5f0, subtle amber tones #ffa726. [LINES AND FORM]: Smooth volumetric light rays, defined geometric composition with clear focal points, balanced proportions with 60-40 visual weight distribution. [LIGHTING]: Dramatic top-down divine light with soft rim lighting, creating sacred ambiance with 5600K color temperature, no harsh shadows. [BACKGROUND]: Gradient sky transitioning from deep blue to golden horizon, atmospheric depth with layered clouds. [COMPOSITION]: Centered vertical framing, low-angle perspective creating elevation sense, rule of thirds applied. [EMOTIONAL CLIMATE]: Reverent, powerful, awakening, spiritually charged atmosphere. [RESTRICTIONS]: no people, no text overlays, no modern objects, no urban elements, no darkness, no chaos. [VARIABLE ELEMENT]: Powerful divine hands formed by golden light reaching down from heaven with protective embrace gesture.",
+                        "parameters": {
+                            "model": "zimage",
+                            "safe": "false"
+                        },
+                        "cache_key": "v2_c6_divine_hands"
+                    }
+                }
+            },
+            {
+                "id": "cta",
+                "narration": {
+                    "text": "Comente 'MINHA FÉ PERMANECE'.",
+                    "subtitles": true
+                },
+                "visual_elements": [
+                    {
+                        "type": "image",
+                        "source": "./assets/image/biblia_pura_simples/logo.png",
+                        "animation": {
+                            "type": "fade_in",
+                            "duration": 0.2
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "slug": "video-3-dia-posicionamento",
+        "channel_name": "biblia_pura_simples",
+        "output_ratio": "9:16",
+        "scenes": [
+            {
+                "id": "cena-1",
+                "narration": {
+                    "text": "HOJE É O 5º DIA DA CORRENTE DE ORAÇÃO, O DIA DO POSICIONAMENTO.",
+                    "subtitles": true
+                },
+                "background": {
+                    "visual": {
+                        "type": "ai",
+                        "provider": "pollinations",
+                        "content_type": "image",
+                        "prompt": "[VISUAL STYLE]: Cinematic photorealistic render with divine atmospheric lighting and ethereal glow effects. [COLOR PALETTE]: Deep celestial blues #1a2332, warm golden accents #d4af37, soft white highlights #f5f5f0, subtle amber tones #ffa726. [LINES AND FORM]: Smooth volumetric light rays, defined geometric composition with clear focal points, balanced proportions with 60-40 visual weight distribution. [LIGHTING]: Dramatic top-down divine light with soft rim lighting, creating sacred ambiance with 5600K color temperature, no harsh shadows. [BACKGROUND]: Gradient sky transitioning from deep blue to golden horizon, atmospheric depth with layered clouds. [COMPOSITION]: Centered vertical framing, low-angle perspective creating elevation sense, rule of thirds applied. [EMOTIONAL CLIMATE]: Reverent, powerful, awakening, spiritually charged atmosphere. [RESTRICTIONS]: no people, no text overlays, no modern objects, no urban elements, no darkness, no chaos. [VARIABLE ELEMENT]: Five golden flame torches standing in formation with divine light connecting them in sacred geometry pattern.",
+                        "parameters": {
+                            "model": "zimage",
+                            "safe": "false"
+                        },
+                        "cache_key": "v3_c1_five_flames"
+                    }
+                }
+            },
+            {
+                "id": "cena-2",
+                "narration": {
+                    "text": "Muitos desistiram, aceitaram a escassez e a ansiedade.",
+                    "subtitles": true
+                },
+                "background": {
+                    "visual": {
+                        "type": "ai",
+                        "provider": "pollinations",
+                        "content_type": "image",
+                        "prompt": "[VISUAL STYLE]: Cinematic photorealistic render with divine atmospheric lighting and ethereal glow effects. [COLOR PALETTE]: Deep celestial blues #1a2332, warm golden accents #d4af37, soft white highlights #f5f5f0, subtle amber tones #ffa726. [LINES AND FORM]: Smooth volumetric light rays, defined geometric composition with clear focal points, balanced proportions with 60-40 visual weight distribution. [LIGHTING]: Dramatic top-down divine light with soft rim lighting, creating sacred ambiance with 5600K color temperature, no harsh shadows. [BACKGROUND]: Gradient sky transitioning from deep blue to golden horizon, atmospheric depth with layered clouds. [COMPOSITION]: Centered vertical framing, low-angle perspective creating elevation sense, rule of thirds applied. [EMOTIONAL CLIMATE]: Reverent, powerful, awakening, spiritually charged atmosphere. [RESTRICTIONS]: no people, no text overlays, no modern objects, no urban elements, no darkness, no chaos. [VARIABLE ELEMENT]: Single torch standing tall with golden flame burning bright while surrounded by extinguished torches in background.",
+                        "parameters": {
+                            "model": "zimage",
+                            "safe": "false"
+                        },
+                        "cache_key": "v3_c2_remaining_flame"
+                    }
+                }
+            },
+            {
+                "id": "cena-3",
+                "narration": {
+                    "text": "Você permaneceu firme em meio às crises financeiras e batalhas na saúde.",
+                    "subtitles": true
+                },
+                "background": {
+                    "visual": {
+                        "type": "ai",
+                        "provider": "pollinations",
+                        "content_type": "image",
+                        "prompt": "[VISUAL STYLE]: Cinematic photorealistic render with divine atmospheric lighting and ethereal glow effects. [COLOR PALETTE]: Deep celestial blues #1a2332, warm golden accents #d4af37, soft white highlights #f5f5f0, subtle amber tones #ffa726. [LINES AND FORM]: Smooth volumetric light rays, defined geometric composition with clear focal points, balanced proportions with 60-40 visual weight distribution. [LIGHTING]: Dramatic top-down divine light with soft rim lighting, creating sacred ambiance with 5600K color temperature, no harsh shadows. [BACKGROUND]: Gradient sky transitioning from deep blue to golden horizon, atmospheric depth with layered clouds. [COMPOSITION]: Centered vertical framing, low-angle perspective creating elevation sense, rule of thirds applied. [EMOTIONAL CLIMATE]: Reverent, powerful, awakening, spiritually charged atmosphere. [RESTRICTIONS]: no people, no text overlays, no modern objects, no urban elements, no darkness, no chaos. [VARIABLE ELEMENT]: Mighty ancient tree with deep roots and golden light radiating from trunk, standing firm against wind.",
+                        "parameters": {
+                            "model": "zimage",
+                            "safe": "false"
+                        },
+                        "cache_key": "v3_c3_firm_tree"
+                    }
+                }
+            },
+            {
+                "id": "cena-4",
+                "narration": {
+                    "text": "Declare: 'O Senhor é o meu auxílio, não temerei', Hebreus 13:6.",
+                    "subtitles": true
+                },
+                "background": {
+                    "visual": {
+                        "type": "ai",
+                        "provider": "pollinations",
+                        "content_type": "image",
+                        "prompt": "[VISUAL STYLE]: Cinematic photorealistic render with divine atmospheric lighting and ethereal glow effects. [COLOR PALETTE]: Deep celestial blues #1a2332, warm golden accents #d4af37, soft white highlights #f5f5f0, subtle amber tones #ffa726. [LINES AND FORM]: Smooth volumetric light rays, defined geometric composition with clear focal points, balanced proportions with 60-40 visual weight distribution. [LIGHTING]: Dramatic top-down divine light with soft rim lighting, creating sacred ambiance with 5600K color temperature, no harsh shadows. [BACKGROUND]: Gradient sky transitioning from deep blue to golden horizon, atmospheric depth with layered clouds. [COMPOSITION]: Centered vertical framing, low-angle perspective creating elevation sense, rule of thirds applied. [EMOTIONAL CLIMATE]: Reverent, powerful, awakening, spiritually charged atmosphere. [RESTRICTIONS]: no people, no text overlays, no modern objects, no urban elements, no darkness, no chaos. [VARIABLE ELEMENT]: Divine shield of golden light standing vertically with protective aura radiating outward in concentric circles.",
+                        "parameters": {
+                            "model": "zimage",
+                            "safe": "false"
+                        },
+                        "cache_key": "v3_c4_divine_shield"
+                    }
+                }
+            },
+            {
+                "id": "cena-5",
+                "narration": {
+                    "text": "Declare na sua vida: o socorro já está a caminho.",
+                    "subtitles": true
+                },
+                "background": {
+                    "visual": {
+                        "type": "ai",
+                        "provider": "pollinations",
+                        "content_type": "image",
+                        "prompt": "[VISUAL STYLE]: Cinematic photorealistic render with divine atmospheric lighting and ethereal glow effects. [COLOR PALETTE]: Deep celestial blues #1a2332, warm golden accents #d4af37, soft white highlights #f5f5f0, subtle amber tones #ffa726. [LINES AND FORM]: Smooth volumetric light rays, defined geometric composition with clear focal points, balanced proportions with 60-40 visual weight distribution. [LIGHTING]: Dramatic top-down divine light with soft rim lighting, creating sacred ambiance with 5600K color temperature, no harsh shadows. [BACKGROUND]: Gradient sky transitioning from deep blue to golden horizon, atmospheric depth with layered clouds. [COMPOSITION]: Centered vertical framing, low-angle perspective creating elevation sense, rule of thirds applied. [EMOTIONAL CLIMATE]: Reverent, powerful, awakening, spiritually charged atmosphere. [RESTRICTIONS]: no people, no text overlays, no modern objects, no urban elements, no darkness, no chaos. [VARIABLE ELEMENT]: Golden light pathway descending from heaven to earth with divine presence moving downward in flowing motion.",
+                        "parameters": {
+                            "model": "zimage",
+                            "safe": "false"
+                        },
+                        "cache_key": "v3_c5_help_descending"
+                    }
+                }
+            },
+            {
+                "id": "cta",
+                "narration": {
+                    "text": "Comente 'EU RECEBO'.",
                     "subtitles": true
                 },
                 "visual_elements": [

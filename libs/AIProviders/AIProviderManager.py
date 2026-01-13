@@ -26,7 +26,7 @@ class AIProviderManager:
         """Registra um novo provider"""
         self.providers[name] = provider
         if make_default or not self.default_provider:
-            self. default_provider = name
+            self.default_provider = name
     
     def get_provider(self, name: Optional[str] = None) -> AIProvider:
         """Obtém um provider específico ou o padrão"""
