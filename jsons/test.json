@@ -1,14 +1,14 @@
 [
   {
-    "slug": "neemias_curiosity_short",
-    "channel_name": "vida_de_oracao",
+    "slug": "slug-do-video",
+    "channel_name": "vida_de_oracao ou biblia_pura_simples",
     "output_ratio": "9:16",
     "debug": false,
     "scenes": [
       {
-        "id": "scene_01_hook",
+        "id": "slug-da-cena",
         "narration": {
-          "text": "Você sabia que um homem com uma pena e um plano mudou uma cidade inteira? Descubra como.",
+          "text": "Texto da narração",
           "subtitles": true
         },
         "background": {
@@ -16,74 +16,71 @@
             "type": "ai",
             "provider": "pollinations",
             "content_type": "image",
-            "prompt": "Close-up cinematic portrait of Nehemiah writing on a parchment at dusk, intense expression, ancient Middle Eastern clothes, photorealistic, ultra-detailed, dramatic rim lighting, vertical 9:16",
+            "prompt": "prompt para geração de imagem viral e cativante para a cena aumentando a retenção, deve ser em inglês e ter 500 caracteres",
             "parameters": {
               "model": "zimage",
               "width": 1080,
               "height": 1920,
               "safe": false
             },
-            "cache_key": "neemias_portrait_write"
+            "cache_key": "chave_para_cache"
           }
         }
       },
       {
-        "id": "scene_02_question",
+        "id": "cta-canal-vida-de-oracao",
         "narration": {
-          "text": "Por que ele deixou o conforto do palácio para voltar à cidade em ruínas?",
+          "text": "Texto da narração do cta",
           "subtitles": true
         },
+        "visual_elements": [
+          {
+            "type": "image",
+            "source": "./assets/image/vida_de_oracao/logo-transparent.png",
+            "animation": {
+              "type": "fade_in",
+              "duration": 0.2
+            }
+          }
+        ],
         "background": {
           "visual": {
-            "type": "ai",
-            "provider": "pollinations",
-            "content_type": "image",
-            "prompt": "Cinematic scene of a ruined Jerusalem wall at sunrise, dramatic dust particles, ruined stones, photorealistic, high detail, vertical 9:16",
-            "parameters": {
-              "model": "zimage",
-              "width": 1080,
-              "height": 1920,
-              "safe": false
-            },
-            "cache_key": "jerusalem_ruins_sunrise"
+            "type": "image",
+            "source": "./assets/image/vida_de_oracao/background-9:16.jpeg"
           }
         }
       },
       {
-        "id": "scene_03_plan",
+        "id": "cta-canal-biblia-pura-simples",
         "narration": {
-          "text": "Ele não começou com armas. Começou com um plano secreto. Quer ver como?",
+          "text": "Texto da narração do cta",
           "subtitles": true
         },
+        "visual_elements": [
+          {
+            "type": "image",
+            "source": "./assets/image/biblia_pura_simples/logo-transparent.png",
+            "animation": {
+              "type": "fade_in",
+              "duration": 0.2
+            }
+          }
+        ],
         "background": {
           "visual": {
-            "type": "ai",
-            "provider": "pollinations",
-            "content_type": "image",
-            "prompt": "Nehemiah whispering with trusted men over a dim map by lantern light, conspiratorial mood, photorealistic, ultra-detailed, vertical 9:16",
-            "parameters": {
-              "model": "zimage",
-              "width": 1080,
-              "height": 1920,
-              "safe": false
-            },
-            "cache_key": "neemias_map_whisper"
+            "type": "color",
+            "source": "#0a121d"
           }
         }
       }
     ],
-    "//youtube": {
-      "title": "A história de Neemias: o segredo que reconstruiu uma cidade (curto)",
+    "youtube": {
+      "title": "TITULO DO VIDEO COM EMOJIS 🎬🔥",
       "tags": [
-        "Neemias",
-        "Bíblia",
-        "história bíblica",
-        "curiosidade",
-        "inspiração",
-        "shorts"
+        "tagsDoVideo"
       ],
-      "description": "Curta e surpreendente narrativa visual sobre Neemias, com imagens geradas por IA. Assista até o fim para descobrir o segredo final.",
-      "publish_at": ""
+      "description": "Descrição do video usando emojis",
+      "publish_at": "2026-01-14 17:30:00"
     }
   }
 ]

@@ -8,22 +8,32 @@ __pycache__/
 /output/*
 !/output/.gitkeep
 
-assets/video/defaults/*
-!assets/video/defaults/.gitkeep
+/assets/audio/*
+!/assets/audio/.gitkeep
 
 /assets/audio/background/*
 !/assets/audio/background/.gitkeep
 
-/tokens/*
-!/tokens/.gitkeep
+/assets/audio/effects/*
+!/assets/audio/effects/.gitkeep
+
+/assets/fonts/*
+!/assets/fonts/.gitkeep
+
+/assets/image/*
+!/assets/image/.gitkeep
 
 /assets/temp/*
 !/assets/temp/.gitkeep
 
-/assets/gifs/*
-!/assets/gifs/.gitkeep
+/assets/video/defaults/*
+!/assets/video/defaults/.gitkeep
 
-/cache/ai_generated/*
-!/cache/ai_generated/.gitkeep
+/jsons/*
+!/jsons/.gitkeep
+
+/tokens/*
+!/tokens/.gitkeep
+
 /cache/ai_generated/*
 !/cache/ai_generated/.gitkeep
