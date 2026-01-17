@@ -1,6 +1,7 @@
 import math
+import random
 from moviepy.editor import *
-from TransitionUtils import TransitionUtils
+from libs.Transitions.TransitionUtils import TransitionUtils
 
 
 class Zoom:
@@ -11,7 +12,7 @@ class Zoom:
             "clip_2": None,
             "audio_file_clip": None,
 
-            "zoom_type": "IN",          # IN | OUT
+            "zoom_type": "in",  # in | out | random
             "zoom_max_scale": 8.0,
             "blur_radius": 30,
 
@@ -41,10 +42,16 @@ class Zoom:
             setattr(self, k, v)
 
         self.width, self.height = self.resolution_output
+        
+        # Aplicar random no zoom_type se necessário
+        self.zoom_type = self._get_zoom_type()
 
-    # --------------------------------
-    # ESCALA CLIP 1 (ZOOM DISPARO)
-    # --------------------------------
+    def _get_zoom_type(self):
+        """Retorna zoom_type, ou aleatório se 'random'."""
+        if self.zoom_type.lower() == "random":
+            return random.choice(["in", "out"])
+        return self.zoom_type.lower()
+
     def _scale_clip1(self, t):
         d = self.duration
         p = self.physics
@@ -66,18 +73,15 @@ class Zoom:
 
         return (
             1.0 + (self.zoom_max_scale - 1.0) * progress
-            if self.zoom_type == "IN"
+            if self.zoom_type == "in"
             else 1.0 - (1.0 - 1 / self.zoom_max_scale) * progress
         )
 
-    # --------------------------------
-    # ESCALA CLIP 2 (RETORNO + SHAKE)
-    # --------------------------------
     def _scale_clip2(self, t):
         d = self.duration
         p = self.physics
 
-        start_scale = self.zoom_max_scale if self.zoom_type == "IN" else 1 / self.zoom_max_scale
+        start_scale = self.zoom_max_scale if self.zoom_type == "in" else 1 / self.zoom_max_scale
 
         if t < d["return"]:
             progress = TransitionUtils.ease_out_cubic(t / d["return"])
@@ -92,18 +96,17 @@ class Zoom:
                 p["shake_decay"],
                 d["shake"]
             )
-            return 1.0 + (-shake if self.zoom_type == "IN" else shake)
+            return 1.0 + (-shake if self.zoom_type == "in" else shake)
 
         return 1.0
 
-    # --------------------------------
-    # PROCESS
-    # --------------------------------
     def process(self):
         start_c2 = self.clip_1.duration
         total_duration = self.clip_1.duration + self.clip_2.duration
 
-        frame = self.clip_1.get_frame(self.clip_1.duration - 0.1)
+        # Captura o frame de forma segura
+        t_frame = max(0, self.clip_1.duration - 0.1)
+        frame = self.clip_1.get_frame(t_frame)
 
         backdrop = TransitionUtils.create_blurred_backdrop(
             frame, self.width, self.height,

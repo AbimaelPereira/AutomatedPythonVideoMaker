@@ -1,189 +1,14 @@
 [
   {
-    "slug": "biblia-pura-simples-mentiras-populares",
-    "channel_name": "biblia_pura_simples",
-    "output_ratio": "9:16",
-    "debug": false,
-    "scenes": [
-      {
-        "id": "scene-1-hook",
-        "narration": {
-          "text": "Você sabia que a frase 'o cair é do homem e o levantar é de Deus' NÃO está na Bíblia?",
-          "subtitles": true
-        },
-        "background": {
-          "visual": {
-            "type": "ai",
-            "provider": "pollinations",
-            "content_type": "image",
-            "prompt": "Minimalist hand-drawn stick figure illustration, background color #0a121d, line color #f8f4da, a stick figure falling into a void while another stick figure above shrugs with a question mark, clean thick lines, high contrast, conceptual art, humorous and intellectual style, 2d vector look, centered composition, high resolution, simple but expressive character design, white-board animation aesthetic.",
-            "parameters": {
-              "model": "zimage",
-              "width": 1080,
-              "height": 1920,
-              "safe": false
-            },
-            "cache_key": "bps_mentira_1"
-          }
-        }
-      },
-      {
-        "id": "scene-2",
-        "narration": {
-          "text": "Pois é. Muita gente repete isso como se fosse lei, mas a teologia por trás disso é bem diferente.",
-          "subtitles": true
-        },
-        "background": {
-          "visual": {
-            "type": "ai",
-            "provider": "pollinations",
-            "content_type": "image",
-            "prompt": "Minimalist hand-drawn stick figure illustration, background color #f8f4da, line color #0a121d, a stick figure holding a giant megaphone shouting at a crowd of stick figures holding books, symbols of exclamation marks everywhere, clean bold lines, intellectual concept, 2d vector style, high contrast, minimalist storytelling, expressive gestures, sharp focus, technical drawing aesthetic.",
-            "parameters": {
-              "model": "zimage",
-              "width": 1080,
-              "height": 1920,
-              "safe": false
-            },
-            "cache_key": "bps_mentira_2"
-          }
-        }
-      },
-      {
-        "id": "scene-3",
-        "narration": {
-          "text": "A Bíblia diz em Provérbios que o justo cai sete vezes e se levanta, mas não tira a responsabilidade do homem.",
-          "subtitles": true
-        },
-        "background": {
-          "visual": {
-            "type": "ai",
-            "provider": "pollinations",
-            "content_type": "image",
-            "prompt": "Minimalist hand-drawn stick figure illustration, background color #0a121d, line color #f8f4da, a stick figure climbing a steep mountain of stairs, looking determined, with a divine hand pointing upwards, symbolic representation of effort and grace, clean lines, 2d vector art, high contrast, intellectual and theological theme, sharp details, minimalist geometry.",
-            "parameters": {
-              "model": "zimage",
-              "width": 1080,
-              "height": 1920,
-              "safe": false
-            },
-            "cache_key": "bps_mentira_3"
-          }
-        }
-      },
-      {
-        "id": "scene-4",
-        "narration": {
-          "text": "Outra expressão comum: 'Deus ajuda quem cedo madruga'. Mentira. Isso é um ditado popular, não bíblico.",
-          "subtitles": true
-        },
-        "background": {
-          "visual": {
-            "type": "ai",
-            "provider": "pollinations",
-            "content_type": "image",
-            "prompt": "Minimalist hand-drawn stick figure illustration, background color #f8f4da, line color #0a121d, a stick figure sleeping in a bed while a giant sun with a clock face laughs, a big red 'X' over the scene, bold clean lines, high contrast, conceptual humor, 2d vector design, minimalist aesthetic, sharp focus, educational and clear communication style.",
-            "parameters": {
-              "model": "zimage",
-              "width": 1080,
-              "height": 1920,
-              "safe": false
-            },
-            "cache_key": "bps_mentira_4"
-          }
-        }
-      },
-      {
-        "id": "scene-5",
-        "narration": {
-          "text": "A Bíblia foca na soberania de Deus e no descanso, não apenas no esforço humano desenfreado.",
-          "subtitles": true
-        },
-        "background": {
-          "visual": {
-            "type": "ai",
-            "provider": "pollinations",
-            "content_type": "image",
-            "prompt": "Minimalist hand-drawn stick figure illustration, background color #0a121d, line color #f8f4da, a stick figure floating peacefully on a cloud under a giant divine crown, stars in the background, sense of peace and authority, clean geometric lines, 2d vector art, high contrast, intellectual representation of sovereignty, sharp lines, minimalist masterpiece.",
-            "parameters": {
-              "model": "zimage",
-              "width": 1080,
-              "height": 1920,
-              "safe": false
-            },
-            "cache_key": "bps_mentira_5"
-          }
-        }
-      },
-      {
-        "id": "scene-6",
-        "narration": {
-          "text": "Cuidado com o que você ouve por aí. Nem tudo que soa espiritual está na Palavra.",
-          "subtitles": true
-        },
-        "background": {
-          "visual": {
-            "type": "ai",
-            "provider": "pollinations",
-            "content_type": "image",
-            "prompt": "Minimalist hand-drawn stick figure illustration, background color #f8f4da, line color #0a121d, a stick figure wearing a detective hat examining a giant scroll with a magnifying glass, dust particles, clean bold lines, 2d vector look, high contrast, mystery and investigation theme, intellectual style, sharp focus, minimalist conceptual art.",
-            "parameters": {
-              "model": "zimage",
-              "width": 1080,
-              "height": 1920,
-              "safe": false
-            },
-            "cache_key": "bps_mentira_6"
-          }
-        }
-      },
-      {
-        "id": "cta-canal-biblia-pura-simples",
-        "narration": {
-          "text": "Quer descobrir mais 'mentiras' que te contaram? Siga o Bíblia Pura e Simples e conheça a verdade.",
-          "subtitles": true
-        },
-        "visual_elements": [
-          {
-            "type": "image",
-            "source": "./assets/image/biblia_pura_simples/logo-transparent.png",
-            "animation": {
-              "type": "fade_in",
-              "duration": 0.2
-            }
-          }
-        ],
-        "background": {
-          "visual": {
-            "type": "color",
-            "source": "#0a121d"
-          }
-        }
-      }
-    ],
-    "youtube": {
-      "title": "ISSO NÃO ESTÁ NA BÍBLIA! 😱📜 #Teologia #Curiosidades #Biblia",
-      "tags": [
-        "estudo bíblico",
-        "mentiras cristãs",
-        "teologia simples",
-        "curiosidade bíblica",
-        "bíblia pura e simples"
-      ],
-      "description": "Você já repetiu essas frases achando que eram bíblicas? Prepare-se para se surpreender com a verdade pura e simples. 🧠📖\n\n#Teologia #Bíblia #Verdade #Cristianismo",
-      "publish_at": "2026-01-14 17:30:00"
-    }
-  },
-  {
-    "slug": "vida-de-oracao-milagre-inesperado",
+    "slug": "vdo-shorts-18h-protecao-urgente",
     "channel_name": "vida_de_oracao",
     "output_ratio": "9:16",
     "debug": false,
     "scenes": [
       {
-        "id": "scene-1-hook",
+        "id": "scene-1-pattern-interrupt",
         "narration": {
-          "text": "Você já sentiu que chegou ao seu limite absoluto, onde o silêncio de Deus parece a única resposta?",
+          "text": "PARE! É PARA VOCÊ. Se você abriu este vídeo agora, não foi o algoritmo, foi um propósito divino.",
           "subtitles": true
         },
         "background": {
@@ -191,21 +16,16 @@
             "type": "ai",
             "provider": "pollinations",
             "content_type": "image",
-            "prompt": "Cinematic wide shot, hyper-realistic, a person standing alone on a massive cliff edge during a powerful storm, dramatic dark clouds, thunderbolts in the distance, overwhelming scale, photorealistic textures, 8k resolution, emotional atmosphere, volumetric lighting, deep blues and greys, intensely detailed rain droplets, high-end film grain, sense of isolation and desperate hope, masterpiece quality, unreal engine 5 render style.",
-            "parameters": {
-              "model": "zimage",
-              "width": 1080,
-              "height": 1920,
-              "safe": false
-            },
-            "cache_key": "vdo_milagre_1"
+            "prompt": "Cinematic hyper-realistic close-up, a glowing neon sign in a dark street with the words 'STOP AND LISTEN' in ethereal light, rain falling with golden reflections, 8k resolution, dramatic high contrast, volumetric lighting, photorealistic textures, emotional and urgent atmosphere, intense shadows, masterpiece quality, sharp focus, vivid colors, Unreal Engine 5 render style, sense of divine intervention and immediate mystery.",
+            "parameters": { "model": "zimage", "width": 1080, "height": 1920, "safe": false },
+            "cache_key": "vdo_18h_1"
           }
         }
       },
       {
-        "id": "scene-2",
+        "id": "scene-2-micro-flash",
         "narration": {
-          "text": "Mas e se eu te dissesse que o maior milagre da sua vida está sendo preparado justamente no meio desse caos?",
+          "text": "Eu sei que a sua noite parecia que seria de choro, mas o decreto mudou.",
           "subtitles": true
         },
         "background": {
@@ -213,21 +33,16 @@
             "type": "ai",
             "provider": "pollinations",
             "content_type": "image",
-            "prompt": "Stunning cinematic close-up, a single sprout emerging from dry cracked desert ground, a brilliant beam of golden divine light piercing through dark storm clouds to illuminate the plant, sparkling dust particles, shallow depth of field, macro photography, vibrant green against golden sand, 8k resolution, symbol of hope and rebirth, professional lighting, intense contrast, hyper-detailed textures.",
-            "parameters": {
-              "model": "zimage",
-              "width": 1080,
-              "height": 1920,
-              "safe": false
-            },
-            "cache_key": "vdo_milagre_2"
+            "prompt": "Cinematic wide shot, a person's silhouette standing against a massive glowing sunset, golden particles floating in the air like micro-diamonds, hyper-realistic, 8k, emotional depth, dramatic lighting, a hidden micro-text flash saying 'DEUS VIU SEU CHORO' flickering for a millisecond, masterpiece of light and shadow, cinematic color grading, warm tones, professional photography style, transcendental and peaceful.",
+            "parameters": { "model": "zimage", "width": 1080, "height": 1920, "safe": false },
+            "cache_key": "vdo_18h_2"
           }
         }
       },
       {
-        "id": "scene-3",
+        "id": "scene-3-empathy",
         "narration": {
-          "text": "Hoje, uma porta que estava trancada há anos será tocada por uma mão invisível.",
+          "text": "Você que está com o celular na mão e um peso no peito: eu determino o fim dessa angústia.",
           "subtitles": true
         },
         "background": {
@@ -235,21 +50,16 @@
             "type": "ai",
             "provider": "pollinations",
             "content_type": "image",
-            "prompt": "Ancient heavy ornate wooden door in a mystical stone hallway, glowing golden light seeping through the keyhole and edges, ethereal translucent hand made of light reaching out to touch the handle, magical atmosphere, cinematic fog, epic fantasy style, ultra-detailed carving on the wood, 8k, hyper-realistic, mysterious and divine, particles of light floating in the air, warm backlight.",
-            "parameters": {
-              "model": "zimage",
-              "width": 1080,
-              "height": 1920,
-              "safe": false
-            },
-            "cache_key": "vdo_milagre_3"
+            "prompt": "Intimate cinematic close-up of a hand holding a glowing smartphone in a dark room, the screen light illuminating a face with a single tear of relief, soft bokeh background, 8k resolution, hyper-realistic skin details, emotional storytelling, cinematic lighting, masterpiece, high contrast between shadow and warm light, sense of personal connection, 35mm lens effect, sharp focus on the eye reflecting light.",
+            "parameters": { "model": "zimage", "width": 1080, "height": 1920, "safe": false },
+            "cache_key": "vdo_18h_3"
           }
         }
       },
       {
-        "id": "scene-4",
+        "id": "scene-4-prophetic",
         "narration": {
-          "text": "Não é coincidência você estar ouvindo isso. É um sinal direto para o seu coração cansado.",
+          "text": "O que vai acontecer na sua casa nas próximas 12 horas vai deixar seus inimigos confusos.",
           "subtitles": true
         },
         "background": {
@@ -257,21 +67,16 @@
             "type": "ai",
             "provider": "pollinations",
             "content_type": "image",
-            "prompt": "Emotional portrait of an elderly person with wise eyes, tears of joy reflecting a sunset, hands pressed against a glowing window pane, warm interior lighting, soft bokeh background, hyper-realistic skin details, cinematic lighting, 8k, intimate moment of revelation, cozy and spiritual atmosphere, shot on 35mm lens, masterpiece of emotional storytelling, high contrast between shadow and light.",
-            "parameters": {
-              "model": "zimage",
-              "width": 1080,
-              "height": 1920,
-              "safe": false
-            },
-            "cache_key": "vdo_milagre_4"
+            "prompt": "Majestic cinematic shot of a modern house interior being hit by a massive wave of golden divine light from the ceiling, translucent feathers and gold dust in the air, hyper-realistic, 8k, professional architectural lighting, emotional impact, masterpiece of spiritual manifestation, deep shadows, extremely high detail, ethereal presence, sense of sudden victory and supernatural protection, photorealistic textures.",
+            "parameters": { "model": "zimage", "width": 1080, "height": 1920, "safe": false },
+            "cache_key": "vdo_18h_4"
           }
         }
       },
       {
-        "id": "scene-5",
+        "id": "scene-5-identity-cta",
         "narration": {
-          "text": "Respire fundo agora. Sinta a ansiedade saindo e a paz de quem já venceu entrando.",
+          "text": "Este canal é o exército dos que não desistem. Se você é um guerreiro, confirme sua presença agora.",
           "subtitles": true
         },
         "background": {
@@ -279,21 +84,16 @@
             "type": "ai",
             "provider": "pollinations",
             "content_type": "image",
-            "prompt": "Serene wide landscape, a calm lake reflecting a lavender and orange sunrise, gentle ripples on the water, a person sitting in meditation silhouette, soft morning mist, peaceful and transcendental atmosphere, cinematic color grading, 8k resolution, photorealistic, National Geographic style, ultra-wide angle, dreamlike quality, harmony between nature and soul, sharp focus on the water reflection.",
-            "parameters": {
-              "model": "zimage",
-              "width": 1080,
-              "height": 1920,
-              "safe": false
-            },
-            "cache_key": "vdo_milagre_5"
+            "prompt": "Epic cinematic shot of a diverse army of people in white robes standing on a mountain of light, holding glowing torches, looking into the distance with determination, 8k resolution, hyper-realistic, dramatic scale, volumetric fog, masterpiece of composition, cinematic lighting, sense of unity and strength, professional color grading, National Geographic style wide angle, spiritual warfare theme.",
+            "parameters": { "model": "zimage", "width": 1080, "height": 1920, "safe": false },
+            "cache_key": "vdo_18h_5"
           }
         }
       },
       {
-        "id": "scene-6",
+        "id": "scene-6-loop-close",
         "narration": {
-          "text": "O decreto de vitória sobre a sua família acaba de ser assinado no céu.",
+          "text": "Escreva seu nome abaixo e 'EU TOMO POSSE', porque o que Deus vai fazer é...",
           "subtitles": true
         },
         "background": {
@@ -301,64 +101,43 @@
             "type": "ai",
             "provider": "pollinations",
             "content_type": "image",
-            "prompt": "Grand heavenly library, rays of divine light hitting a golden scroll on a stone altar, glowing ink writing itself, majestic architecture, floating gold dust, epic scale, 8k resolution, cinematic lighting, holy and powerful atmosphere, hyper-detailed textures, ethereal glow, angelic presence implied by light, high fantasy realism, masterpiece composition, sharp details on the golden scroll.",
-            "parameters": {
-              "model": "zimage",
-              "width": 1080,
-              "height": 1920,
-              "safe": false
-            },
-            "cache_key": "vdo_milagre_6"
+            "prompt": "Macro shot of an ancient stone altar with a golden quill writing on a glowing scroll, sparks of light flying, hyper-realistic, 8k resolution, cinematic lighting, sacred atmosphere, extremely detailed textures of the stone and parchment, epic scale, holy lighting, sense of destiny being written, masterpiece, sharp focus, warm amber tones, dramatic shadows, mysterious and powerful.",
+            "parameters": { "model": "zimage", "width": 1080, "height": 1920, "safe": false },
+            "cache_key": "vdo_18h_6"
           }
         }
       },
       {
         "id": "cta-canal-vida-de-oracao",
         "narration": {
-          "text": "Se você crê nesse milagre, escreva 'Amém' e siga nosso canal para fortalecer sua fé diariamente.",
+          "text": "Inscreva-se e ative o sinal para selar sua bênção. Amanhã será o dia do seu...",
           "subtitles": true
         },
         "visual_elements": [
-          {
-            "type": "image",
-            "source": "./assets/image/vida_de_oracao/logo-transparent.png",
-            "animation": {
-              "type": "fade_in",
-              "duration": 0.2
-            }
-          }
+          { "type": "image", "source": "./assets/image/vida_de_oracao/logo-transparent.png", "animation": { "type": "fade_in", "duration": 0.2 } }
         ],
         "background": {
-          "visual": {
-            "type": "image",
-            "source": "./assets/image/vida_de_oracao/background-9:16.jpeg"
-          }
+          "visual": { "type": "image", "source": "./assets/image/vida_de_oracao/background-9:16.jpeg" }
         }
       }
     ],
     "youtube": {
-      "title": "DEUS MANDOU TE DIZER ISSO HOJE! 😭🙌 #Oração #Milagre #Fé",
-      "tags": [
-        "oração da manhã",
-        "milagre urgente",
-        "deus falou comigo",
-        "vida de oração",
-        "reflexão cristã"
-      ],
-      "description": "Uma mensagem profética para o seu coração. Se você sente que não aguenta mais, assista até o final. 🙏✨\n\n#Milagre #Deus #OraçãoPoderosa #Fé",
-      "publish_at": "2026-01-14 17:30:00"
+      "title": "PARE! LEIA ISSO ANTES QUE O DIA ACABE! 😭🙌 #Oração #Milagre #Fé",
+      "tags": ["oração da noite", "urgente", "deus mandou falar", "vida de oração", "milagre em 24 horas"],
+      "description": "Uma mensagem profética que vai mudar sua noite. Não ignore o sinal que você pediu. 🙏✨\n\n#Milagre #Deus #OraçãoPoderosa #Fé #Shorts",
+      "publish_at": "2024-05-20T18:00:00Z"
     }
   },
   {
-    "slug": "vida-de-oracao-corrente-poderosa",
+    "slug": "vdo-shorts-20h-virada-financeira",
     "channel_name": "vida_de_oracao",
     "output_ratio": "9:16",
     "debug": false,
     "scenes": [
       {
-        "id": "scene-1-hook",
+        "id": "scene-1-hook-scarcity",
         "narration": {
-          "text": "Pare tudo o que você está fazendo. Uma corrente de milagres acabou de ser ativada neste exato momento.",
+          "text": "Você tem exatamente 30 segundos para ouvir o que eu vou dizer, ou vai ignorar o sinal que pediu hoje.",
           "subtitles": true
         },
         "background": {
@@ -366,21 +145,16 @@
             "type": "ai",
             "provider": "pollinations",
             "content_type": "image",
-            "prompt": "Cinematic hyper-realistic shot, a massive golden chain made of pure glowing ethereal light stretching from the deep earth up into a swirling cosmic nebula, sparkling divine particles, intense volumetric lighting, 8k resolution, dramatic perspective looking up, awe-inspiring atmosphere, intricate light textures, photorealistic, mystical energy radiating, high-end visual effects, masterpiece of spiritual art, deep blacks and brilliant golds.",
-            "parameters": {
-              "model": "zimage",
-              "width": 1080,
-              "height": 1920,
-              "safe": false
-            },
-            "cache_key": "vdo_corrente_1"
+            "prompt": "Cinematic shot of a giant ethereal hourglass floating in a cosmic void, the sand inside is made of sparkling gold dust, a brilliant light shining from above, 8k resolution, hyper-realistic, dramatic perspective, volumetric lighting, masterpiece of spiritual art, intense contrast, sense of urgent divine timing, photorealistic textures, Unreal Engine 5 render style, sharp focus, epic scale and detail.",
+            "parameters": { "model": "zimage", "width": 1080, "height": 1920, "safe": false },
+            "cache_key": "vdo_20h_1"
           }
         }
       },
       {
-        "id": "scene-2",
+        "id": "scene-2-shock",
         "narration": {
-          "text": "Milhares de pessoas estão unidas agora em um único espírito, e o peso que você carrega está prestes a cair.",
+          "text": "A porta que o homem trancou, a mão invisível de Deus acaba de colocar a chave.",
           "subtitles": true
         },
         "background": {
@@ -388,21 +162,16 @@
             "type": "ai",
             "provider": "pollinations",
             "content_type": "image",
-            "prompt": "Stunning cinematic wide shot of thousands of silhouettes of people standing on a misty mountain plain at dawn, each person connected by a thin glowing thread of golden light to the sky, soft morning fog, vibrant sunrise colors, hyper-realistic, 8k, emotional depth, sense of unity and collective power, professional color grading, National Geographic style photography, breathtaking scale and detail, ethereal atmosphere.",
-            "parameters": {
-              "model": "zimage",
-              "width": 1080,
-              "height": 1920,
-              "safe": false
-            },
-            "cache_key": "vdo_corrente_2"
+            "prompt": "Cinematic close-up of a massive ancient iron gate being opened by a translucent hand of pure golden light, sparks of energy flying as the lock breaks, 8k, hyper-realistic, dramatic shadows, mysterious and powerful vibe, masterpiece of lighting, intense spiritual energy, detailed metal textures, cinematic color grading, sense of breakthrough and divine power, sharp focus on the shattering lock.",
+            "parameters": { "model": "zimage", "width": 1080, "height": 1920, "safe": false },
+            "cache_key": "vdo_20h_2"
           }
         }
       },
       {
-        "id": "scene-3",
+        "id": "scene-3-open-loop",
         "narration": {
-          "text": "A Bíblia diz que onde dois ou mais concordarem, o impossível acontece. Imagine o que milhares podem fazer!",
+          "text": "Daqui a pouco, vou te entregar a palavra de 3 letras que destrava o seu cativeiro financeiro.",
           "subtitles": true
         },
         "background": {
@@ -410,21 +179,16 @@
             "type": "ai",
             "provider": "pollinations",
             "content_type": "image",
-            "prompt": "Macro shot of two translucent hands made of light and stardust gently touching, creating a massive shockwave of golden energy and light ripples, hyper-detailed skin textures, magical realism, cinematic lighting, 8k resolution, sparks of divinity, intense contrast, masterpiece composition, symbol of agreement and spiritual power, sharp focus on the point of contact, glowing particles floating in air.",
-            "parameters": {
-              "model": "zimage",
-              "width": 1080,
-              "height": 1920,
-              "safe": false
-            },
-            "cache_key": "vdo_corrente_3"
+            "prompt": "Cinematic shot of a golden chest opening in a dark ancient vault, blinding light overflowing from within, gold coins and diamonds floating in zero gravity, hyper-realistic, 8k resolution, professional studio lighting, masterpiece composition, sense of hidden treasure and revelation, dramatic shadows, high contrast, intricate textures of gold and stone, mystical and rich atmosphere.",
+            "parameters": { "model": "zimage", "width": 1080, "height": 1920, "safe": false },
+            "cache_key": "vdo_20h_3"
           }
         }
       },
       {
-        "id": "scene-4",
+        "id": "scene-4-validation",
         "narration": {
-          "text": "Nós não vamos deixar você lutar sozinho. Sua dor termina onde a nossa intercessão começa.",
+          "text": "Eu sei que a conta não fecha e o sono sumiu. Mas a palavra que recebi hoje é de virada absoluta.",
           "subtitles": true
         },
         "background": {
@@ -432,21 +196,16 @@
             "type": "ai",
             "provider": "pollinations",
             "content_type": "image",
-            "prompt": "Emotional cinematic close-up, a glowing warrior angel silhouette standing behind a weeping person in a modern city street at night, protective light shield, rain falling with neon reflections, 8k, hyper-realistic, dramatic shadows, spiritual warfare theme, intense emotional storytelling, high contrast, cinematic bokeh, masterpiece of lighting and mood, detailed textures of the city and the light aura.",
-            "parameters": {
-              "model": "zimage",
-              "width": 1080,
-              "height": 1920,
-              "safe": false
-            },
-            "cache_key": "vdo_corrente_4"
+            "prompt": "Emotional cinematic shot of a person sitting at a table with bills and a calculator, but a massive angelic wing of light is gently wrapping around them, providing comfort and peace, soft glow, 8k, hyper-realistic, dramatic lighting, masterpiece of emotional storytelling, warm amber tones, detailed feathers of light, sense of supernatural protection and calm in the storm.",
+            "parameters": { "model": "zimage", "width": 1080, "height": 1920, "safe": false },
+            "cache_key": "vdo_20h_4"
           }
         }
       },
       {
-        "id": "scene-5",
+        "id": "scene-5-the-word",
         "narration": {
-          "text": "Escreva agora o seu pedido ou apenas o seu nome nos comentários para entrar nessa cobertura espiritual.",
+          "text": "A palavra é: CRÊ. Se você crê, o impossível vira rotina na sua vida a partir de agora.",
           "subtitles": true
         },
         "background": {
@@ -454,21 +213,16 @@
             "type": "ai",
             "provider": "pollinations",
             "content_type": "image",
-            "prompt": "An ancient, heavy book of prayers lying on a stone altar inside a cathedral, golden ink appearing on the pages as if written by an invisible hand, rays of sunlight through stained glass windows hitting the book, dust motes dancing in the light, hyper-realistic, 8k resolution, cinematic atmosphere, sacred and peaceful vibe, extremely detailed textures of the leather and paper, epic scale, holy lighting.",
-            "parameters": {
-              "model": "zimage",
-              "width": 1080,
-              "height": 1920,
-              "safe": false
-            },
-            "cache_key": "vdo_corrente_5"
+            "prompt": "Minimalist and powerful cinematic shot, the word 'CRÊ' written in giant 3D golden letters floating over a calm ocean under a starry night sky, a pillar of light hitting the word, 8k resolution, hyper-realistic, masterpiece of typography and light, epic scale, professional color grading, peaceful and transcendental vibe, sharp focus on the golden textures of the letters.",
+            "parameters": { "model": "zimage", "width": 1080, "height": 1920, "safe": false },
+            "cache_key": "vdo_20h_5"
           }
         }
       },
       {
-        "id": "scene-6",
+        "id": "scene-6-engagement-loop",
         "narration": {
-          "text": "Enquanto você digita, sinta a paz invadindo sua casa. O exército de Deus já está se movendo por você.",
+          "text": "Sela esse decreto digitando 'PROSPERIDADE' nos comentários e siga o canal dos milagres.",
           "subtitles": true
         },
         "background": {
@@ -476,227 +230,31 @@
             "type": "ai",
             "provider": "pollinations",
             "content_type": "image",
-            "prompt": "Majestic cinematic shot of a modern living room being filled with a warm, supernatural golden light coming from above, translucent white feathers floating in the air, sense of divine peace, hyper-realistic interior design, 8k, professional architectural lighting, emotional calm, masterpiece of spiritual manifestation, soft shadows, extremely high detail, ethereal presence, cozy and transcendental.",
-            "parameters": {
-              "model": "zimage",
-              "width": 1080,
-              "height": 1920,
-              "safe": false
-            },
-            "cache_key": "vdo_corrente_6"
+            "prompt": "Cinematic shot of a giant golden book of life where the word 'PROSPERIDADE' is being engraved by a beam of light, golden ink splashing like liquid fire, 8k, hyper-realistic, dramatic lighting, masterpiece of sacred art, intricate details on the parchment, sense of eternal decree, sharp focus, high contrast, warm spiritual atmosphere, professional photography style.",
+            "parameters": { "model": "zimage", "width": 1080, "height": 1920, "safe": false },
+            "cache_key": "vdo_20h_6"
           }
         }
       },
       {
         "id": "cta-canal-vida-de-oracao",
         "narration": {
-          "text": "Não quebre essa corrente. Curta este vídeo para que ele chegue a mais pessoas e se inscreva para não perder sua bênção diária.",
+          "text": "Não quebre o ciclo. Compartilhe com quem precisa e prepare-se, porque o que vem é...",
           "subtitles": true
         },
         "visual_elements": [
-          {
-            "type": "image",
-            "source": "./assets/image/vida_de_oracao/logo-transparent.png",
-            "animation": {
-              "type": "fade_in",
-              "duration": 0.2
-            }
-          }
+          { "type": "image", "source": "./assets/image/vida_de_oracao/logo-transparent.png", "animation": { "type": "fade_in", "duration": 0.2 } }
         ],
         "background": {
-          "visual": {
-            "type": "image",
-            "source": "./assets/image/vida_de_oracao/background-9:16.jpeg"
-          }
+          "visual": { "type": "image", "source": "./assets/image/vida_de_oracao/background-9:16.jpeg" }
         }
       }
     ],
     "youtube": {
-      "title": "CORRENTE DE MILAGRES: COLOQUE SEU NOME AQUI! 🙏🔥 #Oração #Corrente #Fé",
-      "tags": [
-        "corrente de oração",
-        "pedido de oração",
-        "oração poderosa",
-        "milagre hoje",
-        "intercessão"
-      ],
-      "description": "Você não chegou aqui por acaso. Deixe seu pedido nos comentários e vamos orar uns pelos outros. A união faz o impossível acontecer! 🤝✨\n\n#Oração #Deus #Fé #Milagre #VidaDeOração",
-      "publish_at": "2026-01-14 18:30:00"
-    }
-  },
-  {
-    "slug": "biblia-pura-simples-ajuda-te",
-    "channel_name": "biblia_pura_simples",
-    "output_ratio": "9:16",
-    "debug": false,
-    "scenes": [
-      {
-        "id": "scene-1-hook",
-        "narration": {
-          "text": "Você acredita que a Bíblia diz: 'Ajuda-te, que eu te ajudarei'? Se sim, você foi enganado a vida toda.",
-          "subtitles": true
-        },
-        "background": {
-          "visual": {
-            "type": "ai",
-            "provider": "pollinations",
-            "content_type": "image",
-            "prompt": "Minimalist hand-drawn stick figure illustration, background color #0a121d, line color #f8f4da, a stick figure pointing at a giant floating text that says 'AJUDA-TE' with a huge red cross over it, another stick figure looking shocked, clean thick lines, high contrast, conceptual art, 2d vector style, intellectual humor, sharp details, minimalist geometry, professional layout, whiteboard animation style.",
-            "parameters": {
-              "model": "zimage",
-              "width": 1080,
-              "height": 1920,
-              "safe": false
-            },
-            "cache_key": "bps_ajuda_1"
-          }
-        }
-      },
-      {
-        "id": "scene-2",
-        "narration": {
-          "text": "Essa frase, na verdade, tem origem em filosofias humanas e no espiritismo, mas nunca saiu da boca de Jesus.",
-          "subtitles": true
-        },
-        "background": {
-          "visual": {
-            "type": "ai",
-            "provider": "pollinations",
-            "content_type": "image",
-            "prompt": "Minimalist hand-drawn stick figure illustration, background color #f8f4da, line color #0a121d, a stick figure wearing a philosopher robe holding a mask, surrounded by swirling question marks and old book symbols, clean bold lines, 2d vector design, high contrast, intellectual theme of origin and myth, minimalist aesthetic, sharp focus, expressive character design, clear storytelling graphics.",
-            "parameters": {
-              "model": "zimage",
-              "width": 1080,
-              "height": 1920,
-              "safe": false
-            },
-            "cache_key": "bps_ajuda_2"
-          }
-        }
-      },
-      {
-        "id": "scene-3",
-        "narration": {
-          "text": "O conceito bíblico é o oposto: Deus ajuda justamente quem admite que não consegue se ajudar sozinho.",
-          "subtitles": true
-        },
-        "background": {
-          "visual": {
-            "type": "ai",
-            "provider": "pollinations",
-            "content_type": "image",
-            "prompt": "Minimalist hand-drawn stick figure illustration, background color #0a121d, line color #f8f4da, a stick figure kneeling with open arms while a giant divine hand reaches down to lift them, stars and cosmic dust in background, clean geometric lines, 2d vector art, high contrast, theological concept of grace, minimalist masterpiece, sharp lines, symbolic of surrender and help.",
-            "parameters": {
-              "model": "zimage",
-              "width": 1080,
-              "height": 1920,
-              "safe": false
-            },
-            "cache_key": "bps_ajuda_3"
-          }
-        }
-      },
-      {
-        "id": "scene-4",
-        "narration": {
-          "text": "Em Romanos, Paulo ensina que Deus justifica o ímpio, e não aquele que se acha autossuficiente.",
-          "subtitles": true
-        },
-        "background": {
-          "visual": {
-            "type": "ai",
-            "provider": "pollinations",
-            "content_type": "image",
-            "prompt": "Minimalist hand-drawn stick figure illustration, background color #f8f4da, line color #0a121d, a stick figure standing on a pedestal looking arrogant, while another humble stick figure below is surrounded by a glowing aura, balance scales symbol in the background, bold clean lines, high contrast, conceptual teology, 2d vector style, sharp focus, educational and clear visual communication.",
-            "parameters": {
-              "model": "zimage",
-              "width": 1080,
-              "height": 1920,
-              "safe": false
-            },
-            "cache_key": "bps_ajuda_4"
-          }
-        }
-      },
-      {
-        "id": "scene-5",
-        "narration": {
-          "text": "Se a salvação dependesse de você se ajudar primeiro, a graça não seria um presente, mas um pagamento.",
-          "subtitles": true
-        },
-        "background": {
-          "visual": {
-            "type": "ai",
-            "provider": "pollinations",
-            "content_type": "image",
-            "prompt": "Minimalist hand-drawn stick figure illustration, background color #0a121d, line color #f8f4da, a giant gift box with a bow being handed from the sky to a small stick figure with empty hands, currency symbols crossed out, clean lines, high contrast, 2d vector art, minimalist representation of grace vs merit, sharp details, intellectual storytelling, masterpiece of simplicity.",
-            "parameters": {
-              "model": "zimage",
-              "width": 1080,
-              "height": 1920,
-              "safe": false
-            },
-            "cache_key": "bps_ajuda_5"
-          }
-        }
-      },
-      {
-        "id": "scene-6",
-        "narration": {
-          "text": "Estude a Palavra para não ser levado por ventos de doutrinas que massageiam o ego, mas ignoram a cruz.",
-          "subtitles": true
-        },
-        "background": {
-          "visual": {
-            "type": "ai",
-            "provider": "pollinations",
-            "content_type": "image",
-            "prompt": "Minimalist hand-drawn stick figure illustration, background color #f8f4da, line color #0a121d, a stick figure holding onto a giant cross like an anchor during a storm of swirling words and symbols, clean bold lines, 2d vector look, high contrast, mystery and investigation theme, intellectual style, sharp focus, minimalist conceptual art, powerful visual metaphor for faith.",
-            "parameters": {
-              "model": "zimage",
-              "width": 1080,
-              "height": 1920,
-              "safe": false
-            },
-            "cache_key": "bps_ajuda_6"
-          }
-        }
-      },
-      {
-        "id": "cta-canal-biblia-pura-simples",
-        "narration": {
-          "text": "Surpreso? Então clique no botão de seguir para limpar sua teologia de ditados populares perigosos.",
-          "subtitles": true
-        },
-        "visual_elements": [
-          {
-            "type": "image",
-            "source": "./assets/image/biblia_pura_simples/logo-transparent.png",
-            "animation": {
-              "type": "fade_in",
-              "duration": 0.2
-            }
-          }
-        ],
-        "background": {
-          "visual": {
-            "type": "color",
-            "source": "#0a121d"
-          }
-        }
-      }
-    ],
-    "youtube": {
-      "title": "A MAIOR MENTIRA QUE TE CONTARAM! 😱🛑 #Teologia #Biblia #Verdade",
-      "tags": [
-        "ajuda-te que eu te ajudarei",
-        "frases que não estão na bíblia",
-        "teologia bíblica",
-        "falsa doutrina",
-        "estudo da palavra"
-      ],
-      "description": "Você já disse 'Ajuda-te que eu te ajudarei' achando que era bíblico? Entenda por que essa frase é o oposto do Evangelho. 🧠📖\n\n#BíbliaPuraESimples #Teologia #Graça #EstudoBíblico",
-      "publish_at": "2026-01-14 18:30:00"
+      "title": "A PALAVRA QUE DESTRAVA TUDO! 🔑💰 #Prosperidade #Oração #Milagre",
+      "tags": ["virada financeira", "oração forte", "decreto de deus", "prosperidade bíblica", "vida de oração"],
+      "description": "Você tem 30 segundos para mudar sua realidade financeira. Ouça com fé e tome posse do que é seu. 💸🙌\n\n#Milagre #Prosperidade #Deus #Fé #Shorts",
+      "publish_at": "2024-05-20T20:00:00Z"
     }
   }
 ]

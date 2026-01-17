@@ -28,10 +28,16 @@
                 "source": "./assets/audio/background/vidadeoracao"
             }
         },
-        "//transition_effect_audio": {
-            "type": "directory",
-            "source": "./assets/audio/effects/transitions",
-            "volume": 1.0
+        "transitions": {
+            "type": "slide",
+            "visual": {
+                "direction": "left"
+            },
+            "audio": {
+                "type": "directory",
+                "source": "./assets/audio/effects/transitions",
+                "volume": 0.9
+            }
         },
         "overlays": {
             "particles": {

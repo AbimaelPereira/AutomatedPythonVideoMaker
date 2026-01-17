@@ -1,6 +1,7 @@
 import math
+import random
 from moviepy.editor import *
-from TransitionUtils import TransitionUtils
+from libs.Transitions.TransitionUtils import TransitionUtils
 
 
 class Slide:
@@ -11,7 +12,7 @@ class Slide:
             "clip_2": None,
             "audio_file_clip": None,
 
-            "direction": "left",  # left | right | bottom | top
+            "direction": "left",  # left | right | bottom | top | random
             "blur_radius": 30,
 
             "duration": {
@@ -21,10 +22,10 @@ class Slide:
             },
 
             "physics": {
-                "impulse_distance": 50,      # Distância do recuo inicial em pixels
-                "shake_amplitude": 30,       # Amplitude do balanço final em pixels
-                "shake_frequency": 8,        # Frequência do balanço
-                "shake_decay": 8             # Decaimento do balanço
+                "impulse_distance": 50,
+                "shake_amplitude": 30,
+                "shake_frequency": 8,
+                "shake_decay": 8
             }
         }
 
@@ -39,11 +40,21 @@ class Slide:
             setattr(self, k, v)
 
         self.width, self.height = self.resolution_output
+        
+        # Aplicar random na direção se necessário
+        self.direction = self._get_direction()
+
+    def _get_direction(self):
+        """Retorna direção, ou aleatória se 'random'."""
+        if self.direction == "random":
+            directions = ["left", "right", "bottom", "top"]
+            return random.choice(directions)
+        return self.direction
 
     def _get_direction_vectors(self):
         """Retorna os vetores de direção baseados na configuração."""
         if self.direction == "left":
-            return (1, 0)  # Move no eixo X
+            return (1, 0)
         elif self.direction == "right":
             return (-1, 0)
         elif self.direction == "bottom":
@@ -52,15 +63,11 @@ class Slide:
             return (0, 1)
         return (1, 0)
 
-    # --------------------------------
-    # POSIÇÃO CLIP 1 (IMPULSO + SLIDE)
-    # --------------------------------
     def _pos_clip1(self, t):
         d = self.duration
         p = self.physics
         vx, vy = self._get_direction_vectors()
 
-        # O Clip 1 começa a sair no final de sua própria duração
         start_transition = self.clip_1.duration - (d["impulse"] + d["slide"])
 
         if t < start_transition:
@@ -68,7 +75,6 @@ class Slide:
 
         local = t - start_transition
 
-        # Estágio 1: Impulso (Recuo suave)
         if local < d["impulse"]:
             progress = local / d["impulse"]
             offset = p["impulse_distance"] * math.sin(progress * math.pi)
@@ -77,7 +83,6 @@ class Slide:
                 self.height // 2 - (self.height // 2) + (offset * -vy)
             )
 
-        # Estágio 2: Slide (Saída do Clip 1)
         progress = (local - d["impulse"]) / d["slide"]
         progress = TransitionUtils.ease_in_cubic(progress)
         
@@ -86,15 +91,11 @@ class Slide:
             -progress * self.height * vy
         )
 
-    # --------------------------------
-    # POSIÇÃO CLIP 2 (SLIDE + SHAKE)
-    # --------------------------------
     def _pos_clip2(self, t):
         d = self.duration
         p = self.physics
         vx, vy = self._get_direction_vectors()
 
-        # Estágio 2: Slide (Entrada do Clip 2)
         if t < d["slide"]:
             progress = TransitionUtils.ease_out_cubic(t / d["slide"])
             return (
@@ -102,7 +103,6 @@ class Slide:
                 (1.0 - progress) * self.height * vy
             )
 
-        # Estágio 3: Balançar até estabilizar
         elif t < d["slide"] + d["shake"]:
             dt = t - d["slide"]
             shake = TransitionUtils.damped_shake(
@@ -119,20 +119,17 @@ class Slide:
 
         return (0, 0)
 
-    # --------------------------------
-    # PROCESS
-    # --------------------------------
     def process(self):
         d = self.duration
-        # O Clip 2 começa a entrar exatamente quando o Clip 1 começa o estágio de 'slide'
-        # Isso cria o efeito 'grudado' (um empurrando o outro)
         overlap_duration = d["slide"]
         start_c2 = self.clip_1.duration - overlap_duration
         
-        # A duração total é reduzida pela sobreposição para não haver 'buracos' ou tempo extra
         total_duration = self.clip_1.duration + self.clip_2.duration - overlap_duration
 
-        frame = self.clip_1.get_frame(self.clip_1.duration - 0.1)
+        # Captura o frame de forma segura
+        t_frame = max(0, self.clip_1.duration - 0.1)
+        frame = self.clip_1.get_frame(t_frame)
+
         backdrop = TransitionUtils.create_blurred_backdrop(
             frame, self.width, self.height,
             self.blur_radius, total_duration
@@ -153,10 +150,8 @@ class Slide:
         if c1.audio:
             audio_layers.append(c1.audio)
         if c2.audio:
-            # O áudio do clip 2 também deve respeitar o novo ponto de início
             audio_layers.append(c2.audio.set_start(start_c2))
         if self.audio_file_clip:
-            # O efeito sonoro geralmente toca no início da transição física (slide)
             audio_layers.append(self.audio_file_clip.set_start(start_c2))
 
         final = CompositeVideoClip(

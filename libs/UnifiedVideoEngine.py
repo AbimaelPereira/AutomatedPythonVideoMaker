@@ -17,7 +17,7 @@ from libs.TTS_Edge import EdgeTTS
 from libs.LayoutEngine import LayoutEngine
 from libs.YouTube import YouTube
 from libs.OverlayEngine import OverlayEngine
-from libs.SceneAudioManager import SceneAudioManager
+from libs.TransitionEngine import TransitionEngine
 
 try:
     from libs.AIProviders import ai_manager
@@ -618,27 +618,6 @@ class UnifiedVideoEngine:
             traceback.print_exc()
             return None
 
-    def _get_transition_effect_config(self, scene_data):
-        """Obtém configuração de efeito de transição com merge global/cena."""
-        global_effect = self.global_settings.get("transition_effect_audio", {})
-        scene_effect = scene_data.get("transition_effect_audio", {})
-
-        if scene_effect:
-            return deep_merge(global_effect, scene_effect)
-        return dict(global_effect) if global_effect else None
-
-    def _select_random_audio_from_dir(self, directory:  str) -> str:
-        """Seleciona áudio aleatório de um diretório."""
-        if not os.path.isdir(directory):
-            return None
-
-        files = [
-            os.path.join(directory, f) for f in os.listdir(directory)
-            if os.path.splitext(f.lower())[1] in self.VALID_AUDIO_EXTENSIONS
-        ]
-
-        return random.choice(files) if files else None
-
     def _apply_background_audio_to_video(self, video_path: str, output_path: str) -> str:
         """
         Aplica áudio de fundo ao vídeo final concatenado.
@@ -730,11 +709,62 @@ class UnifiedVideoEngine:
             traceback.print_exc()
             return video_path
 
+    def _render_scene(self, scene_index, total_scenes, composed_clip, narration_clip, temp_dir):
+        temp_scene_path = os.path.join(temp_dir, f"scene_{scene_index:04d}.mp4")
+        temp_audiofile = os.path.join(temp_dir, f"temp-audio-{scene_index}.m4a")
+
+        print(f"[UVE] 🎬 Renderizando cena {scene_index + 1}/{total_scenes}...")
+
+        composed_clip.write_videofile(
+            temp_scene_path,
+            codec='libx264',
+            audio_codec='aac',
+            temp_audiofile=temp_audiofile,
+            remove_temp=True,
+            fps=24,
+            preset='medium',
+            threads=4,
+            verbose=False,
+            # logger self.debug
+            logger=self.config_instance.logger
+        )
+
+        print(f"[UVE] ✅ Cena {scene_index + 1} renderizada:  {os.path.basename(temp_scene_path)}")
+
+        # Limpeza de memória
+        try:
+            composed_clip.close()
+            if narration_clip:
+                narration_clip.close()
+        except: 
+            pass
+
+        del composed_clip
+        gc.collect()
+
+        return temp_scene_path
+
+    def _select_random_audio_from_dir(self, directory):
+        """Seleciona um arquivo de áudio aleatório de um diretório. (Corrigido)"""
+        if not os.path.isdir(directory):
+            print(f"[UVE] ⚠️ Diretório de áudio não encontrado: {directory}")
+            return None
+        
+        valid_extensions = ('.mp3', '.wav', '.ogg', '.m4a')
+        audio_files = [f for f in os.listdir(directory) if f.lower().endswith(valid_extensions)]
+        
+        if not audio_files:
+            print(f"[UVE] ⚠️ Nenhum arquivo de áudio válido encontrado em: {directory}")
+            return None
+            
+        return os.path.join(directory, random.choice(audio_files))
+    
     def run(self, output_filename="final_video.mp4"):
         """Método principal de renderização."""
         print("[UVE] 🚀 Iniciando processamento do vídeo...")
 
         scene_files = []
+        scene_video_clips_buffer = []
         temp_dir = os.path.join(self.output_dir, "_temp")
         os.makedirs(temp_dir, exist_ok=True)
 
@@ -796,59 +826,57 @@ class UnifiedVideoEngine:
                 composed_clip = CompositeVideoClip(safe_clips, size=self.resolution_output).set_duration(scene_duration)
                 composed_clip = composed_clip.fl_image(force_rgb)
 
-                # 7. Processar áudio da cena (narração + efeito de transição)
-                effect_config = self._get_transition_effect_config(scene)
-
-                audio_manager = SceneAudioManager({
-                    "scene_duration": scene_duration,
-                    "output_dir": scene_dir,
-                })
-
-                scene_audio = audio_manager.create_scene_audio(
-                    narration_clip=narration_clip,
-                    transition_effect_config=effect_config,
-                    scene_duration=scene_duration
-                )
-
-                if scene_audio:
-                    composed_clip = composed_clip.set_audio(scene_audio)
-                    print("[UVE] ✅ Áudio da cena composto (narração + efeito)")
-                elif narration_clip:
+                # 7. Adicionar narração
+                if narration_clip:
                     composed_clip = composed_clip.set_audio(narration_clip)
-                    print("[UVE] ✅ Áudio da narração adicionado")
+                    print("[UVE] ✅ Narração adicionada à cena")
+                else:
+                    print("[UVE] Cena sem narração")
 
-                # 8. Renderizar cena para arquivo temporário
-                temp_scene_path = os.path.join(temp_dir, f"scene_{scene_index:04d}.mp4")
-                temp_audiofile = os.path.join(temp_dir, f"temp-audio-{scene_index}.m4a")
+                # obtem configurações de transição  
+                transitions_settings = self.data_config.get("global_settings", {}).get("transitions")
+                
+                if transitions_settings:
+                    # adiciona
+                    # add VideoFileClip to buffer for later rendering
+                    scene_video_clips_buffer.append(composed_clip)
 
-                print(f"[UVE] 🎬 Renderizando cena {scene_index + 1}/{total_scenes}...")
+                    # se tiver menos de 2 pula
+                    if len(scene_video_clips_buffer) < 2:
+                        print(f"[UVE] Acumulando cenas no buffer ({len(scene_video_clips_buffer)})...")
+                        continue
 
-                composed_clip.write_videofile(
-                    temp_scene_path,
-                    codec='libx264',
-                    audio_codec='aac',
-                    temp_audiofile=temp_audiofile,
-                    remove_temp=True,
-                    fps=24,
-                    preset='medium',
-                    threads=4,
-                    verbose=False,
-                    logger=None
-                )
+                    # reinicia a TransitionEngine passando 
+                    # - os clips do buffer
+                    # - configurações da transição, da cena ou globais
+                    # renderiza e limpa o buffer deixando só o último clip no buffer
 
-                scene_files.append(temp_scene_path)
-                print(f"[UVE] ✅ Cena {scene_index + 1} renderizada:  {os.path.basename(temp_scene_path)}")
+                    transition_engine = TransitionEngine({
+                        "clips": scene_video_clips_buffer,
+                        "resolution": self.resolution_output,
+                        "transitions_settings": transitions_settings,
+                    })
 
-                # Limpeza de memória
-                try:
-                    composed_clip.close()
-                    if narration_clip:
-                        narration_clip.close()
-                except: 
-                    pass
+                    clip_1_breaked, clip_2_breaked = transition_engine.apply_transitions()
 
-                del composed_clip
-                gc.collect()
+                    # renderiza o clip 1 com transição
+                    temp_scene_path = self._render_scene(
+                        scene_index - 1, total_scenes, clip_1_breaked, None, temp_dir
+                    )
+                    scene_files.append(temp_scene_path)
+
+                    # mantém o clip 2 no buffer para próxima iteração
+                    scene_video_clips_buffer = [clip_2_breaked]
+
+
+                    
+                else:
+                    # sem transição, renderiza imediatamente
+                    temp_scene_path = self._render_scene(
+                        scene_index, total_scenes, composed_clip, narration_clip, temp_dir
+                    )
+                    scene_files.append(temp_scene_path)
+                    continue
 
             except Exception as e:
                 print(f"[UVE] ❌ Erro ao processar cena {scene_index + 1}: {e}")

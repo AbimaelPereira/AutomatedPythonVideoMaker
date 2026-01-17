@@ -1,53 +1,58 @@
 [
     {
-        "slug": "video-3-dia-posicionamento",
-        "channel_name": "biblia_pura_simples",
+        "slug": "teste-de-transicoes",
+        "channel_name": "vida_de_oracao",
         "output_ratio": "9:16",
         "scenes": [
             {
                 "id": "cena-1",
                 "narration": {
-                    "text": "HOJE É O 5º DIA DA CORRENTE DE ORAÇÃO, O DIA DO POSICIONAMENTO.",
+                    "text": "Primeira cena do teste de Transições.",
                     "subtitles": true
                 },
                 "background": {
                     "visual": {
-                        "type": "ai",
-                        "provider": "pollinations",
-                        "content_type": "image",
-                        "prompt": "[VISUAL STYLE]: Cinematic photorealistic render with divine atmospheric lighting and ethereal glow effects. [COLOR PALETTE]: Deep celestial blues #1a2332, warm golden accents #d4af37, soft white highlights #f5f5f0, subtle amber tones #ffa726. [LINES AND FORM]: Smooth volumetric light rays, defined geometric composition with clear focal points, balanced proportions with 60-40 visual weight distribution. [LIGHTING]: Dramatic top-down divine light with soft rim lighting, creating sacred ambiance with 5600K color temperature, no harsh shadows. [BACKGROUND]: Gradient sky transitioning from deep blue to golden horizon, atmospheric depth with layered clouds. [COMPOSITION]: Centered vertical framing, low-angle perspective creating elevation sense, rule of thirds applied. [EMOTIONAL CLIMATE]: Reverent, powerful, awakening, spiritually charged atmosphere. [RESTRICTIONS]: no people, no text overlays, no modern objects, no urban elements, no darkness, no chaos. [VARIABLE ELEMENT]: Five golden flame torches standing in formation with divine light connecting them in sacred geometry pattern.",
-                        "parameters": {
-                            "model": "zimage",
-                            "safe": "false"
-                        },
-                        "cache_key": "v3_c1_five_flames"
+                        "type": "image",
+                        "source": "./assets/image/1.png"
                     }
                 }
-            }
-        ]
-    },
-    {
-        "slug": "video-4-dia-posicionamento",
-        "channel_name": "biblia_pura_simples",
-        "output_ratio": "9:16",
-        "scenes": [
+            },
             {
                 "id": "cena-2",
                 "narration": {
-                    "text": "Muitos desistiram, aceitaram a escassez e a ansiedade.",
+                    "text": "Segunda cena do teste de Transições.",
                     "subtitles": true
                 },
                 "background": {
                     "visual": {
-                        "type": "ai",
-                        "provider": "pollinations",
-                        "content_type": "image",
-                        "prompt": "[VISUAL STYLE]: Cinematic photorealistic render with divine atmospheric lighting and ethereal glow effects. [COLOR PALETTE]: Deep celestial blues #1a2332, warm golden accents #d4af37, soft white highlights #f5f5f0, subtle amber tones #ffa726. [LINES AND FORM]: Smooth volumetric light rays, defined geometric composition with clear focal points, balanced proportions with 60-40 visual weight distribution. [LIGHTING]: Dramatic top-down divine light with soft rim lighting, creating sacred ambiance with 5600K color temperature, no harsh shadows. [BACKGROUND]: Gradient sky transitioning from deep blue to golden horizon, atmospheric depth with layered clouds. [COMPOSITION]: Centered vertical framing, low-angle perspective creating elevation sense, rule of thirds applied. [EMOTIONAL CLIMATE]: Reverent, powerful, awakening, spiritually charged atmosphere. [RESTRICTIONS]: no people, no text overlays, no modern objects, no urban elements, no darkness, no chaos. [VARIABLE ELEMENT]: Single torch standing tall with golden flame burning bright while surrounded by extinguished torches in background.",
-                        "parameters": {
-                            "model": "zimage",
-                            "safe": "false"
-                        },
-                        "cache_key": "v3_c2_remaining_flame"
+                        "type": "image",
+                        "source": "./assets/image/2.png"
+                    }
+                }
+            },
+            {
+                "id": "cena-3",
+                "narration": {
+                    "text": "Terceira cena do teste de Transições.",
+                    "subtitles": true
+                },
+                "background": {
+                    "visual": {
+                        "type": "image",
+                        "source": "./assets/image/1.png"
+                    }
+                }
+            },
+            {
+                "id": "cena-4",
+                "narration": {
+                    "text": "Quarta cena do teste de Transições.",
+                    "subtitles": true
+                },
+                "background": {
+                    "visual": {
+                        "type": "image",
+                        "source": "./assets/image/2.png"
                     }
                 }
             }
