@@ -725,8 +725,7 @@ class UnifiedVideoEngine:
             preset='medium',
             threads=4,
             verbose=False,
-            # logger self.debug
-            logger=self.config_instance.logger
+            logger=None
         )
 
         print(f"[UVE] ✅ Cena {scene_index + 1} renderizada:  {os.path.basename(temp_scene_path)}")
@@ -883,6 +882,16 @@ class UnifiedVideoEngine:
                 import traceback
                 traceback.print_exc()
                 continue
+
+        if scene_video_clips_buffer:
+            print(f"[UVE] Renderizando última cena do buffer...")
+            last_clip = scene_video_clips_buffer[0]
+            temp_scene_path = self._render_scene(
+                len(scenes) - 1, total_scenes, last_clip, None, temp_dir
+            )
+            scene_files. append(temp_scene_path)
+            print(f"[UVE] ✅ Última cena renderizada")
+
 
         # 9. Concatenar cenas em vídeo final
         slug = self.data_config.get("slug", "video_final")
