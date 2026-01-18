@@ -18,7 +18,7 @@ class Slide:
             "duration": {
                 "impulse": 0.3,
                 "slide": 0.5,
-                "shake": 0.4
+                "shake": 0.9
             },
 
             "physics": {
@@ -40,126 +40,130 @@ class Slide:
             setattr(self, k, v)
 
         self.width, self.height = self.resolution_output
-        
-        # Aplicar random na direção se necessário
         self.direction = self._get_direction()
 
     def _get_direction(self):
-        """Retorna direção, ou aleatória se 'random'."""
         if self.direction == "random":
             directions = ["left", "right", "bottom", "top"]
             return random.choice(directions)
         return self.direction
 
     def _get_direction_vectors(self):
-        """Retorna os vetores de direção baseados na configuração."""
-        if self.direction == "left":
-            return (1, 0)
-        elif self.direction == "right":
-            return (-1, 0)
-        elif self.direction == "bottom":
-            return (0, -1)
-        elif self.direction == "top":
-            return (0, 1)
-        return (1, 0)
+        directions = {"left": (1, 0), "right": (-1, 0), "bottom": (0, -1), "top": (0, 1)}
+        return directions.get(self.direction, (1, 0))
 
     def _pos_clip1(self, t):
-        d = self.duration
-        p = self.physics
+        """Movimento do Clip 1: Impulso + Saída."""
+        d, p = self.duration, self.physics
         vx, vy = self._get_direction_vectors()
-
         start_transition = self.clip_1.duration - (d["impulse"] + d["slide"])
 
         if t < start_transition:
-            return ("center", "center")
+            return (0, 0)
 
         local = t - start_transition
-
         if local < d["impulse"]:
+            # Fase 1: Wiggle (Impulso)
             progress = local / d["impulse"]
             offset = p["impulse_distance"] * math.sin(progress * math.pi)
-            return (
-                self.width // 2 - (self.width // 2) + (offset * -vx),
-                self.height // 2 - (self.height // 2) + (offset * -vy)
-            )
+            return (offset * -vx, offset * -vy)
 
-        progress = (local - d["impulse"]) / d["slide"]
-        progress = TransitionUtils.ease_in_cubic(progress)
-        
-        return (
-            -progress * self.width * vx,
-            -progress * self.height * vy
-        )
+        # Fase 2: Saída (Slide Out)
+        progress = TransitionUtils.ease_in_cubic((local - d["impulse"]) / d["slide"])
+        return (-progress * self.width * vx, -progress * self.height * vy)
 
-    def _pos_clip2(self, t):
+    def _pos_clip2_entrance(self, t):
+        """Movimento do Clip 2 (Parte 1): Entrando junto com o Clip 1."""
         d = self.duration
-        p = self.physics
+        vx, vy = self._get_direction_vectors()
+        # Sincronia perfeita: usa a mesma curva ease_in_cubic
+        progress = TransitionUtils.ease_in_cubic(t / d["slide"])
+        return ((1.0 - progress) * self.width * vx, (1.0 - progress) * self.height * vy)
+
+    def _pos_clip2_shake(self, t):
+        """Movimento do Clip 2 (Parte 2): Balanço (Shake) ao chegar."""
+        d, p = self.duration, self.physics
         vx, vy = self._get_direction_vectors()
 
-        if t < d["slide"]:
-            progress = TransitionUtils.ease_out_cubic(t / d["slide"])
-            return (
-                (1.0 - progress) * self.width * vx,
-                (1.0 - progress) * self.height * vy
-            )
-
-        elif t < d["slide"] + d["shake"]:
-            dt = t - d["slide"]
+        # Como reiniciamos o clip, 't' começa em 0.0 aqui
+        if t < d["shake"]:
             shake = TransitionUtils.damped_shake(
-                dt,
-                p["shake_amplitude"],
-                p["shake_frequency"],
-                p["shake_decay"],
+                t, 
+                p["shake_amplitude"], 
+                p["shake_frequency"], 
+                p["shake_decay"], 
                 d["shake"]
             )
-            return (
-                shake * vx,
-                shake * vy
-            )
-
+            return (shake * vx, shake * vy)
         return (0, 0)
 
     def process(self):
         d = self.duration
-        overlap_duration = d["slide"]
-        start_c2 = self.clip_1.duration - overlap_duration
+        c1_dur = self.clip_1.duration
+        c2_dur = self.clip_2.duration
         
-        total_duration = self.clip_1.duration + self.clip_2.duration - overlap_duration
+        # Tempos chave da animação visual
+        t_trans_start = c1_dur - (d["impulse"] + d["slide"]) # Começo do Impulso (visual)
+        t_slide_start = c1_dur - d["slide"]                 # Começo do Slide (visual)
+        
+        # Frame de referência para o backdrop
+        frame_ref = self.clip_1.get_frame(max(0, c1_dur - 0.1))
 
-        # Captura o frame de forma segura
-        t_frame = max(0, self.clip_1.duration - 0.1)
-        frame = self.clip_1.get_frame(t_frame)
+        # ==============================================================================
+        # VIDEO (Visual permanece igual)
+        # ==============================================================================
+        c1_anim = self.clip_1.resize((self.width, self.height)).set_position(self._pos_clip1)
+        
+        c2_part1 = (self.clip_2.subclip(0, d["slide"])
+                    .resize((self.width, self.height))
+                    .set_position(self._pos_clip2_entrance)
+                    .set_start(t_slide_start))
+        
+        bg1_dur = d["impulse"] + d["slide"]
+        bg1 = TransitionUtils.create_blurred_backdrop(frame_ref, self.width, self.height, self.blur_radius, bg1_dur).set_start(t_trans_start)
 
-        backdrop = TransitionUtils.create_blurred_backdrop(
-            frame, self.width, self.height,
-            self.blur_radius, total_duration
-        )
+        clip_1_ready = CompositeVideoClip([bg1, c1_anim, c2_part1], size=(self.width, self.height)).set_duration(c1_dur)
 
-        c1 = (
-            self.clip_1.resize((self.width, self.height))
-            .set_position(self._pos_clip1)
-        )
+        # Parte 2 (Clip 2)
+        duration_remaining = c2_dur - d["slide"]
+        c2_part2 = (self.clip_2.resize((self.width, self.height))
+                    .set_duration(duration_remaining)
+                    .set_position(self._pos_clip2_shake))
+        
+        if self.clip_2.audio:
+             c2_part2.audio = self.clip_2.audio.subclip(d["slide"])
 
-        c2 = (
-            self.clip_2.resize((self.width, self.height))
-            .set_position(self._pos_clip2)
-            .set_start(start_c2)
-        )
+        bg2 = TransitionUtils.create_blurred_backdrop(frame_ref, self.width, self.height, self.blur_radius, d["shake"]).set_start(0)
+        clip_2_ready = CompositeVideoClip([bg2, c2_part2], size=(self.width, self.height)).set_duration(duration_remaining)
 
-        audio_layers = []
-        if c1.audio:
-            audio_layers.append(c1.audio)
-        if c2.audio:
-            audio_layers.append(c2.audio.set_start(start_c2))
+        # ==============================================================================
+        # CORREÇÃO DE TEMPO DO ÁUDIO
+        # ==============================================================================
+        audio_c1_list = [clip_1_ready.audio] if clip_1_ready.audio else []
+        audio_c2_list = [clip_2_ready.audio] if clip_2_ready.audio else []
+
         if self.audio_file_clip:
-            audio_layers.append(self.audio_file_clip.set_start(start_c2))
+            # NOVO TEMPO DE INICIO: Ignora o 'impulse', começa no 'slide'
+            # Isso é exatamente t_slide_start calculado acima
+            t_audio_start = t_slide_start
+            
+            # 1. Adiciona o SFX ao Clip 1 no momento exato do Slide
+            sfx_part1 = self.audio_file_clip.set_start(t_audio_start)
+            audio_c1_list.append(sfx_part1)
+            
+            # 2. Cálculo de sobra (Bridging)
+            # O tempo disponível agora é APENAS o tempo do slide (d["slide"])
+            # Pois o áudio começou mais tarde, mais perto do fim do clip 1
+            time_in_c1 = d["slide"]
+            
+            if self.audio_file_clip.duration > time_in_c1:
+                # O que sobrar vai para o clip 2
+                sfx_part2 = self.audio_file_clip.subclip(time_in_c1).set_start(0)
+                audio_c2_list.append(sfx_part2)
 
-        final = CompositeVideoClip(
-            [backdrop, c1, c2],
-            size=(self.width, self.height)
-        ).set_duration(total_duration)
+        if audio_c1_list:
+            clip_1_ready.audio = CompositeAudioClip(audio_c1_list)
+        if audio_c2_list:
+            clip_2_ready.audio = CompositeAudioClip(audio_c2_list)
 
-        if audio_layers:
-            final.audio = CompositeAudioClip(audio_layers)
-
-        return final
+        return clip_1_ready, clip_2_ready

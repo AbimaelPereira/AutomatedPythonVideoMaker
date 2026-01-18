@@ -17,7 +17,6 @@ from libs.TTS_Edge import EdgeTTS
 from libs.LayoutEngine import LayoutEngine
 from libs.YouTube import YouTube
 from libs.OverlayEngine import OverlayEngine
-from libs.TransitionEngine import TransitionEngine
 
 try:
     from libs.AIProviders import ai_manager
@@ -763,7 +762,6 @@ class UnifiedVideoEngine:
         print("[UVE] 🚀 Iniciando processamento do vídeo...")
 
         scene_files = []
-        scene_video_clips_buffer = []
         temp_dir = os.path.join(self.output_dir, "_temp")
         os.makedirs(temp_dir, exist_ok=True)
 
@@ -831,66 +829,18 @@ class UnifiedVideoEngine:
                     print("[UVE] ✅ Narração adicionada à cena")
                 else:
                     print("[UVE] Cena sem narração")
-
-                # obtem configurações de transição  
-                transitions_settings = self.data_config.get("global_settings", {}).get("transitions")
                 
-                if transitions_settings:
-                    # adiciona
-                    # add VideoFileClip to buffer for later rendering
-                    scene_video_clips_buffer.append(composed_clip)
-
-                    # se tiver menos de 2 pula
-                    if len(scene_video_clips_buffer) < 2:
-                        print(f"[UVE] Acumulando cenas no buffer ({len(scene_video_clips_buffer)})...")
-                        continue
-
-                    # reinicia a TransitionEngine passando 
-                    # - os clips do buffer
-                    # - configurações da transição, da cena ou globais
-                    # renderiza e limpa o buffer deixando só o último clip no buffer
-
-                    transition_engine = TransitionEngine({
-                        "clips": scene_video_clips_buffer,
-                        "resolution": self.resolution_output,
-                        "transitions_settings": transitions_settings,
-                    })
-
-                    clip_1_breaked, clip_2_breaked = transition_engine.apply_transitions()
-
-                    # renderiza o clip 1 com transição
-                    temp_scene_path = self._render_scene(
-                        scene_index - 1, total_scenes, clip_1_breaked, None, temp_dir
-                    )
-                    scene_files.append(temp_scene_path)
-
-                    # mantém o clip 2 no buffer para próxima iteração
-                    scene_video_clips_buffer = [clip_2_breaked]
-
-
-                    
-                else:
-                    # sem transição, renderiza imediatamente
-                    temp_scene_path = self._render_scene(
-                        scene_index, total_scenes, composed_clip, narration_clip, temp_dir
-                    )
-                    scene_files.append(temp_scene_path)
-                    continue
+                # sem transição, renderiza imediatamente
+                temp_scene_path = self._render_scene(
+                    scene_index, total_scenes, composed_clip, narration_clip, temp_dir
+                )
+                scene_files.append(temp_scene_path)
 
             except Exception as e:
                 print(f"[UVE] ❌ Erro ao processar cena {scene_index + 1}: {e}")
                 import traceback
                 traceback.print_exc()
                 continue
-
-        if scene_video_clips_buffer:
-            print(f"[UVE] Renderizando última cena do buffer...")
-            last_clip = scene_video_clips_buffer[0]
-            temp_scene_path = self._render_scene(
-                len(scenes) - 1, total_scenes, last_clip, None, temp_dir
-            )
-            scene_files. append(temp_scene_path)
-            print(f"[UVE] ✅ Última cena renderizada")
 
 
         # 9. Concatenar cenas em vídeo final

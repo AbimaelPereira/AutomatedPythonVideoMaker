@@ -101,45 +101,53 @@ class Zoom:
         return 1.0
 
     def process(self):
-        start_c2 = self.clip_1.duration
-        total_duration = self.clip_1.duration + self.clip_2.duration
+        d = self.duration
+        c1_dur, c2_dur = self.clip_1.duration, self.clip_2.duration
+        
+        # Tempos visuais
+        t_trans1_start = c1_dur - d["impulse"] - d["zoom"]
+        t_trans1_dur = d["impulse"] + d["zoom"]
+        t_trans2_dur = d["return"] + d["shake"]
+        
+        # TEMPO PARA O AUDIO (Começa apenas no ZOOM, ignorando o IMPULSE)
+        t_audio_start = c1_dur - d["zoom"]
 
-        # Captura o frame de forma segura
-        t_frame = max(0, self.clip_1.duration - 0.1)
-        frame = self.clip_1.get_frame(t_frame)
+        frame = self.clip_1.get_frame(c1_dur - 0.1)
 
-        backdrop = TransitionUtils.create_blurred_backdrop(
-            frame, self.width, self.height,
-            self.blur_radius, total_duration
-        )
+        # ==============================================================================
+        # VIDEO (Visual permanece igual)
+        # ==============================================================================
+        c1_z = self.clip_1.resize(width=self.width).resize(self._scale_clip1).set_position("center")
+        bg1 = TransitionUtils.create_blurred_backdrop(frame, self.width, self.height, self.blur_radius, t_trans1_dur).set_start(t_trans1_start)
+        clip_1_ready = CompositeVideoClip([bg1, c1_z], size=(self.width, self.height)).set_duration(c1_dur)
 
-        c1 = (
-            self.clip_1.resize((self.width, self.height))
-            .resize(self._scale_clip1)
-            .set_position("center")
-        )
+        c2_z = self.clip_2.resize(width=self.width).resize(self._scale_clip2).set_position("center")
+        bg2 = TransitionUtils.create_blurred_backdrop(frame, self.width, self.height, self.blur_radius, t_trans2_dur).set_start(0)
+        clip_2_ready = CompositeVideoClip([bg2, c2_z], size=(self.width, self.height)).set_duration(c2_dur)
 
-        c2 = (
-            self.clip_2.resize((self.width, self.height))
-            .resize(self._scale_clip2)
-            .set_position("center")
-            .set_start(start_c2)
-        )
+        # ==============================================================================
+        # CORREÇÃO DE TEMPO DO ÁUDIO
+        # ==============================================================================
+        audio_c1_list = [clip_1_ready.audio] if clip_1_ready.audio else []
+        audio_c2_list = [clip_2_ready.audio] if clip_2_ready.audio else []
 
-        audio_layers = []
-        if c1.audio:
-            audio_layers.append(c1.audio)
-        if c2.audio:
-            audio_layers.append(c2.audio.set_start(start_c2))
         if self.audio_file_clip:
-            audio_layers.append(self.audio_file_clip.set_start(start_c2))
+            # 1. Adiciona SFX ao Clip 1 no momento do Zoom rápido
+            sfx_part1 = self.audio_file_clip.set_start(t_audio_start)
+            audio_c1_list.append(sfx_part1)
+            
+            # 2. Cálculo de sobra
+            # O tempo disponível no clip 1 agora é apenas a duração do zoom
+            time_in_c1 = d["zoom"]
+            
+            if self.audio_file_clip.duration > time_in_c1:
+                # Adiciona o restante ao Clip 2
+                sfx_part2 = self.audio_file_clip.subclip(time_in_c1).set_start(0)
+                audio_c2_list.append(sfx_part2)
 
-        final = CompositeVideoClip(
-            [backdrop, c1, c2],
-            size=(self.width, self.height)
-        ).set_duration(total_duration)
+        if audio_c1_list:
+            clip_1_ready.audio = CompositeAudioClip(audio_c1_list)
+        if audio_c2_list:
+            clip_2_ready.audio = CompositeAudioClip(audio_c2_list)
 
-        if audio_layers:
-            final.audio = CompositeAudioClip(audio_layers)
-
-        return final
+        return clip_1_ready, clip_2_ready

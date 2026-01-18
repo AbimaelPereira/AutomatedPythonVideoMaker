@@ -11,7 +11,7 @@
             "stroke_enabled": false,
             "shadow_enabled": true,
             "shadow_color": "#A68A56",
-            "shadow_opacity": 0.85,
+            "shadow_opacity": 0.95,
             "blur_radius": 6.0,
             "shadow_offset": [
                 4,
@@ -28,7 +28,7 @@
                 "source": "./assets/audio/background/vidadeoracao"
             }
         },
-        "transitions": {
+        "//transitions": {
             "type": "slide",
             "visual": {
                 "direction": "left"

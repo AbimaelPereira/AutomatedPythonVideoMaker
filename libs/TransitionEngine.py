@@ -75,7 +75,6 @@ class TransitionEngine:
 
 
     def apply_transitions(self):
-        """Executa a lógica de transição em cadeia."""
         if not self.clips:
             return None
         if len(self.clips) == 1:
@@ -87,40 +86,29 @@ class TransitionEngine:
             **self.visual_settings,
         }
 
-        # adds into params clip_1 and clip_2
         clip_1 = self.clips[0]
-        clip_2 = self.clips[1]
-
+        clip_2 = self. clips[1]
+        
         params["clip_1"] = clip_1
         params["clip_2"] = clip_2
 
         # audio
         audio_clip = self._get_clip_audio()
-        if audio_clip:
+        if audio_clip: 
             params["audio_file_clip"] = audio_clip
+        # print debug params
+        print(f"[TransitionEngine] Params: {params}")
 
         # Seleciona a classe de transição
         transition_map = {
             "slide": Slide,
-            "zoom": Zoom,
-            "random": random.choice([Slide, Zoom])
+            "zoom":  Zoom,
+            "random":  random.choice([Slide, Zoom])
         }
 
         TransitionClass = transition_map.get(self.transition_type)
-        if not TransitionClass:
+        if not TransitionClass: 
             raise ValueError(f"[TransitionEngine] Tipo de transição desconhecido: {self.transition_type}")
 
-        # Cria a instância da transição e processa
         transition_instance = TransitionClass(params)
-
-        final_clip = transition_instance.process()
-
-        # cortar os clips com base na duracao original dos clips
-        clip_1_duration = clip_1.duration
-        clip_2_duration = clip_2.duration
-
-        clip_1_breaked = final_clip.subclip(0, clip_1_duration)
-        clip_2_breaked = final_clip.subclip(clip_1_duration, clip_1_duration + clip_2_duration)
-
-        return clip_1_breaked, clip_2_breaked
-
+        return transition_instance.process()
