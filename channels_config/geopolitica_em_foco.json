@@ -4,7 +4,7 @@
             "voice": "pt-BR-AntonioNeural"
         },
         "subtitle": {
-            "font_path": "./assets/fonts/CormorantGaramond/CormorantGaramond-Bold.ttf",
+            "font_path": "./assets/fonts/Montserrat/Montserrat-Bold.ttf",
             "font_size": 110,
             "color": "#E5C687",
             "uppercase": true,
@@ -19,16 +19,12 @@
             ]
         },
         "background": {
-            "visual": {
-                "type": "directory",
-                "source": "./assets/video/defaults/IA/CEU"
-            },
             "audio": {
                 "type": "directory",
-                "source": "./assets/audio/background/vidadeoracao"
+                "source": "./assets/audio/background/geopolitica"
             }
         },
-        "overlays": {
+        "//overlays": {
             "particles": {
                 "density": 0.4,
                 "speed": 0.8,
@@ -44,7 +40,7 @@
         }
     },
     "youtube": {
-        "token_file_name": "vida_de_oracao.json",
+        "token_file_name": "geopolitica_em_foco.json",
         "privacy_status": "private",
         "category_id": "22"
     }

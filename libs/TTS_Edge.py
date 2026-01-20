@@ -25,9 +25,9 @@ class EdgeTTS:
             "audio_format": "mp3",
             "output_basename": "narration",
             "text": None,
-            "silence_thresh": -50,
-            "min_silence_len": 600, # tempo mínimo de silêncio para considerar corte
-            "keep_silence": 295, # tempo de silêncio a manter após cada corte (em ms)
+            "silence_thresh": -50, # limiar de silêncio em dBFS
+            "min_silence_len": 800, # tempo mínimo de silêncio para considerar corte
+            "keep_silence": 100, # tempo de silêncio a manter após cada corte (em ms)
         }
         if params:
             defaults.update(params)

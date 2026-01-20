@@ -183,6 +183,6 @@ class YouTube:
 
 if __name__ == "__main__":
     # genera token para novo canal
-    FILE_JSON_SAVE = "vida_de_oracao.json"
+    FILE_JSON_SAVE = "geopolitica_em_foco.json"
     yt = YouTube(params={"token_file_name": FILE_JSON_SAVE})
     yt.generate_token()

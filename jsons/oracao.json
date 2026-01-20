@@ -1,1896 +1,212 @@
-[
-  {
-    "slug": "short-01-pare-agora-18jan-v2",
-    "channel_name": "vida_de_oracao",
-    "output_ratio": "9:16",
-    "debug": false,
-    "scenes": [
-      {
-        "id": "scene-01-shock",
-        "narration": {
-          "text": "PARE! É PARA VOCÊ.",
-          "subtitles": true
-        },
-        "background": {
-          "visual": {
-            "type": "ai",
-            "provider": "pollinations",
-            "content_type": "image",
-            "prompt": "Cinematic impact shot, a massive golden 'STOP' text hovering over a stormy dark ocean, divine lightning strikes, high contrast, 8k resolution, dramatic shadows --ar 9:16",
-            "parameters": {
-              "model": "klein",
-              "width": 1080,
-              "height": 1920,
-              "safe": false
-            },
-            "cache_key": "sh1_s1"
-          }
-        }
+{
+  "slug": "short-oracao-bencao-dia",
+  "channel_name": "vida_de_oracao",
+  "output_ratio": "9:16",
+  "debug": false,
+  "scenes": [
+    {
+      "id": "sc02",
+      "narration": {
+        "text": "Deus quer blindar o restante da sua tarde e te dar a paz que excede todo o entendimento extamente agora, neste momento.",
+        "subtitles": true
       },
-      {
-        "id": "scene-02-pain",
-        "narration": {
-          "text": "Eu sei que você não dormiu bem e a conta não fecha.",
-          "subtitles": true
-        },
-        "background": {
-          "visual": {
-            "type": "ai",
-            "provider": "pollinations",
-            "content_type": "image",
-            "prompt": "Close-up of a person's face in shadows, looking exhausted, blue moody lighting, spiritual realism, cinematic bokeh --ar 9:16",
-            "parameters": {
-              "model": "klein",
-              "width": 1080,
-              "height": 1920,
-              "safe": false
-            },
-            "cache_key": "sh1_s2"
-          }
-        }
-      },
-      {
-        "id": "scene-03-authority",
-        "narration": {
-          "text": "Mas eu determino: o que estava travado será solto agora!",
-          "subtitles": true
-        },
-        "background": {
-          "visual": {
-            "type": "ai",
-            "provider": "pollinations",
-            "content_type": "image",
-            "prompt": "Golden light exploding from an old iron lock, particles of light, high contrast, divine intervention style --ar 9:16",
-            "parameters": {
-              "model": "klein",
-              "width": 1080,
-              "height": 1920,
-              "safe": false
-            },
-            "cache_key": "sh1_s3"
-          }
-        }
-      },
-      {
-        "id": "scene-04-microtext",
-        "narration": {
-          "text": "Veja este sinal.",
-          "subtitles": true
-        },
-        "background": {
-          "visual": {
-            "type": "ai",
-            "provider": "pollinations",
-            "content_type": "image",
-            "prompt": "Macro shot of an ancient Bible page, one specific word 'MIRACLE' glowing in gold, 0.5s flash style --ar 9:16",
-            "parameters": {
-              "model": "klein",
-              "width": 1080,
-              "height": 1920,
-              "safe": false
-            },
-            "cache_key": "sh1_s4"
-          }
-        }
-      },
-      {
-        "id": "scene-05-openloop",
-        "narration": {
-          "text": "Ainda neste vídeo, vou revelar a data da sua virada.",
-          "subtitles": true
-        },
-        "background": {
-          "visual": {
-            "type": "ai",
-            "provider": "pollinations",
-            "content_type": "image",
-            "prompt": "A hand holding a glowing hourglass, sand turning into gold dust, mystical background --ar 9:16",
-            "parameters": {
-              "model": "klein",
-              "width": 1080,
-              "height": 1920,
-              "safe": false
-            },
-            "cache_key": "sh1_s5"
-          }
-        }
-      },
-      {
-        "id": "scene-06-prayer",
-        "narration": {
-          "text": "Repita comigo: 'Eu sou herdeiro das promessas'.",
-          "subtitles": true
-        },
-        "background": {
-          "visual": {
-            "type": "ai",
-            "provider": "pollinations",
-            "content_type": "image",
-            "prompt": "Ethereal figure standing on a mountain peak looking at a sunrise, divine scale, cinematic majesty --ar 9:16",
-            "parameters": {
-              "model": "klein",
-              "width": 1080,
-              "height": 1920,
-              "safe": false
-            },
-            "cache_key": "sh1_s6"
-          }
-        }
-      },
-      {
-        "id": "scene-07-interaction",
-        "narration": {
-          "text": "Escreva o nome da sua família abaixo para eu interceder.",
-          "subtitles": true
-        },
-        "background": {
-          "visual": {
-            "type": "ai",
-            "provider": "pollinations",
-            "content_type": "image",
-            "prompt": "Hands writing in a journal with a fountain pen, warm candlelight, spiritual atmosphere --ar 9:16",
-            "parameters": {
-              "model": "klein",
-              "width": 1080,
-              "height": 1920,
-              "safe": false
-            },
-            "cache_key": "sh1_s7"
-          }
-        }
-      },
-      {
-        "id": "scene-08-loop",
-        "narration": {
-          "text": "Sabe por que você foi escolhido? Porque o que Deus vai fazer é...",
-          "subtitles": true
-        },
-        "background": {
-          "visual": {
-            "type": "ai",
-            "provider": "pollinations",
-            "content_type": "image",
-            "prompt": "Divine portal opening in the sky, intense white and gold light, spiritual transcendence --ar 9:16",
-            "parameters": {
-              "model": "klein",
-              "width": 1080,
-              "height": 1920,
-              "safe": false
-            },
-            "cache_key": "sh1_s8"
-          }
-        }
-      },
-      {
-        "id": "scene-09-cta",
-        "narration": {
-          "text": "Impactante! Clique no botão de inscrição agora.",
-          "subtitles": true
-        },
-        "visual_elements": [
-          {
-            "type": "image",
-            "source": "./assets/image/vida_de_oracao/logo-transparent.png",
-            "animation": {
-              "type": "fade_in",
-              "duration": 0.2
-            }
-          }
-        ],
-        "background": {
-          "visual": {
-            "type": "image",
-            "source": "./assets/image/vida_de_oracao/background-9:16.jpeg"
-          }
+      "background": {
+        "visual": {
+          "type": "ai",
+          "provider": "pollinations",
+          "content_type": "image",
+          "prompt": "A transparent golden shield forming around a person walking through a busy ancient marketplace, ethereal light protecting them from shadows, photorealistic, biblical accuracy.",
+          "parameters": {
+            "model": "zimage",
+            "width": 1080,
+            "height": 1920,
+            "safe": false
+          },
+          "cache_key": "short_oracao_sc02"
         }
       }
-    ],
-    "youtube": {
-      "title": "PARE! É PARA VOCÊ. 🕊️🔥",
-      "tags": [
-        "oração",
-        "milagre",
-        "fé"
-      ],
-      "description": "Não ignore o sinal. #oração",
-      "publish_at": "2026-01-18 06:15:00"
-    }
-  },
-  {
-    "slug": "short-02-ciclo-acabou-18jan-v2",
-    "channel_name": "vida_de_oracao",
-    "output_ratio": "9:16",
-    "debug": false,
-    "scenes": [
-      {
-        "id": "sh2-s1",
-        "narration": {
-          "text": "VOCÊ TEM 30 SEGUNDOS!",
-          "subtitles": true
-        },
-        "background": {
-          "visual": {
-            "type": "ai",
-            "provider": "pollinations",
-            "content_type": "image",
-            "prompt": "Dramatic close-up of a ticking clock hand, glowing red energy, high contrast, cinematic --ar 9:16",
-            "parameters": {
-              "model": "klein",
-              "width": 1080,
-              "height": 1920,
-              "safe": false
-            },
-            "cache_key": "sh2_s1"
-          }
-        }
+    },
+    {
+      "id": "sc03-verse",
+      "narration": {
+        "text": "Como está escrito no livro de Números, capítulo seis, versículos vinte e quatro e vinte e cinco:",
+        "subtitles": true
       },
-      {
-        "id": "sh2-s2",
-        "narration": {
-          "text": "Ou vai ignorar o sinal que pediu hoje de madrugada?",
-          "subtitles": true
-        },
-        "background": {
-          "visual": {
-            "type": "ai",
-            "provider": "pollinations",
-            "content_type": "image",
-            "prompt": "Person kneeling in a dark room, a single beam of light hitting them, emotional prayer --ar 9:16",
-            "parameters": {
-              "model": "klein",
-              "width": 1080,
-              "height": 1920,
-              "safe": false
-            },
-            "cache_key": "sh2_s2"
-          }
-        }
-      },
-      {
-        "id": "sh2-s3",
-        "narration": {
-          "text": "O ciclo de humilhação financeira termina hoje.",
-          "subtitles": true
-        },
-        "background": {
-          "visual": {
-            "type": "ai",
-            "provider": "pollinations",
-            "content_type": "image",
-            "prompt": "Burning old debt papers turning into gold coins, dramatic fire effects, spiritual victory --ar 9:16",
-            "parameters": {
-              "model": "klein",
-              "width": 1080,
-              "height": 1920,
-              "safe": false
-            },
-            "cache_key": "sh2_s3"
-          }
-        }
-      },
-      {
-        "id": "sh2-s4",
-        "narration": {
-          "text": "Veja a chave agora.",
-          "subtitles": true
-        },
-        "background": {
-          "visual": {
-            "type": "ai",
-            "provider": "pollinations",
-            "content_type": "image",
-            "prompt": "Golden key floating in a void of light, ethereal particles, 8k photorealistic --ar 9:16",
-            "parameters": {
-              "model": "klein",
-              "width": 1080,
-              "height": 1920,
-              "safe": false
-            },
-            "cache_key": "sh2_s4"
-          }
-        }
-      },
-      {
-        "id": "sh2-s5",
-        "narration": {
-          "text": "Escute bem o que vou te entregar.",
-          "subtitles": true
-        },
-        "background": {
-          "visual": {
-            "type": "ai",
-            "provider": "pollinations",
-            "content_type": "image",
-            "prompt": "Old prophet whispering to the camera, dramatic lighting, intense gaze, cinematic --ar 9:16",
-            "parameters": {
-              "model": "klein",
-              "width": 1080,
-              "height": 1920,
-              "safe": false
-            },
-            "cache_key": "sh2_s5"
-          }
-        }
-      },
-      {
-        "id": "sh2-s6",
-        "narration": {
-          "text": "Eu profetizo: portas abertas onde não havia saída.",
-          "subtitles": true
-        },
-        "background": {
-          "visual": {
-            "type": "ai",
-            "provider": "pollinations",
-            "content_type": "image",
-            "prompt": "A massive stone wall splitting in two, bright light behind it, divine path --ar 9:16",
-            "parameters": {
-              "model": "klein",
-              "width": 1080,
-              "height": 1920,
-              "safe": false
-            },
-            "cache_key": "sh2_s6"
-          }
-        }
-      },
-      {
-        "id": "sh2-s7",
-        "narration": {
-          "text": "Escreva 'EU TOMO POSSE' para selar.",
-          "subtitles": true
-        },
-        "background": {
-          "visual": {
-            "type": "ai",
-            "provider": "pollinations",
-            "content_type": "image",
-            "prompt": "Text 'EU TOMO POSSE' written in gold on a black stone tablet, cinematic lighting --ar 9:16",
-            "parameters": {
-              "model": "klein",
-              "width": 1080,
-              "height": 1920,
-              "safe": false
-            },
-            "cache_key": "sh2_s7"
-          }
-        }
-      },
-      {
-        "id": "sh2-s8",
-        "narration": {
-          "text": "Prepare-se, pois o que está vindo é...",
-          "subtitles": true
-        },
-        "background": {
-          "visual": {
-            "type": "ai",
-            "provider": "pollinations",
-            "content_type": "image",
-            "prompt": "A storm clearing to reveal a double rainbow over a calm lake, cinematic peace --ar 9:16",
-            "parameters": {
-              "model": "klein",
-              "width": 1080,
-              "height": 1920,
-              "safe": false
-            },
-            "cache_key": "sh2_s8"
-          }
-        }
-      },
-      {
-        "id": "sh2-s9",
-        "narration": {
-          "text": "Impactante! Siga o canal para mais revelações.",
-          "subtitles": true
-        },
-        "visual_elements": [
-          {
-            "type": "image",
-            "source": "./assets/image/vida_de_oracao/logo-transparent.png",
-            "animation": {
-              "type": "fade_in",
-              "duration": 0.2
-            }
-          }
-        ],
-        "background": {
-          "visual": {
-            "type": "image",
-            "source": "./assets/image/vida_de_oracao/background-9:16.jpeg"
-          }
+      "background": {
+        "visual": {
+          "type": "ai",
+          "provider": "pollinations",
+          "content_type": "image",
+          "prompt": "Ancient glowing parchment floating in a sacred void, Hebrew-style golden letters radiating light, swirling celestial dust, cinematic 8k.",
+          "parameters": {
+            "model": "zimage",
+            "width": 1080,
+            "height": 1920,
+            "safe": false
+          },
+          "cache_key": "short_oracao_sc03"
         }
       }
-    ],
-    "youtube": {
-      "title": "O CICLO ACABOU! 🙌💰",
-      "tags": [
-        "prosperidade",
-        "bênção"
-      ],
-      "description": "Sua vida muda hoje. #prosperidade",
-      "publish_at": "2026-01-18 12:30:00"
-    }
-  },
-  {
-    "slug": "short-03-paz-18jan-v2",
-    "channel_name": "vida_de_oracao",
-    "output_ratio": "9:16",
-    "debug": false,
-    "scenes": [
-      {
-        "id": "sh3-s1",
-        "narration": {
-          "text": "SOLTE O CELULAR POR UM SEGUNDO.",
-          "subtitles": true
-        },
-        "background": {
-          "visual": {
-            "type": "ai",
-            "provider": "pollinations",
-            "content_type": "image",
-            "prompt": "Extreme zoom in on a human eye reflecting a divine white light, cinematic detail, emotional --ar 9:16",
-            "parameters": {
-              "model": "klein",
-              "width": 1080,
-              "height": 1920,
-              "safe": false
-            },
-            "cache_key": "sh3_s1"
-          }
-        }
+    },
+    {
+      "id": "sc04-verse-cont",
+      "narration": {
+        "text": "O Senhor te abençoe e te guarde; o Senhor faça resplandecer o seu rosto sobre ti.",
+        "subtitles": true
       },
-      {
-        "id": "sh3-s2",
-        "narration": {
-          "text": "Eu sinto o aperto no seu peito daqui.",
-          "subtitles": true
-        },
-        "background": {
-          "visual": {
-            "type": "ai",
-            "provider": "pollinations",
-            "content_type": "image",
-            "prompt": "Person standing in rain, looking up, dramatic moody lighting, feeling of release --ar 9:16",
-            "parameters": {
-              "model": "klein",
-              "width": 1080,
-              "height": 1920,
-              "safe": false
-            },
-            "cache_key": "sh3_s2"
-          }
-        }
-      },
-      {
-        "id": "sh3-s3",
-        "narration": {
-          "text": "A ansiedade que te trava cai por terra agora.",
-          "subtitles": true
-        },
-        "background": {
-          "visual": {
-            "type": "ai",
-            "provider": "pollinations",
-            "content_type": "image",
-            "prompt": "Black smoke evaporating into white doves, cinematic spiritual warfare --ar 9:16",
-            "parameters": {
-              "model": "klein",
-              "width": 1080,
-              "height": 1920,
-              "safe": false
-            },
-            "cache_key": "sh3_s3"
-          }
-        }
-      },
-      {
-        "id": "sh3-s4",
-        "narration": {
-          "text": "Respire fundo.",
-          "subtitles": true
-        },
-        "background": {
-          "visual": {
-            "type": "ai",
-            "provider": "pollinations",
-            "content_type": "image",
-            "prompt": "Pure white feathers falling slowly in a dark space, backlit by golden light --ar 9:16",
-            "parameters": {
-              "model": "klein",
-              "width": 1080,
-              "height": 1920,
-              "safe": false
-            },
-            "cache_key": "sh3_s4"
-          }
-        }
-      },
-      {
-        "id": "sh3-s5",
-        "narration": {
-          "text": "Deus está restaurando sua noite de sono.",
-          "subtitles": true
-        },
-        "background": {
-          "visual": {
-            "type": "ai",
-            "provider": "pollinations",
-            "content_type": "image",
-            "prompt": "A peaceful bedroom glowing with soft divine blue light, angel shadow on the wall --ar 9:16",
-            "parameters": {
-              "model": "klein",
-              "width": 1080,
-              "height": 1920,
-              "safe": false
-            },
-            "cache_key": "sh3_s5"
-          }
-        }
-      },
-      {
-        "id": "sh3-s6",
-        "narration": {
-          "text": "Eu declaro: a paz que excede o entendimento é sua.",
-          "subtitles": true
-        },
-        "background": {
-          "visual": {
-            "type": "ai",
-            "provider": "pollinations",
-            "content_type": "image",
-            "prompt": "Calm ocean at twilight, glowing water, stars reflecting perfectly, cinematic peace --ar 9:16",
-            "parameters": {
-              "model": "klein",
-              "width": 1080,
-              "height": 1920,
-              "safe": false
-            },
-            "cache_key": "sh3_s6"
-          }
-        }
-      },
-      {
-        "id": "sh3-s7",
-        "narration": {
-          "text": "Escreva seu nome para materializar essa paz.",
-          "subtitles": true
-        },
-        "background": {
-          "visual": {
-            "type": "ai",
-            "provider": "pollinations",
-            "content_type": "image",
-            "prompt": "Close-up of hands held together, glowing warm light between palms --ar 9:16",
-            "parameters": {
-              "model": "klein",
-              "width": 1080,
-              "height": 1920,
-              "safe": false
-            },
-            "cache_key": "sh3_s7"
-          }
-        }
-      },
-      {
-        "id": "sh3-s8",
-        "narration": {
-          "text": "Sabe por que a angústia parou? Porque o que Deus vai fazer é...",
-          "subtitles": true
-        },
-        "background": {
-          "visual": {
-            "type": "ai",
-            "provider": "pollinations",
-            "content_type": "image",
-            "prompt": "Sun breaking through heavy clouds, cinematic lens flare, spiritual hope --ar 9:16",
-            "parameters": {
-              "model": "klein",
-              "width": 1080,
-              "height": 1920,
-              "safe": false
-            },
-            "cache_key": "sh3_s8"
-          }
-        }
-      },
-      {
-        "id": "sh3-s9",
-        "narration": {
-          "text": "Impactante! Entre no exército dos que oram agora.",
-          "subtitles": true
-        },
-        "visual_elements": [
-          {
-            "type": "image",
-            "source": "./assets/image/vida_de_oracao/logo-transparent.png",
-            "animation": {
-              "type": "fade_in",
-              "duration": 0.2
-            }
-          }
-        ],
-        "background": {
-          "visual": {
-            "type": "image",
-            "source": "./assets/image/vida_de_oracao/background-9:16.jpeg"
-          }
+      "background": {
+        "visual": {
+          "type": "ai",
+          "provider": "pollinations",
+          "content_type": "image",
+          "prompt": "A majestic divine face of light appearing in the clouds, warm golden rays touching a green valley below, sacred awe, atmospheric lighting.",
+          "parameters": {
+            "model": "zimage",
+            "width": 1080,
+            "height": 1920,
+            "safe": false
+          },
+          "cache_key": "short_oracao_sc04"
         }
       }
-    ],
-    "youtube": {
-      "title": "RECEBA SUA PAZ AGORA 🙏✨",
-      "tags": [
-        "cura",
-        "paz",
-        "ansiedade"
-      ],
-      "description": "Deus restaura sua alma hoje. #paz",
-      "publish_at": "2026-01-18 20:45:00"
-    }
-  },
-  {
-    "slug": "longo-erro-oculto-oracao-18jan",
-    "channel_name": "vida_de_oracao",
-    "output_ratio": "16:9",
-    "debug": false,
-    "scenes": [
-      {
-        "id": "p1-s1-gancho-tempo",
-        "narration": {
-          "text": "Você tem exatamente trinta segundos para ouvir o que eu vou te dizer agora.",
-          "subtitles": true
-        },
-        "background": {
-          "visual": {
-            "type": "ai",
-            "provider": "pollinations",
-            "content_type": "image",
-            "prompt": "Cinematic wide shot of a massive ancient clock tower standing against a dramatic twilight sky, golden light rays piercing through heavy dark storm clouds, intense high contrast, spiritual atmosphere of divine timing, 8k resolution, photorealistic style, sharp architectural details, ethereal glow, sense of urgency and cosmic importance, dramatic shadows and highlights, highly detailed atmosphere with floating dust particles in the light beams --ar 16:9",
-            "parameters": {
-              "model": "klein",
-              "width": 1920,
-              "height": 1080,
-              "safe": false
-            },
-            "cache_key": "p1_s1_clock"
-          }
-        }
+    },
+    {
+      "id": "sc05",
+      "narration": {
+        "text": "Creia no poder do Nome de Jesus e clame pela paz que excede todo o entendimento",
+        "subtitles": true
       },
-      {
-        "id": "p1-s2-escolha-sinal",
-        "narration": {
-          "text": "Ou você vai ignorar o sinal que pediu a Deus hoje de madrugada. A escolha é sua.",
-          "subtitles": true
-        },
-        "background": {
-          "visual": {
-            "type": "ai",
-            "provider": "pollinations",
-            "content_type": "image",
-            "prompt": "Close-up of a person's weathered hands holding an ancient, glowing parchment letter in a dimly lit rustic room, warm candlelight flickering nearby, motes of dust dancing in a single beam of light, spiritual realism, 8k resolution, emotional and sacred atmosphere, cinematic depth of field, mysterious and profound mood, photorealistic skin textures and paper grain, high contrast between shadows and golden light --ar 16:9",
-            "parameters": {
-              "model": "klein",
-              "width": 1920,
-              "height": 1080,
-              "safe": false
-            },
-            "cache_key": "p1_s2_hands"
-          }
-        }
-      },
-      {
-        "id": "p1-s3-proposito-algoritmo",
-        "narration": {
-          "text": "Não foi o algoritmo que te trouxe aqui. Foi um propósito divino para destravar sua vida.",
-          "subtitles": true
-        },
-        "background": {
-          "visual": {
-            "type": "ai",
-            "provider": "pollinations",
-            "content_type": "image",
-            "prompt": "A massive celestial portal shaped like a divine cross opening in the starlit night sky over a silent mountain range, intense white and blue light radiating outwards, spiritual transcendence, majestic and awe-inspiring, cinematic landscape, 8k resolution, photorealistic textures, cosmic energy flowing through the air, dramatic perspective looking up from the ground, ethereal and powerful presence --ar 16:9",
-            "parameters": {
-              "model": "klein",
-              "width": 1920,
-              "height": 1080,
-              "safe": false
-            },
-            "cache_key": "p1_s3_portal"
-          }
-        }
-      },
-      {
-        "id": "p1-s4-dor-sono",
-        "narration": {
-          "text": "Eu sei que você não dormiu bem. Eu sinto o peso nos seus ombros daqui.",
-          "subtitles": true
-        },
-        "background": {
-          "visual": {
-            "type": "ai",
-            "provider": "pollinations",
-            "content_type": "image",
-            "prompt": "Cinematic silhouette of a tired person sitting on the edge of a wooden bed in a dark, moody room, cold blue moonlight filtering through a window, atmosphere of heavy spiritual burden and exhaustion, realistic shadows, 8k resolution, emotional composition, photorealistic textures of fabrics and wood, sense of isolation and deep thought, cinematic bokeh in the background --ar 16:9",
-            "parameters": {
-              "model": "klein",
-              "width": 1920,
-              "height": 1080,
-              "safe": false
-            },
-            "cache_key": "p1_s4_tired"
-          }
-        }
-      },
-      {
-        "id": "p1-s5-contas-familia",
-        "narration": {
-          "text": "Você olha para as contas, olha para a sua família, e parece que o céu está fechado.",
-          "subtitles": true
-        },
-        "background": {
-          "visual": {
-            "type": "ai",
-            "provider": "pollinations",
-            "content_type": "image",
-            "prompt": "Macro shot of a stack of unpaid bills and old coins resting on a rough wooden table, illuminated by a single vertical beam of divine golden light that creates a sharp contrast, high spiritual tension, 8k resolution, photorealistic, cinematic depth of field showing a blurred family photo in the background, textures of worn paper and wood, dramatic and moody lighting representing the struggle for prosperity --ar 16:9",
-            "parameters": {
-              "model": "klein",
-              "width": 1920,
-              "height": 1080,
-              "safe": false
-            },
-            "cache_key": "p1_s5_bills"
-          }
-        }
-      },
-      {
-        "id": "p1-s6-profundo-fe",
-        "narration": {
-          "text": "Mas escute bem: não é falta de fé. É algo muito mais profundo e oculto.",
-          "subtitles": true
-        },
-        "background": {
-          "visual": {
-            "type": "ai",
-            "provider": "pollinations",
-            "content_type": "image",
-            "prompt": "A single white candle burning with a steady flame inside a dark ancient stone cathedral, the warm light reflecting off a nearby silver cross, soft swirls of incense smoke rising, atmosphere of sacred silence and hidden truth, 8k resolution, spiritual realism, high contrast between the small flame and the vast darkness, intricate stone textures, cinematic and solemn mood --ar 16:9",
-            "parameters": {
-              "model": "klein",
-              "width": 1920,
-              "height": 1080,
-              "safe": false
-            },
-            "cache_key": "p1_s6_candle"
-          }
-        }
-      },
-      {
-        "id": "p1-s7-erro-bloqueio",
-        "narration": {
-          "text": "Existe um erro invisível que está parando sua vitória na porta da sua casa.",
-          "subtitles": true
-        },
-        "background": {
-          "visual": {
-            "type": "ai",
-            "provider": "pollinations",
-            "content_type": "image",
-            "prompt": "Abstract cinematic visual of thick, dark metallic chains suddenly breaking apart into glowing fragments of golden light, intense energy explosion, high contrast against a black background, divine power overcoming spiritual obstacles, 8k resolution, photorealistic metallic textures and sparks, sense of liberation and sudden movement, dramatic lighting and special effects style --ar 16:9",
-            "parameters": {
-              "model": "klein",
-              "width": 1920,
-              "height": 1080,
-              "safe": false
-            },
-            "cache_key": "p1_s7_chains"
-          }
-        }
-      },
-      {
-        "id": "p1-s8-chave-openloop",
-        "narration": {
-          "text": "Daqui a pouco, vou te entregar a chave de três letras que destrava esse cativeiro.",
-          "subtitles": true
-        },
-        "background": {
-          "visual": {
-            "type": "ai",
-            "provider": "pollinations",
-            "content_type": "image",
-            "prompt": "A majestic ornate golden key floating in a void of pure brilliant light, intricate sacred engravings on the metal, sparkling divine particles surrounding it, ethereal and heavenly atmosphere, 8k resolution, photorealistic textures, glowing aura, cinematic representation of a spiritual secret being revealed, high-end commercial quality, sharp focus on the key's details --ar 16:9",
-            "parameters": {
-              "model": "klein",
-              "width": 1920,
-              "height": 1080,
-              "safe": false
-            },
-            "cache_key": "p1_s8_key"
-          }
-        }
-      },
-      {
-        "id": "p1-s9-quarta-parede",
-        "narration": {
-          "text": "Você que está aí com o celular na mão, sentindo esse aperto no peito... sim, é com VOCÊ.",
-          "subtitles": true
-        },
-        "background": {
-          "visual": {
-            "type": "ai",
-            "provider": "pollinations",
-            "content_type": "image",
-            "prompt": "Extreme close-up of a human eye filled with emotion and reflecting a bright cross of white light in the pupil, highly detailed iris and skin texture, dramatic lighting with deep shadows, cinematic spiritual connection, 8k resolution, photorealistic, soul-stirring composition, sense of divine eye contact and personal revelation, high detail on every eyelash --ar 16:9",
-            "parameters": {
-              "model": "klein",
-              "width": 1920,
-              "height": 1080,
-              "safe": false
-            },
-            "cache_key": "p1_s9_eye"
-          }
-        }
-      },
-      {
-        "id": "p1-s10-coracao-historia",
-        "narration": {
-          "text": "Prepare o seu coração. O que você vai ouvir agora vai mudar sua história para sempre.",
-          "subtitles": true
-        },
-        "background": {
-          "visual": {
-            "type": "ai",
-            "provider": "pollinations",
-            "content_type": "image",
-            "prompt": "A wide cinematic shot of a person standing on a desert dune, walking towards a massive wall of blinding white light at the horizon, dramatic sunrise with intense lens flare, sense of destiny and a new beginning, spiritual journey, 8k resolution, photorealistic, epic scale, warm color palette, powerful atmosphere of transformation and hope --ar 16:9",
-            "parameters": {
-              "model": "klein",
-              "width": 1920,
-              "height": 1080,
-              "safe": false
-            },
-            "cache_key": "p1_s10_journey"
-          }
-        }
-      },
-      {
-        "id": "p1-s11-passo1-zeigarnik",
-        "narration": {
-          "text": "Vamos começar o Passo 1: O Diagnóstico do Bloqueio Espiritual.",
-          "subtitles": true
-        },
-        "background": {
-          "visual": {
-            "type": "ai",
-            "provider": "pollinations",
-            "content_type": "image",
-            "prompt": "An old parchment scroll unrolling on a heavy stone altar, glowing blue spiritual symbols appearing on the paper, mystical energy, cinematic mystery, 8k resolution, photorealistic stone and paper textures, high contrast lighting, sense of ancient knowledge being uncovered, dramatic shadows, spiritual diagnostic atmosphere --ar 16:9",
-            "parameters": {
-              "model": "klein",
-              "width": 1920,
-              "height": 1080,
-              "safe": false
-            },
-            "cache_key": "p1_s11_scroll"
-          }
-        }
-      },
-      {
-        "id": "p1-s12-vazio-fim-parte1",
-        "narration": {
-          "text": "Entenda por que, até hoje, suas palavras pareciam cair no vazio.",
-          "subtitles": true
-        },
-        "background": {
-          "visual": {
-            "type": "ai",
-            "provider": "pollinations",
-            "content_type": "image",
-            "prompt": "Wide cinematic shot of an empty, misty valley at dawn, a single sharp beam of divine light hitting a small stream of water, peaceful but heavy atmosphere, cinematic nature photography style, 8k resolution, spiritual reflection, photorealistic trees and mist, cool color tones with a warm center where the light hits, sense of silence and waiting for a response --ar 16:9",
-            "parameters": {
-              "model": "klein",
-              "width": 1920,
-              "height": 1080,
-              "safe": false
-            },
-            "cache_key": "p1_s12_valley"
-          }
-        }
-      },
-      {
-        "id": "p2-s13-validacao-esforco",
-        "narration": {
-          "text": "Sejamos honestos: você sente que todo o seu esforço tem sido em vão nos últimos meses.",
-          "subtitles": true
-        },
-        "background": {
-          "visual": {
-            "type": "ai",
-            "provider": "pollinations",
-            "content_type": "image",
-            "prompt": "Cinematic shot of a person's silhouette standing in a vast, empty field during a gloomy, grey sunrise, low fog creeping over the ground, atmosphere of solitude and quiet reflection, spiritual realism, 8k resolution, photorealistic, dramatic natural lighting, sense of feeling lost despite the effort, moody blue and grey tones --ar 16:9",
-            "parameters": {
-              "model": "klein",
-              "width": 1920,
-              "height": 1080,
-              "safe": false
-            },
-            "cache_key": "p2_s13_field"
-          }
-        }
-      },
-      {
-        "id": "p2-s14-rotina-cansativa",
-        "narration": {
-          "text": "Você acorda cedo, dá o seu melhor no trabalho, mas parece que está correndo em círculos.",
-          "subtitles": true
-        },
-        "background": {
-          "visual": {
-            "type": "ai",
-            "provider": "pollinations",
-            "content_type": "image",
-            "prompt": "Time-lapse style cinematic shot of a busy city street blurred by motion, centered on a single stationary person looking exhausted, high contrast, warm street lights clashing with cold morning shadows, 8k resolution, photorealistic, spiritual depth, representing the grind of daily life, dramatic composition --ar 16:9",
-            "parameters": {
-              "model": "klein",
-              "width": 1920,
-              "height": 1080,
-              "safe": false
-            },
-            "cache_key": "p2_s14_grind"
-          }
-        }
-      },
-      {
-        "id": "p2-s15-injustica-veneno",
-        "narration": {
-          "text": "Ver pessoas que nem sequer oram prosperando, enquanto você luta, dói. Eu sei.",
-          "subtitles": true
-        },
-        "background": {
-          "visual": {
-            "type": "ai",
-            "provider": "pollinations",
-            "content_type": "image",
-            "prompt": "Close-up of a person's hand gripped tightly around a simple wooden cross, knuckles white from tension, dark moody background with a single sharp light highlight, representing internal struggle and the feeling of injustice, cinematic spiritual realism, 8k resolution, photorealistic skin textures, high emotional impact --ar 16:9",
-            "parameters": {
-              "model": "klein",
-              "width": 1920,
-              "height": 1080,
-              "safe": false
-            },
-            "cache_key": "p2_s15_grip"
-          }
-        }
-      },
-      {
-        "id": "p2-s16-conflito-familiar",
-        "narration": {
-          "text": "Dentro da sua casa, o silêncio é pesado. Discussões por motivos bobos que drenam sua energia.",
-          "subtitles": true
-        },
-        "background": {
-          "visual": {
-            "type": "ai",
-            "provider": "pollinations",
-            "content_type": "image",
-            "prompt": "Cinematic interior of a dimly lit living room, two silhouettes facing away from each other in the shadows, a single dust-mote filled beam of light separating them, heavy atmospheric tension, 8k resolution, photorealistic, moody lighting, spiritual realism style, representing family discord and emotional distance --ar 16:9",
-            "parameters": {
-              "model": "klein",
-              "width": 1920,
-              "height": 1080,
-              "safe": false
-            },
-            "cache_key": "p2_s16_home"
-          }
-        }
-      },
-      {
-        "id": "p2-s17-clamo-vazio",
-        "narration": {
-          "text": "Você clama: 'Deus, onde o Senhor está? O Senhor me esqueceu?'",
-          "subtitles": true
-        },
-        "background": {
-          "visual": {
-            "type": "ai",
-            "provider": "pollinations",
-            "content_type": "image",
-            "prompt": "Wide shot of a person kneeling in a vast, dark cathedral, a single vertical pillar of blinding white divine light descending from the ceiling hitting the floor just in front of them, atmosphere of desperate prayer and seeking, 8k resolution, photorealistic, cinematic high contrast, epic spiritual scale --ar 16:9",
-            "parameters": {
-              "model": "klein",
-              "width": 1920,
-              "height": 1080,
-              "safe": false
-            },
-            "cache_key": "p2_s17_cathedral"
-          }
-        }
-      },
-      {
-        "id": "p2-s18-resposta-divina",
-        "narration": {
-          "text": "Ele não esqueceu. Ele está permitindo esse deserto para te mostrar algo que você ainda não viu.",
-          "subtitles": true
-        },
-        "background": {
-          "visual": {
-            "type": "ai",
-            "provider": "pollinations",
-            "content_type": "image",
-            "prompt": "Cinematic desert landscape at sunset, the sand glowing golden, a single green plant miraculously sprouting from the dry earth under a beam of light, spiritual metaphor for hope in the desert, 8k resolution, photorealistic, warm vibrant colors, dramatic lens flare, epic composition --ar 16:9",
-            "parameters": {
-              "model": "klein",
-              "width": 1920,
-              "height": 1080,
-              "safe": false
-            },
-            "cache_key": "p2_s18_desert"
-          }
-        }
-      },
-      {
-        "id": "p2-s19-barreira-nao-pecado",
-        "narration": {
-          "text": "A barreira que impede sua oração de subir não é o seu pecado. É um bloqueio técnico espiritual.",
-          "subtitles": true
-        },
-        "background": {
-          "visual": {
-            "type": "ai",
-            "provider": "pollinations",
-            "content_type": "image",
-            "prompt": "Abstract cinematic representation of a glass wall rippling like water, separating a person from a golden city in the distance, spiritual frequency, divine architecture, 8k resolution, photorealistic textures, high contrast lighting, ethereal and mysterious mood, sense of a hidden barrier --ar 16:9",
-            "parameters": {
-              "model": "klein",
-              "width": 1920,
-              "height": 1080,
-              "safe": false
-            },
-            "cache_key": "p2_s19_barrier"
-          }
-        }
-      },
-      {
-        "id": "p2-s20-autoridade-mago",
-        "narration": {
-          "text": "Eu recebi uma direção para te entregar a chave que remove esse entulho hoje.",
-          "subtitles": true
-        },
-        "background": {
-          "visual": {
-            "type": "ai",
-            "provider": "pollinations",
-            "content_type": "image",
-            "prompt": "Extreme close-up of an old, wise man's face (the Prophet/Mage archetype), intense eyes filled with light and compassion, dramatic lighting, 8k resolution, photorealistic skin details, spiritual authority, cinematic portrait, dark background with golden highlights --ar 16:9",
-            "parameters": {
-              "model": "klein",
-              "width": 1920,
-              "height": 1080,
-              "safe": false
-            },
-            "cache_key": "p2_s20_prophet"
-          }
-        }
-      },
-      {
-        "id": "p2-s21-palavras-sozinho",
-        "narration": {
-          "text": "Observe o que você diz quando está sozinho e ninguém está olhando.",
-          "subtitles": true
-        },
-        "background": {
-          "visual": {
-            "type": "ai",
-            "provider": "pollinations",
-            "content_type": "image",
-            "prompt": "Cinematic shot of a person looking at their own reflection in a cracked old mirror, the reflection seems to be whispering, moody lighting, spiritual depth, 8k resolution, photorealistic, representing internal dialogue and hidden thoughts, high contrast shadows --ar 16:9",
-            "parameters": {
-              "model": "klein",
-              "width": 1920,
-              "height": 1080,
-              "safe": false
-            },
-            "cache_key": "p2_s21_mirror"
-          }
-        }
-      },
-      {
-        "id": "p2-s22-exército-guerreiros",
-        "narration": {
-          "text": "Nós somos um exército de guerreiros, e um guerreiro não luta sem as ferramentas certas.",
-          "subtitles": true
-        },
-        "background": {
-          "visual": {
-            "type": "ai",
-            "provider": "pollinations",
-            "content_type": "image",
-            "prompt": "A line of ancient warriors' silhouettes standing on a ridge at dawn, holding glowing golden shields and swords, epic cinematic scale, divine army, spiritual warfare, 8k resolution, photorealistic, dramatic sky with fire and light, sense of unity and power --ar 16:9",
-            "parameters": {
-              "model": "klein",
-              "width": 1920,
-              "height": 1080,
-              "safe": false
-            },
-            "cache_key": "p2_s22_army"
-          }
-        }
-      },
-      {
-        "id": "p2-s23-erro-exposto",
-        "narration": {
-          "text": "O Erro Oculto está prestes a ser exposto. E quando ele cair, sua oração chegará ao trono.",
-          "subtitles": true
-        },
-        "background": {
-          "visual": {
-            "type": "ai",
-            "provider": "pollinations",
-            "content_type": "image",
-            "prompt": "A massive stone fortress wall crumbling under the impact of a white light explosion, golden debris flying, spiritual victory, 8k resolution, photorealistic textures, cinematic high-speed action shot, dramatic lighting, sense of a stronghold being destroyed --ar 16:9",
-            "parameters": {
-              "model": "klein",
-              "width": 1920,
-              "height": 1080,
-              "safe": false
-            },
-            "cache_key": "p2_s23_wall"
-          }
-        }
-      },
-      {
-        "id": "p2-s24-transicao-revelacao",
-        "narration": {
-          "text": "Respire fundo. A partir de agora, o que era confusão se tornará clareza absoluta.",
-          "subtitles": true
-        },
-        "background": {
-          "visual": {
-            "type": "ai",
-            "provider": "pollinations",
-            "content_type": "image",
-            "prompt": "Cinematic shot of clear crystal water being poured into a golden goblet, light refracting through the water creating rainbows on the table, 8k resolution, photorealistic, spiritual clarity and purity, warm and peaceful atmosphere, high contrast --ar 16:9",
-            "parameters": {
-              "model": "klein",
-              "width": 1920,
-              "height": 1080,
-              "safe": false
-            },
-            "cache_key": "p2_s24_clarity"
-          }
-        }
-      },
-      {
-        "id": "p3-s25-o-diagnostico",
-        "narration": {
-          "text": "Chegou o momento. O erro oculto que trava 97% das orações é a 'Oração de Reclamação'.",
-          "subtitles": true
-        },
-        "background": {
-          "visual": {
-            "type": "ai",
-            "provider": "pollinations",
-            "content_type": "image",
-            "prompt": "Cinematic close-up of an ancient stone wall with a single glowing golden crack in the shape of a keyhole, intense light leaking through, dust particles dancing in the beam, 8k resolution, photorealistic, mysterious spiritual atmosphere, high contrast, dramatic shadows, sense of discovering a hidden secret --ar 16:9",
-            "parameters": {
-              "model": "klein",
-              "width": 1920,
-              "height": 1080,
-              "safe": false
-            },
-            "cache_key": "p3_s25_secret"
-          }
-        }
-      },
-      {
-        "id": "p3-s26-energia-negativa",
-        "narration": {
-          "text": "Muitas vezes, você ajoelha para falar com Deus, mas acaba apenas listando problemas com amargura.",
-          "subtitles": true
-        },
-        "background": {
-          "visual": {
-            "type": "ai",
-            "provider": "pollinations",
-            "content_type": "image",
-            "prompt": "Abstract representation of dark smoke rising from a person's mouth as they speak in a dark room, the smoke forming heavy grey clouds above them, cinematic lighting, moody atmosphere, 8k resolution, photorealistic, spiritual weight, high contrast, blue and grey tones --ar 16:9",
-            "parameters": {
-              "model": "klein",
-              "width": 1920,
-              "height": 1080,
-              "safe": false
-            },
-            "cache_key": "p3_s26_smoke"
-          }
-        }
-      },
-      {
-        "id": "p3-s27-lei-espiritual",
-        "narration": {
-          "text": "A lei espiritual é clara: o que você foca, expande. Reclamação é clamar pelo que você não quer.",
-          "subtitles": true
-        },
-        "background": {
-          "visual": {
-            "type": "ai",
-            "provider": "pollinations",
-            "content_type": "image",
-            "prompt": "A field of dead, dry thorns on one side and a lush glowing green garden on the other, separated by a thin line of golden light, cinematic landscape, 8k resolution, photorealistic, metaphorical representation of spiritual focus, dramatic sunset background --ar 16:9",
-            "parameters": {
-              "model": "klein",
-              "width": 1920,
-              "height": 1080,
-              "safe": false
-            },
-            "cache_key": "p3_s27_focus"
-          }
-        }
-      },
-      {
-        "id": "p3-s28-frequencia-ceu",
-        "narration": {
-          "text": "O Céu não responde à frequência da murmuração, mas à frequência da gratidão antecipada.",
-          "subtitles": true
-        },
-        "background": {
-          "visual": {
-            "type": "ai",
-            "provider": "pollinations",
-            "content_type": "image",
-            "prompt": "Majestic view of a golden harp floating amidst white celestial clouds, strings vibrating with ripples of pure light, ethereal atmosphere, 8k resolution, photorealistic, divine frequency, bright and uplifting colors, cinematic heaven-like setting --ar 16:9",
-            "parameters": {
-              "model": "klein",
-              "width": 1920,
-              "height": 1080,
-              "safe": false
-            },
-            "cache_key": "p3_s28_harp"
-          }
-        }
-      },
-      {
-        "id": "p3-s29-bloqueio-tecnico",
-        "narration": {
-          "text": "Esse é o bloqueio técnico. Você está tentando abrir uma porta de ouro com uma chave de madeira.",
-          "subtitles": true
-        },
-        "background": {
-          "visual": {
-            "type": "ai",
-            "provider": "pollinations",
-            "content_type": "image",
-            "prompt": "Macro shot of a crude, broken wooden key being held up to a massive, intricate golden door with divine symbols, sharp contrast in textures, 8k resolution, photorealistic, cinematic lighting, dramatic shadows, sense of mismatch and revelation --ar 16:9",
-            "parameters": {
-              "model": "klein",
-              "width": 1920,
-              "height": 1080,
-              "safe": false
-            },
-            "cache_key": "p3_s29_door"
-          }
-        }
-      },
-      {
-        "id": "p3-s30-a-chave-3-letras",
-        "narration": {
-          "text": "Lembra da chave de três letras que eu prometi? Ela é a base de tudo: CRÊ.",
-          "subtitles": true
-        },
-        "background": {
-          "visual": {
-            "type": "ai",
-            "provider": "pollinations",
-            "content_type": "image",
-            "prompt": "The word 'CRÊ' written in massive 3D letters made of solid light and fire, standing in the middle of a dark desert, sparks flying everywhere, 8k resolution, photorealistic, epic cinematic scale, spiritual power, high contrast --ar 16:9",
-            "parameters": {
-              "model": "klein",
-              "width": 1920,
-              "height": 1080,
-              "safe": false
-            },
-            "cache_key": "p3_s30_cre"
-          }
-        }
-      },
-      {
-        "id": "p3-s31-crer-ver",
-        "narration": {
-          "text": "Não é 'ver para crer'. No Reino de Deus, é 'crer para ver'.",
-          "subtitles": true
-        },
-        "background": {
-          "visual": {
-            "type": "ai",
-            "provider": "pollinations",
-            "content_type": "image",
-            "prompt": "A blindfolded person standing at the edge of a cliff, stepping forward onto a bridge made of pure golden light that appears only as they step, 8k resolution, photorealistic, cinematic spiritual realism, intense lighting, theme of faith --ar 16:9",
-            "parameters": {
-              "model": "klein",
-              "width": 1920,
-              "height": 1080,
-              "safe": false
-            },
-            "cache_key": "p3_s31_faith"
-          }
-        }
-      },
-      {
-        "id": "p3-s32-o-teste-imediato",
-        "narration": {
-          "text": "Faça o teste agora: pare de pedir e comece a agradecer como se já tivesse recebido.",
-          "subtitles": true
-        },
-        "background": {
-          "visual": {
-            "type": "ai",
-            "provider": "pollinations",
-            "content_type": "image",
-            "prompt": "A person's face transitioning from tears to a serene, powerful smile, warm golden light illuminating the skin, cinematic close-up, 8k resolution, photorealistic, emotional transformation, spiritual peace, bokeh background with light particles --ar 16:9",
-            "parameters": {
-              "model": "klein",
-              "width": 1920,
-              "height": 1080,
-              "safe": false
-            },
-            "cache_key": "p3_s32_smile"
-          }
-        }
-      },
-      {
-        "id": "p3-s33-destrava-financeiro",
-        "narration": {
-          "text": "Isso destrava o financeiro, cura o corpo e restaura a casa. A murmuração atrai o deserto.",
-          "subtitles": true
-        },
-        "background": {
-          "visual": {
-            "type": "ai",
-            "provider": "pollinations",
-            "content_type": "image",
-            "prompt": "A dry desert landscape being rapidly overtaken by flowing water and blooming flowers in a surreal cinematic sweep, high speed photography style, 8k resolution, photorealistic, vibrant colors, spiritual restoration, epic scale --ar 16:9",
-            "parameters": {
-              "model": "klein",
-              "width": 1920,
-              "height": 1080,
-              "safe": false
-            },
-            "cache_key": "p3_s33_bloom"
-          }
-        }
-      },
-      {
-        "id": "p3-s34-aviso-final",
-        "narration": {
-          "text": "Se você continuar agindo como uma vítima, nunca será tratado como um herdeiro.",
-          "subtitles": true
-        },
-        "background": {
-          "visual": {
-            "type": "ai",
-            "provider": "pollinations",
-            "content_type": "image",
-            "prompt": "A crown made of gold and thorns resting on a dark velvet cushion, a single spotlight hitting the crown, cinematic lighting, 8k resolution, photorealistic, spiritual identity, high contrast, dramatic atmosphere --ar 16:9",
-            "parameters": {
-              "model": "klein",
-              "width": 1920,
-              "height": 1080,
-              "safe": false
-            },
-            "cache_key": "p3_s34_crown"
-          }
-        }
-      },
-      {
-        "id": "p3-s35-preparacao-climax",
-        "narration": {
-          "text": "Agora, vou fazer a oração que vai quebrar esse padrão na sua vida. Prepare-se.",
-          "subtitles": true
-        },
-        "background": {
-          "visual": {
-            "type": "ai",
-            "provider": "pollinations",
-            "content_type": "image",
-            "prompt": "Hands reaching up towards a massive storm of golden light and fire in the sky, intense energy, cinematic spiritual warfare, 8k resolution, photorealistic, awe-inspiring perspective, high contrast, divine power preparation --ar 16:9",
-            "parameters": {
-              "model": "klein",
-              "width": 1920,
-              "height": 1080,
-              "safe": false
-            },
-            "cache_key": "p3_s35_climax"
-          }
-        }
-      },
-      {
-        "id": "p3-s36-transicao-oracao",
-        "narration": {
-          "text": "Feche seus olhos. O erro oculto acaba aqui. A resposta começa agora.",
-          "subtitles": true
-        },
-        "background": {
-          "visual": {
-            "type": "ai",
-            "provider": "pollinations",
-            "content_type": "image",
-            "prompt": "Total darkness fading into a single, perfectly centered point of brilliant white light, cinematic minimalism, spiritual depth, 8k resolution, photorealistic, sense of focus and new beginning --ar 16:9",
-            "parameters": {
-              "model": "klein",
-              "width": 1920,
-              "height": 1080,
-              "safe": false
-            },
-            "cache_key": "p3_s36_fade"
-          }
-        }
-      },
-      {
-        "id": "p4-s37-inicio-autoridade",
-        "narration": {
-          "text": "Eu me levanto agora como uma autoridade profética sobre a sua vida. O tempo da humilhação acabou.",
-          "subtitles": true
-        },
-        "background": {
-          "visual": {
-            "type": "ai",
-            "provider": "pollinations",
-            "content_type": "image",
-            "prompt": "Cinematic low-angle shot of a majestic figure silhouetted against a brilliant sun, wearing flowing robes that catch the wind, standing on a mountain peak, dramatic lens flare, 8k resolution, photorealistic, spiritual authority, sense of immense power and leadership, high contrast lighting, epic and awe-inspiring atmosphere --ar 16:9",
-            "parameters": {
-              "model": "klein",
-              "width": 1920,
-              "height": 1080,
-              "safe": false
-            },
-            "cache_key": "p4_s37_authority"
-          }
-        }
-      },
-      {
-        "id": "p4-s38-comando-espiritual",
-        "narration": {
-          "text": "Eu comando agora que toda barreira invisível que impedia sua oração seja despedaçada!",
-          "subtitles": true
-        },
-        "background": {
-          "visual": {
-            "type": "ai",
-            "provider": "pollinations",
-            "content_type": "image",
-            "prompt": "Explosion of white and gold energy shattering a wall of dark, jagged glass, shards flying towards the camera in slow motion, intense divine light behind the wall, 8k resolution, photorealistic textures, cinematic high-speed photography style, dramatic spiritual warfare, high contrast, powerful impact --ar 16:9",
-            "parameters": {
-              "model": "klein",
-              "width": 1920,
-              "height": 1080,
-              "safe": false
-            },
-            "cache_key": "p4_s38_shatter"
-          }
-        }
-      },
-      {
-        "id": "p4-s39-financeiro-destrava",
-        "narration": {
-          "text": "Eu profetizo: o espírito de escassez que assola sua família cai por terra agora. Receba a provisão!",
-          "subtitles": true
-        },
-        "background": {
-          "visual": {
-            "type": "ai",
-            "provider": "pollinations",
-            "content_type": "image",
-            "prompt": "A golden chest opening in a dark room, overflowing with brilliant light and ancient gold coins, the light illuminating the surroundings with a warm glow, cinematic depth of field, 8k resolution, photorealistic, spiritual prosperity, sense of divine abundance and miracle, dramatic shadows --ar 16:9",
-            "parameters": {
-              "model": "klein",
-              "width": 1920,
-              "height": 1080,
-              "safe": false
-            },
-            "cache_key": "p4_s39_provision"
-          }
-        }
-      },
-      {
-        "id": "p4-s40-saude-cura",
-        "narration": {
-          "text": "Onde houver enfermidade ou cansaço extremo, eu determino: haja saúde e vigor pelo poder da palavra.",
-          "subtitles": true
-        },
-        "background": {
-          "visual": {
-            "type": "ai",
-            "provider": "pollinations",
-            "content_type": "image",
-            "prompt": "Soft green and white light flowing through a person's body like a gentle mist, focusing on the heart area, ethereal and healing atmosphere, 8k resolution, photorealistic, cinematic spiritual realism, peaceful and restorative mood, high detail in the light particles and skin texture --ar 16:9",
-            "parameters": {
-              "model": "klein",
-              "width": 1920,
-              "height": 1080,
-              "safe": false
-            },
-            "cache_key": "p4_s40_healing"
-          }
-        }
-      },
-      {
-        "id": "p4-s41-familia-restauro",
-        "narration": {
-          "text": "A discórdia na sua casa está sendo substituída pela paz que excede todo o entendimento.",
-          "subtitles": true
-        },
-        "background": {
-          "visual": {
-            "type": "ai",
-            "provider": "pollinations",
-            "content_type": "image",
-            "prompt": "A peaceful living room where the shadows are being pushed away by a warm, golden sunrise through the window, a white dove perched on the windowsill, cinematic atmosphere of restoration and domestic peace, 8k resolution, photorealistic, soft lighting, spiritual serenity --ar 16:9",
-            "parameters": {
-              "model": "klein",
-              "width": 1920,
-              "height": 1080,
-              "safe": false
-            },
-            "cache_key": "p4_s41_peace"
-          }
-        }
-      },
-      {
-        "id": "p4-s42-correntes-quebra",
-        "narration": {
-          "text": "Sinta as correntes da ansiedade caindo. Ouça o som da liberdade espiritual!",
-          "subtitles": true
-        },
-        "background": {
-          "visual": {
-            "type": "ai",
-            "provider": "pollinations",
-            "content_type": "image",
-            "prompt": "Extreme close-up of heavy rusted iron chains snapping under an intense white light, sparks and metal fragments flying, dark moody background with high contrast, 8k resolution, photorealistic textures, cinematic action shot, spiritual liberation, powerful and dramatic --ar 16:9",
-            "parameters": {
-              "model": "klein",
-              "width": 1920,
-              "height": 1080,
-              "safe": false
-            },
-            "cache_key": "p4_s42_chains_snap"
-          }
-        }
-      },
-      {
-        "id": "p4-s43-maos-erguidas",
-        "narration": {
-          "text": "Erga suas mãos onde você estiver. O Céu está aberto sobre você neste exato segundo.",
-          "subtitles": true
-        },
-        "background": {
-          "visual": {
-            "type": "ai",
-            "provider": "pollinations",
-            "content_type": "image",
-            "prompt": "Cinematic shot from behind a person with hands raised high towards a massive swirl of golden and white celestial clouds, a direct pillar of light coming down to touch them, epic scale, 8k resolution, photorealistic, spiritual connection, divine response, dramatic and heavenly lighting --ar 16:9",
-            "parameters": {
-              "model": "klein",
-              "width": 1920,
-              "height": 1080,
-              "safe": false
-            },
-            "cache_key": "p4_s43_hands_up"
-          }
-        }
-      },
-      {
-        "id": "p4-s44-fogo-purificador",
-        "narration": {
-          "text": "O fogo de Deus consome agora todo o entulho da murmuração e da dúvida.",
-          "subtitles": true
-        },
-        "background": {
-          "visual": {
-            "type": "ai",
-            "provider": "pollinations",
-            "content_type": "image",
-            "prompt": "Holy blue and gold flames swirling in a circle, burning away dark grey mist, high contrast, cinematic special effects, 8k resolution, photorealistic, spiritual purification, intense energy, ethereal and powerful mood, sharp focus on the flames --ar 16:9",
-            "parameters": {
-              "model": "klein",
-              "width": 1920,
-              "height": 1080,
-              "safe": false
-            },
-            "cache_key": "p4_s44_fire"
-          }
-        }
-      },
-      {
-        "id": "p4-s45-identidade-filho",
-        "narration": {
-          "text": "Você não é um mendigo de bênçãos. Você é um herdeiro do Rei.",
-          "subtitles": true
-        },
-        "background": {
-          "visual": {
-            "type": "ai",
-            "provider": "pollinations",
-            "content_type": "image",
-            "prompt": "A majestic golden throne standing in a hall of light, a royal mantle draped over it, cinematic perspective, 8k resolution, photorealistic, divine royalty, spiritual identity, high contrast between gold and soft white light, awe-inspiring atmosphere --ar 16:9",
-            "parameters": {
-              "model": "klein",
-              "width": 1920,
-              "height": 1080,
-              "safe": false
-            },
-            "cache_key": "p4_s45_throne"
-          }
-        }
-      },
-      {
-        "id": "p4-s46-selo-profetico",
-        "narration": {
-          "text": "Eu selo esta oração com o sangue do cordeiro. O que foi ligado no céu, está ligado na terra.",
-          "subtitles": true
-        },
-        "background": {
-          "visual": {
-            "type": "ai",
-            "provider": "pollinations",
-            "content_type": "image",
-            "prompt": "A massive ancient signet ring stamping a glowing seal onto a parchment made of light, divine sparks flying, 8k resolution, photorealistic textures, cinematic close-up, spiritual legal authority, high contrast, golden and white tones, dramatic and sacred --ar 16:9",
-            "parameters": {
-              "model": "klein",
-              "width": 1920,
-              "height": 1080,
-              "safe": false
-            },
-            "cache_key": "p4_s46_seal"
-          }
-        }
-      },
-      {
-        "id": "p4-s47-vitoria-visivel",
-        "narration": {
-          "text": "A partir de amanhã, você verá os primeiros sinais da sua colheita.",
-          "subtitles": true
-        },
-        "background": {
-          "visual": {
-            "type": "ai",
-            "provider": "pollinations",
-            "content_type": "image",
-            "prompt": "A vast field of golden wheat glowing under a bright midday sun, the wind creating waves in the grain, cinematic landscape, 8k resolution, photorealistic, spiritual harvest metaphor, vibrant and warm colors, sense of fulfillment and victory --ar 16:9",
-            "parameters": {
-              "model": "klein",
-              "width": 1920,
-              "height": 1080,
-              "safe": false
-            },
-            "cache_key": "p4_s47_harvest"
-          }
-        }
-      },
-      {
-        "id": "p4-s48-descanso-espirito",
-        "narration": {
-          "text": "Descanse no que foi feito hoje. O erro oculto foi removido. O caminho está livre.",
-          "subtitles": true
-        },
-        "background": {
-          "visual": {
-            "type": "ai",
-            "provider": "pollinations",
-            "content_type": "image",
-            "prompt": "A wide, straight path made of white stone leading towards a brilliant mountain peak, clear blue sky, cinematic perspective, 8k resolution, photorealistic, spiritual clarity and peace, sense of a clear future, uplifting and serene atmosphere --ar 16:9",
-            "parameters": {
-              "model": "klein",
-              "width": 1920,
-              "height": 1080,
-              "safe": false
-            },
-            "cache_key": "p4_s48_path"
-          }
-        }
-      },
-      {
-        "id": "p5-s49-consolidacao-identidade",
-        "narration": {
-          "text": "Você não chegou ao final deste vídeo por acaso. Você foi convocado para algo maior.",
-          "subtitles": true
-        },
-        "background": {
-          "visual": {
-            "type": "ai",
-            "provider": "pollinations",
-            "content_type": "image",
-            "prompt": "Cinematic wide shot of a vast army of glowing silhouettes standing on a field of light under a starry night sky, all looking towards a central brilliant cross of light, epic spiritual scale, 8k resolution, photorealistic, divine mission, high contrast, atmosphere of unity and sacred purpose --ar 16:9",
-            "parameters": {
-              "model": "klein",
-              "width": 1920,
-              "height": 1080,
-              "safe": false
-            },
-            "cache_key": "p5_s49_army_call"
-          }
-        }
-      },
-      {
-        "id": "p5-s50-exército-nao-desiste",
-        "narration": {
-          "text": "Este canal não é apenas uma página, é o exército dos que não desistem. É o lugar dos que creem no impossível.",
-          "subtitles": true
-        },
-        "background": {
-          "visual": {
-            "type": "ai",
-            "provider": "pollinations",
-            "content_type": "image",
-            "prompt": "A heavy iron flag with a golden lion emblem being planted firmly into a rocky mountain peak, dramatic lightning in the background, cinematic high contrast, 8k resolution, photorealistic textures, spiritual warfare victory, sense of unyielding strength and faith --ar 16:9",
-            "parameters": {
-              "model": "klein",
-              "width": 1920,
-              "height": 1080,
-              "safe": false
-            },
-            "cache_key": "p5_s50_flag"
-          }
-        }
-      },
-      {
-        "id": "p5-s51-cta-identidade",
-        "narration": {
-          "text": "Se você é um desses guerreiros, clique no botão de inscrição agora e confirme sua presença neste exército.",
-          "subtitles": true
-        },
-        "visual_elements": [
-          {
-            "type": "image",
-            "source": "./assets/image/vida_de_oracao/logo-transparent.png",
-            "animation": {
-              "type": "fade_in",
-              "duration": 0.5
-            }
-          }
-        ],
-        "background": {
-          "visual": {
-            "type": "ai",
-            "provider": "pollinations",
-            "content_type": "image",
-            "prompt": "A glowing golden subscribe button hovering in a sanctuary filled with ethereal light and floating embers, cinematic depth of field, 8k resolution, photorealistic, sacred and inviting atmosphere, dramatic lighting --ar 16:9",
-            "parameters": {
-              "model": "klein",
-              "width": 1920,
-              "height": 1080,
-              "safe": false
-            },
-            "cache_key": "p5_s51_sub"
-          }
-        }
-      },
-      {
-        "id": "p5-s52-selo-nos-comentarios",
-        "narration": {
-          "text": "Escreva nos comentários: 'MINHA ORAÇÃO FOI DESTRAVADA'. O que você escreve, você materializa no mundo espiritual.",
-          "subtitles": true
-        },
-        "background": {
-          "visual": {
-            "type": "ai",
-            "provider": "pollinations",
-            "content_type": "image",
-            "prompt": "Macro shot of golden ink flowing onto a dark parchment, forming glowing letters in the dark, cinematic lighting, 8k resolution, photorealistic, spiritual manifestation, high contrast, magical and sacred writing process --ar 16:9",
-            "parameters": {
-              "model": "klein",
-              "width": 1920,
-              "height": 1080,
-              "safe": false
-            },
-            "cache_key": "p5_s52_writing"
-          }
-        }
-      },
-      {
-        "id": "p5-s53-afiliado-amazon",
-        "narration": {
-          "text": "E se você sente que precisa de uma ferramenta física para sua jornada, deixei uma recomendação especial no primeiro comentário.",
-          "subtitles": true
-        },
-        "background": {
-          "visual": {
-            "type": "ai",
-            "provider": "pollinations",
-            "content_type": "image",
-            "prompt": "A beautiful leather-bound prayer journal and a professional fountain pen resting on a mahogany desk, soft warm lamp light, cinematic bokeh, 8k resolution, photorealistic, high-end product photography style, spiritual and studious atmosphere --ar 16:9",
-            "parameters": {
-              "model": "klein",
-              "width": 1920,
-              "height": 1080,
-              "safe": false
-            },
-            "cache_key": "p5_s53_journal"
-          }
-        }
-      },
-      {
-        "id": "p5-s54-bencao-final",
-        "narration": {
-          "text": "Que a paz de Deus, que excede todo o entendimento, guarde o seu coração. Nos vemos na próxima oração.",
-          "subtitles": true
-        },
-        "background": {
-          "visual": {
-            "type": "ai",
-            "provider": "pollinations",
-            "content_type": "image",
-            "prompt": "A calm lake reflecting a golden sunset perfectly, a single white feather floating on the water's surface, cinematic peace and serenity, 8k resolution, photorealistic, spiritual rest, warm and soft color palette --ar 16:9",
-            "parameters": {
-              "model": "klein",
-              "width": 1920,
-              "height": 1080,
-              "safe": false
-            },
-            "cache_key": "p5_s54_final_peace"
-          }
-        }
-      },
-      {
-        "id": "p5-s55-logo-final-loop",
-        "narration": {
-          "text": "Impactante!",
-          "subtitles": true
-        },
-        "visual_elements": [
-          {
-            "type": "image",
-            "source": "./assets/image/vida_de_oracao/logo-transparent.png",
-            "animation": {
-              "type": "zoom_in",
-              "duration": 1.0
-            }
-          }
-        ],
-        "background": {
-          "visual": {
-            "type": "image",
-            "source": "./assets/image/vida_de_oracao/background-16:9.png"
-          }
+      "background": {
+        "visual": {
+          "type": "ai",
+          "provider": "pollinations",
+          "content_type": "image",
+          "prompt": "Stone walls crumbling into dust as a pulse of white light hits them, dark smoke dissipating, dramatic chiaroscuro, biblical ruins.",
+          "parameters": {
+            "model": "zimage",
+            "width": 1080,
+            "height": 1920,
+            "safe": false
+          },
+          "cache_key": "short_oracao_sc05"
         }
       }
-    ],
-    "youtube": {
-      "title": "🛑🙏 POR QUE sua oração NÃO está sendo ouvida? (O Erro Oculto) 🛑🙏",
-      "tags": [
-        "oração",
-        "por que deus não me ouve",
-        "vida de oração",
-        "bloqueio espiritual",
-        "fé",
-        "milagre",
-        "espiritualidade",
-        "deus"
+    },
+    {
+      "id": "sc06",
+      "narration": {
+        "text": "Receba fôlego novo para concluir o seu dia e sabedoria divina para tomar decisões.",
+        "subtitles": true
+      },
+      "background": {
+        "visual": {
+          "type": "ai",
+          "provider": "pollinations",
+          "content_type": "image",
+          "prompt": "A person sitting at a wooden table with an ancient map, a single candle flame turning into a bright golden star of guidance, cinematic wisdom style.",
+          "parameters": {
+            "model": "zimage",
+            "width": 1080,
+            "height": 1920,
+            "safe": false
+          },
+          "cache_key": "short_oracao_sc06"
+        }
+      }
+    },
+    {
+      "id": "sc07",
+      "narration": {
+        "text": "Lembre-se: você não caminha sozinho. O General de Guerra está à sua frente preparando o caminho.",
+        "subtitles": true
+      },
+      "background": {
+        "visual": {
+          "type": "ai",
+          "provider": "pollinations",
+          "content_type": "image",
+          "prompt": "Silhouette of a majestic king-priest warrior walking through a misty path, golden light illuminating the way, sacred authority, photorealistic.",
+          "parameters": {
+            "model": "zimage",
+            "width": 1080,
+            "height": 1920,
+            "safe": false
+          },
+          "cache_key": "short_oracao_sc07"
+        }
+      }
+    },
+    {
+      "id": "sc08",
+      "narration": {
+        "text": "Creia no Senhor e na sua bondade.",
+        "subtitles": true
+      },
+      "background": {
+        "visual": {
+          "type": "ai",
+          "provider": "pollinations",
+          "content_type": "image",
+          "prompt": "A person standing on a hilltop at midday, hands raised in quiet triumph, soft golden aura, peaceful and sovereign atmosphere.",
+          "parameters": {
+            "model": "zimage",
+            "width": 1080,
+            "height": 1920,
+            "safe": false
+          },
+          "cache_key": "short_oracao_sc08"
+        }
+      }
+    },
+    {
+      "id": "sc09-cta-interaction",
+      "narration": {
+        "text": "Receba isso e deixe seu Amém nos comentários e mande para mais alguém que precisa desta oração.",
+        "subtitles": true
+      },
+      "background": {
+        "visual": {
+          "type": "ai",
+          "provider": "pollinations",
+          "content_type": "image",
+          "prompt": "A group of diverse hands joining together in a circle under a beam of heavenly light, ancient robes, sacred unity, 8k resolution.",
+          "parameters": {
+            "model": "zimage",
+            "width": 1080,
+            "height": 1920,
+            "safe": false
+          },
+          "cache_key": "short_oracao_sc09"
+        }
+      }
+    },
+    {
+      "id": "sc10-cta-final",
+      "narration": {
+        "text": "Inscreva-se no Vida de Oração para fortalecer sua fé todos os dias. O Senhor é contigo!",
+        "subtitles": true
+      },
+      "visual_elements": [
+        {
+          "type": "image",
+          "source": "./assets/image/vida_de_oracao/logo-transparent.png",
+          "animation": {
+            "type": "fade_in",
+            "duration": 0.2
+          }
+        }
       ],
-      "description": "Você ora, clama e jejua, mas parece que o céu está fechado? Existe um 'erro oculto' que pode estar bloqueando suas bênçãos agora mesmo. \n\nNeste vídeo, eu revelo o bloqueio espiritual que ninguém te conta e como removê-lo para que sua resposta chegue em tempo recorde. Não ignore este aviso, pois ele pode ser a chave que você pediu a Deus hoje.\n\n✨ Este canal é o exército dos que não desistem. Se você é um guerreiro, confirme sua presença se inscrevendo agora.\n\n#oração #fé #vidadeoração #milagre #espiritualidade",
-      "publish_at": "2026-01-18 18:00:00"
+      "background": {
+        "visual": {
+          "type": "image",
+          "source": "./assets/image/vida_de_oracao/background-9:16.jpeg"
+        }
+      }
     }
+  ],
+  "youtube": {
+    "title": "🙏 ORAÇÃO PARA ABENÇOAR SUA TARDE ✨",
+    "description": "Uma palavra de autoridade para mudar o curso do seu dia! 🛡️\n\nNúmeros 6:24-25 revela o desejo de Deus para você hoje. Não aceite o cansaço, aceite o renovo sobrenatural. \n\n#oração #bênção #fé #Deus #vidadeoracao #milagre",
+    "tags": ["oração", "benção", "vida de oração", "deus", "fé", "palavra do dia"]
   }
-]
+}

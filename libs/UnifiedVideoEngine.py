@@ -268,12 +268,12 @@ class UnifiedVideoEngine:
 
                 print(f"[UVE] ✅ IA background salvo:  {filename} ({result['size']} bytes)")
 
-                self.ai_cache.store(cache_key, file_path, content_type, {
-                    "prompt": prompt,
-                    "provider": provider,
-                    "parameters": parameters,
-                    "size": result["size"]
-                })
+                # self.ai_cache.store(cache_key, file_path, content_type, {
+                #     "prompt": prompt,
+                #     "provider": provider,
+                #     "parameters": parameters,
+                #     "size": result["size"]
+                # })
 
             if content_type == "image":
                 bg_clip = (ImageClip(file_path)
@@ -902,11 +902,11 @@ class UnifiedVideoEngine:
             print("[UVE] Sem áudio de fundo configurado")
 
         # 11. Limpeza de arquivos temporários
-        try:
-            shutil.rmtree(temp_dir, ignore_errors=True)
-            print("[UVE] 🧹 Arquivos temporários removidos")
-        except Exception as e:
-            print(f"[UVE] ⚠️ Falha na limpeza: {e}")
+        # try:
+        #     shutil.rmtree(temp_dir, ignore_errors=True)
+        #     print("[UVE] 🧹 Arquivos temporários removidos")
+        # except Exception as e:
+        #     print(f"[UVE] ⚠️ Falha na limpeza: {e}")
 
         # 12. Upload para YouTube (se configurado)
         if self.data_config.get("youtube") and self.data_config.get("debug") is not True:
