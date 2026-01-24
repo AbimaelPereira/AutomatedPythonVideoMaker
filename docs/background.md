@@ -1,159 +1,112 @@
-# background — configuração visual e áudio (muitos exemplos)
+# background — visual, áudio e filtros
 
-Campos principais
-- visual: { type: "image"|"video"|"directory", source, loop_background, max_clip_duration, shuffle }
-- audio: { type: "file"|"directory", source, volume, loop }
-- crossfade_duration: tempo entre background clips (float)
-- enable_crossfade: boolean
-- max_clips: limite de clipes selecionados de um diretório
-- output_ratio / resolution_output: permite override da resolução final
+## Visão geral
+- Engine: `libs/Background/BackgroundEngine.py`
+- Suporta `background.visual.type`: `color`, `image`, `video`, `ai`, `directory`
+- `directory`: usa `libs/Background/DirectoryType.py` para carregar/redimensionar arquivos e cachear por caminho (path -> lista de clips)
+- Filtros: `background.filters` (substitui `overlays`); composição sobre o fundo
 
-Exemplos variados
+## Esquema JSON
 
-1) Background com imagem única
 ```json
-"background": {
-  "visual": {
-    "type": "image",
-    "source": "./assets/backgrounds/single_bg.jpg"
-  }
-}
-```
-
-2) Background com vídeo único e loop
-```json
-"background": {
-  "visual": {
-    "type": "video",
-    "source": "./assets/video/bg_loop.mp4",
-    "loop_background": true
-  }
-}
-```
-
-3) Background a partir de diretório (embaralhado, crossfade)
-```json
-"background": {
-  "visual": {
-    "type": "directory",
-    "source": "./assets/video/backgrounds/",
-    "shuffle": true,
-    "max_clips": 8,
-    "max_clip_duration": 4
-  },
-  "crossfade_duration": 0.9,
-  "enable_crossfade": true
-}
-```
-
-4) Background áudio: único arquivo
-```json
-"background": {
-  "audio": {
-    "type": "file",
-    "source": "./assets/audio/background_music.mp3",
-    "volume": 0.25,
-    "loop": true
-  }
-}
-```
-
-5) Background áudio: diretório com seleção aleatória
-```json
-"background": {
-  "audio": {
-    "type": "directory",
-    "source": "./assets/audio/bgs/",
-    "volume": 0.3,
-    "loop": true
-  }
-}
-```
-
-6) Completo — vídeo directory + música directory + overrides
-```json
-"background": {
-  "visual": {
-    "type": "directory",
-    "source": "./assets/video/vertical_backgrounds/",
-    "shuffle": false,
-    "max_clips": 5,
-    "max_clip_duration": 6
-  },
-  "audio": {
-    "type": "directory",
-    "source": "./assets/audio/soft_loop/",
-    "volume": 0.18
-  },
-  "enable_crossfade": true,
-  "crossfade_duration": 1.2
-}
-```
-
-7) Forçar resolução de saída para backgrounds (quando precisa de crop/resize)
-```json
-"background": {
-  "visual": {
-    "type": "directory",
-    "source": "./assets/video/backgrounds/",
-    "shuffle": true
-  },
-  "resolution_output": [1080, 1920]
-}
-```
-
-8) Caso de fallback: imagem + áudio local se diretório vazio
-```json
-"background": {
-  "visual": {
-    "type": "directory",
-    "source": "./assets/video/maybe_empty/",
-    "shuffle": true
-  },
-  "fallback": {
-    "visual": { "type": "image", "source": "./assets/images/default_bg.jpg" },
-    "audio": { "type": "file", "source": "./assets/audio/default_bg.mp3", "volume": 0.2 }
-  }
-}
-```
-
-Exemplo de vídeo completo (contexto de uso em vídeo JSON)
-```json
-[
-  {
-    "slug": "video_com_background_exemplo",
-    "output_ratio": "9:16",
-    "global_settings": {
-      "background": {
-        "visual": {
-          "type": "directory",
-          "source": "./assets/video/vertical_bg/",
-          "shuffle": true,
-          "max_clips": 6
-        },
-        "audio": {
-          "type": "file",
-          "source": "./assets/audio/theme_loop.mp3",
-          "volume": 0.28
-        }
-      },
-      "crossfade_duration": 0.8
+"global_settings": {
+  "background": {
+    "visual": {
+      "type": "directory",
+      "source": "./assets/video/backgrounds",
+      "shuffle": true,
+      "max_clips": 6,
+      "max_clip_duration": 4.0,
+      "image_default_duration": 4.0
     },
-    "scenes": [
-      {
-        "id": "cena1",
-        "duration": 5,
-        "narration": { "text": "Abertura", "subtitles": true }
+    "audio": {
+      "type": "directory",
+      "source": "./assets/audio/canal_music",
+      "volume": 0.25
+    },
+    "filters": {
+      "particles": {
+        "density": 0.4,
+        "speed": 0.7,
+        "size": 0.5,
+        "movement": "float",
+        "blur_radius": 4.0,
+        "axis_ratio_range": [0.8, 1.3],
+        "color": "#FFD27A"
       }
-    ]
+    }
+  }
+}
+```
+
+### Tipos suportados (`background.visual.type`)
+- `color`
+  - `"source": "#000000"` (hex)
+- `image`
+  - `"source": "./path/to/image.png"`
+  - Ajuste: recorte proporcional + resize para resolução alvo
+- `video`
+  - `"source": "./path/to/video.mp4"`
+  - Ajuste: resize; subclip/loop para duração da cena; remove áudio
+- `ai`
+  - `"provider"`, `"content_type": "image" | "video"`, `"prompt"`, `"parameters"`, `"cache_key"`
+  - Geração e cache automático; fallback se indisponível
+- `directory`
+  - `"source": "./assets/video/backgrounds"`
+  - `"shuffle": true | false`
+  - `"max_clips": int` (limite de arquivos carregados)
+  - `"max_clip_duration": float` (corte por clipe de vídeo)
+  - `"image_default_duration": float` (duração por imagem)
+  - Comportamento:
+    - `DirectoryType.load_clips` retorna lista de clips já redimensionados
+    - `BackgroundEngine` seleciona clipes, concatena e ajusta duração final da cena
+  - Cache:
+    - `dir_clips_cache[path_dir] = List[VideoClip]`
+    - Reuso por cenas com diferentes diretórios
+
+## Filtros de fundo (`background.filters`) — substitui `overlays`
+- Composição RGBA sobre fundo via `FiltersEngine` (particles implementado)
+- Merge: `global_settings.background.filters` pode ser sobrescrito por `scene.background.filters`
+
+Parâmetros `particles`:
+- `opacity`: 0..1 (máx por partícula; default 0.8)
+- `density`: 0..1 (quantidade; default 0.7)
+- `speed`: 0..1 (velocidade; default 0.6)
+- `size`: 0..1 (tamanho; default 0.6)
+- `movement`: `"scatter" | "float" | "fall"`
+- `color`: `#RRGGBB` ou `(r,g,b)`
+- `blur_radius`: pixels (default 3.0)
+- `axis_ratio_range`: `[min, max]` (ovais; default [0.8, 1.3])
+- Avançado:
+  - `num_particles`: int
+  - `speed_range`: `[min_px_per_s, max_px_per_s]`
+  - `size_range`: `[min_px, max_px]`
+  - `intensity`: aplica densidade/velocidade/tamanho quando respectivos ausentes
+
+## Exemplos
+
+Global + override por cena:
+```json
+"global_settings": {
+  "background": {
+    "visual": { "type": "directory", "source": "./assets/video/bg_default", "shuffle": true, "max_clips": 6 },
+    "audio": { "type": "directory", "source": "./assets/audio/bg", "volume": 0.25 },
+    "filters": { "particles": { "density": 0.4, "speed": 0.6, "size": 0.5, "color": "#FFFFFF" } }
+  }
+},
+"scenes": [
+  {
+    "id": "intro",
+    "duration": 5.0,
+    "background": {
+      "visual": { "type": "directory", "source": "./assets/video/intro_bg" },
+      "filters": { "particles": { "density": 0.7, "movement": "float", "color": "#FFD27A" } }
+    }
   }
 ]
 ```
 
-Regras operacionais
-- Quando visual.type == "directory": engine filtra por extensões válidas (mp4,mkv,avi,mov,flv,webm).
-- Se crossfade habilitado e vídeos curtos, ajuste max_clip_duration para evitar cortes bruscos.
-- volume aceitável: 0.0 a 1.0; valores < 0.3 recomendados para música de fundo.
-- fallback útil em pipelines automatizados para evitar erro quando diretório estiver vazio.
-
-Fim.
+## Migração
+- Remover `overlays` do nível da cena/global.
+- Adicionar `background.filters` com a mesma estrutura.
+- Nenhuma alteração em `visual_elements` (suporta `filters` próprios de elementos).

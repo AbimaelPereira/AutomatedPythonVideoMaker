@@ -1,181 +1,281 @@
-import DirectoryType
-import random
-# Imports das suas libs existentes
-from libs.MediaDownloader import MediaDownloader 
-from libs.AIProviders.AIProviderManager import AIProviderManager
-from libs.OverlayEngine import OverlayEngine # <--- Integração solicitada
+import os
+import json
+import hashlib
+from typing import Dict, List, Tuple, Optional
+from moviepy.editor import ColorClip, ImageClip, VideoFileClip, CompositeVideoClip, concatenate_videoclips
+from libs.Config import Config
+from libs.VisualClip import force_rgb
+from libs.MediaDownloader import MediaDownloader
+from libs.Background.DirectoryType import DirectoryType
+from libs.Background.FiltersEngine import FiltersEngine
+
+try:
+    from libs.AIProviders import ai_manager
+    from libs.AIProviders.AICache import AICache
+    AI_AVAILABLE = True
+except ImportError:
+    AI_AVAILABLE = False
+    ai_manager = None
+    AICache = None
+
+
+def _hex_to_rgb(hex_value):
+    if not isinstance(hex_value, str):
+        return tuple(hex_value)
+    hex_value = hex_value.lstrip('#')
+    try:
+        if len(hex_value) == 6:
+            return tuple(int(hex_value[i:i+2], 16) for i in (0, 2, 4))
+    except ValueError:
+        pass
+    return (0, 0, 0)
+
 
 class BackgroundEngine:
-    def __init__(self):
-        self.downloader = MediaDownloader()
-        self.ai_manager = AIProviderManager() 
-        self.overlay_engine = OverlayEngine() # Instancia a engine de overlays existente
+    """
+    Engine unificada para geração do fundo e aplicação de filtros.
+    Contempla todos os tipos suportados previamente em UVE._create_background_clip:
+      - color, image, video, ai, directory
+    - DirectoryType: carrega e redimensiona, retornando lista de clips por diretório (cache por path).
+    - Seleção/concatenação/loop para cobrir a duração ocorre aqui.
+    - Aplica background.filters (substitui overlays).
+    """
+    def __init__(self, resolution_output: Tuple[int, int], dir_clips_cache: Dict[str, List],
+                 ai_cache=None):
+        self.resolution_output = tuple(map(int, resolution_output))
+        self.dir_clips_cache = dir_clips_cache  # key: dir path -> List[VideoClip]
+        self.ai_cache = ai_cache if AI_AVAILABLE else None
+        # histórico simples (opcional)
+        self.last_used_videos: List[str] = []
+        self.max_history = 3
 
-        # Transforma o dicionário final em atributos da classe
-        for key, value in sel.items():
-            setattr(self, key, value)
+    # ---- Tipos visuais ----
+    def _build_color(self, cfg: Dict, scene_duration: float):
+        color = cfg.get("source", "#000000")
+        if isinstance(color, str):
+            color = _hex_to_rgb(color)
+        return ColorClip(size=self.resolution_output, color=color).set_duration(scene_duration)
 
-    def create_background(self, config, duration):
-        """
-        Gera o background (Visual + Overlays Externos).
-        """
-        visual_config = config.get("visual", {
-            "type": "color",
-            "source": "#000000",    
-        })
+    def _build_image(self, cfg: Dict, scene_duration: float, storage_dir: str):
+        src = cfg.get("source")
+        if not src:
+            raise ValueError("Source da imagem não especificada")
+        path = MediaDownloader.resolve_source_path(src, storage_dir)
+        return ImageClip(path).resize(newsize=self.resolution_output).set_duration(scene_duration)
 
-        overlay_config = config.get("overlays", None)
+    def _build_video(self, cfg: Dict, scene_duration: float, storage_dir: str):
+        src = cfg.get("source")
+        if not src:
+            raise ValueError("Source do vídeo não especificada")
+        path = MediaDownloader.resolve_source_path(src, storage_dir)
+        clip = VideoFileClip(path, audio=False).resize(newsize=self.resolution_output)
+        if clip.duration < scene_duration:
+            clip = clip.loop(duration=scene_duration)
+        else:
+            clip = clip.subclip(0, scene_duration)
+        return clip.without_audio()
 
-        # 1. Gerar Camada Base (Visual)
-        background_clip = self._generate_visual_layer(visual_config, duration)
+    def _build_ai(self, cfg: Dict, scene_duration: float, storage_dir: str):
+        if not AI_AVAILABLE or not self.ai_cache:
+            raise ValueError("Sistema de IA não está disponível")
 
-        # 2. Padronizar (Resize, Crop, Loop/Cut)
-        background_clip = self._standardize_clip(background_clip, duration)
+        provider = cfg.get("provider", "pollinations")
+        content_type = cfg.get("content_type", "image")
+        prompt = cfg.get("prompt", "")
+        parameters = cfg.get("parameters", {})
+        cache_key = cfg.get("cache_key")
 
-        # 3. Aplicar Overlays (Delegando para OverlayEngine)
-        if overlay_config:
-            print("[BackgroundEngine] Aplicando overlays via OverlayEngine...")
-            final_clip = self._apply_overlays_external(background_clip, overlay_config, duration)
-            return final_clip
-        
-        return base_clip
+        if not prompt:
+            raise ValueError("Prompt não especificado para IA background")
 
-    def _generate_visual_layer(self, config, duration):
-        bg_type = config.get("type", "color")
-        
-        try:
-            if bg_type == "directory":
-                return self._create_from_directory(self, {
-                    "duration": duration,
-                    # "preloaded_clips": config.get("parameters", {}).get("preloaded_clips", None),
-                })
-            elif bg_type == "ai":
-                return self._create_from_ai(config)
-            elif bg_type == "video":
-                return self._create_from_video(config)
-            elif bg_type == "image":
-                return self._create_from_image(config, duration)
-            elif bg_type == "color":
-                color = config.get("parameters", {}).get("color", "#000000")
-                return ColorClip(size=(self.width, self.height), color=color).set_duration(duration)
+        if not cache_key:
+            cache_data = {
+                "provider": provider,
+                "type": content_type,
+                "prompt": prompt,
+                "parameters": parameters
+            }
+            cache_key = hashlib.md5(json.dumps(cache_data, sort_keys=True).encode()).hexdigest()[:12]
+
+        cached_file = self.ai_cache.get(cache_key, content_type) if self.ai_cache else None
+        if cached_file:
+            file_path = cached_file
+        else:
+            if not parameters.get("width") and not parameters.get("height"):
+                parameters["width"] = self.resolution_output[0]
+                parameters["height"] = self.resolution_output[1]
+
+            if content_type == "image":
+                result = ai_manager.generate_image(prompt=prompt, provider=provider, **parameters)
+            elif content_type == "video":
+                result = ai_manager.generate_video(prompt=prompt, provider=provider, **parameters)
             else:
-                print(f"[BackgroundEngine] Tipo '{bg_type}' desconhecido. Usando preto.")
-                return ColorClip(size=(self.width, self.height), color="#000000").set_duration(duration)
-        except Exception as e:
-            print(f"[BackgroundEngine] Erro crítico ao gerar visual: {e}. Fallback para preto.")
-            return ColorClip(size=(self.width, self.height), color="#000000").set_duration(duration)
+                raise ValueError(f"Tipo de conteúdo IA inválido: {content_type}")
 
-    def _create_from_directory(self, params={}):
-        defaults = {
-            "duration": None,
-            "preloaded_clips": None,
-            
-            "crossfade_duration": 0.8,
-            "enable_crossfade": True,
+            if not result.get("success"):
+                raise ValueError(f"Falha na geração IA: {result.get('error')}")
 
-            "max_clip_duration": 4,
+            extension = "png" if content_type == "image" else "mp4"
+            filename = f"ai_bg_{cache_key}.{extension}"
+            file_path = os.path.join(storage_dir, filename)
 
-            "max_clips": None,
-            "shuffle_clips": True,
-        }
+            with open(file_path, "wb") as f:
+                f.write(result["content"])
 
-        params = {**defaults, **params}
+        if content_type == "image":
+            return ImageClip(file_path).resize(newsize=self.resolution_output).set_duration(scene_duration)
+        else:
+            clip = VideoFileClip(file_path, audio=False).resize(newsize=self.resolution_output)
+            if clip.duration < scene_duration:
+                clip = clip.loop(duration=scene_duration)
+            else:
+                clip = clip.subclip(0, scene_duration)
+            return clip.without_audio()
 
-        # clips = preloaded_clips if preloaded_clips is not None else self.get_processed_clips()
-        clips = params.get("preloaded_clips", None)
+    def _select_random_videos_for_duration(self, available_clips: List, target_duration: float) -> List:
+        """Seleciona vídeos aleatórios para cobrir a duração necessária (realocado da UVE)."""
+        if not available_clips:
+            return []
+
+        selected_clips = []
+        current_duration = 0.0
+        attempts = 0
+        max_attempts = len(available_clips) * 3
+
+        available_for_selection = []
+        for clip in available_clips:
+            clip_path = getattr(clip, 'filename', str(hash(str(clip))))
+            if clip_path not in self.last_used_videos:
+                available_for_selection.append(clip)
+
+        if not available_for_selection:
+            available_for_selection = available_clips.copy()
+            self.last_used_videos = []
+
+        while current_duration < target_duration and attempts < max_attempts:
+            attempts += 1
+            if not available_for_selection:
+                break
+
+            selected_clip = random.choice(available_for_selection)
+            clip_duration = getattr(selected_clip, 'duration', 4.0)
+            remaining_duration = target_duration - current_duration
+            actual_duration = min(clip_duration, remaining_duration)
+
+            if actual_duration < clip_duration:
+                start_time = random.uniform(0, max(0, clip_duration - actual_duration))
+                clip_segment = selected_clip.subclip(start_time, start_time + actual_duration)
+            else:
+                clip_segment = selected_clip.copy()
+
+            selected_clips.append(clip_segment)
+            current_duration += actual_duration
+
+            clip_path = getattr(selected_clip, 'filename', str(hash(str(selected_clip))))
+            if clip_path not in self.last_used_videos:
+                self.last_used_videos.append(clip_path)
+
+            available_for_selection.remove(selected_clip)
+
+        if len(self.last_used_videos) > self.max_history:
+            self.last_used_videos = self.last_used_videos[-self.max_history:]
+
+        return selected_clips
+
+    def _build_directory(self, cfg: Dict, scene_duration: float) -> Optional:
+        source_dir = cfg.get("source")
+        if not source_dir:
+            raise ValueError("Diretório source não especificado")
+
+        loader = DirectoryType(self.resolution_output, self.dir_clips_cache)
+        if source_dir not in self.dir_clips_cache:
+            clips = loader.load_clips(cfg, scene_duration)
+        else:
+            clips = self.dir_clips_cache[source_dir]
 
         if not clips:
-            return None
+            return ColorClip(size=self.resolution_output, color=(0, 0, 0)).set_duration(scene_duration)
 
-        if params.get("shuffle_clips", True):
-            random.shuffle(clips)
+        selected = self._select_random_videos_for_duration(clips, float(scene_duration))
+        if not selected:
+            return ColorClip(size=self.resolution_output, color=(0, 0, 0)).set_duration(scene_duration)
 
-        if params.get("max_clips", None):
-            clips = clips[:params["max_files"]]
+        if len(selected) == 1:
+            bg_clip = selected[0]
+            if bg_clip.duration < scene_duration:
+                bg_clip = bg_clip.loop(duration=scene_duration)
+            elif bg_clip.duration > scene_duration:
+                bg_clip = bg_clip.subclip(0, scene_duration)
+            return bg_clip
 
-        # Ajusta a duração de cada clipe
-        ajusted_clips = []
+        bg_clip = concatenate_videoclips(selected, method="compose")
+        if bg_clip.duration > scene_duration:
+            bg_clip = bg_clip.subclip(0, scene_duration)
+        elif bg_clip.duration < scene_duration:
+            remaining = scene_duration - bg_clip.duration
+            last_clip = selected[-1]
+            extra_clip = last_clip.subclip(0, remaining) if last_clip.duration >= remaining else last_clip.loop(duration=remaining)
+            bg_clip = concatenate_videoclips([bg_clip, extra_clip], method="compose")
+        return bg_clip
 
-        for clip in clips:
-            if hasattr(clip, 'duration'):
-                if clip.duration > params.get("max_clip_duration", 4):
-                    clip = clip.subclip(0, params.get("max_clip_duration", 4))
-            else:
-                clip = clip.set_duration(params.get("max_clip_duration", 4))
-            ajusted_clips.append(clip)
-
-        clips = ajusted_clips
-
-        
-        final_duration = 0
-        extended_clips = []
-        idx = 0
-        while True:
-            clip = clips[idx % len(clips)]
-
-            if extended_clips:
-                nova_duracao = final_duration + clip.duration - params["crossfade_duration"]
-            else:
-                nova_duracao = final_duration + clip.duration
-
-            if nova_duracao >= duracao:
-                restante = duracao - final_duration
-                if extended_clips:
-                    restante += params["crossfade_duration"]
-                if restante < clip.duration:
-                    clip = clip.subclip(0, restante)
-                extended_clips.append(clip)
-                break
-            else:
-                extended_clips.append(clip)
-                final_duration = nova_duracao
-                idx += 1
-        clips = extended_clips
-
-        if params.get("enable_crossfade", True):
-
-            base = clips[0]
-            for next_clip in clips[1:]:
-                next_clip = next_clip.crossfadein(params["crossfade_duration"]).set_start(base.duration - params["crossfade_duration"])
-                base = CompositeVideoClip([base, next_clip]).set_duration(base.duration + next_clip.duration - params["crossfade_duration"])
-            final_video = base
+    # ---- Filtros ----
+    def _apply_filters(self, bg_clip, global_filters_cfg: Dict, scene_filters_cfg: Optional[Dict], scene_duration: float):
+        if scene_filters_cfg is not None and isinstance(scene_filters_cfg, dict):
+            filters_cfg = Config.deep_merge(global_filters_cfg or {}, scene_filters_cfg)
         else:
-            final_video = concatenate_videoclips(clips, method='compose')
+            filters_cfg = dict(global_filters_cfg or {})
 
-        if params.get("duration", None):
-            final_video = final_video.subclip(0, params["duration"])
+        if not filters_cfg:
+            return bg_clip.fl_image(force_rgb)
 
-        return final_video
+        engine = FiltersEngine(self.resolution_output)
+        fclip = engine.create_filters_clip(filters_cfg, float(scene_duration))
+        if fclip is None:
+            return bg_clip.fl_image(force_rgb)
+        composed = CompositeVideoClip([bg_clip, fclip], size=self.resolution_output).set_duration(scene_duration)
+        return composed.fl_image(force_rgb)
 
-    def _create_from_ai(self, config):
-        provider = config.get("provider", "pollinations")
-        prompt = config.get("prompt")
-        params = config.get("parameters", {})
-        
-        # Injeção de contexto se o prompt vier com placeholders
-        # Ex: "Cena de {cenario}" -> "Cena de montanha" (Isso deve ser feito antes, mas aqui garantimos)
-        
-        image_path = self.ai_manager.generate_image(
-            prompt=prompt, 
-            provider=provider, 
-            width=self.width, 
-            height=self.height,
-            model=params.get("model", "flux")
-        )
-        return ImageClip(image_path)
+    # ---- API principal ----
+    def build_scene_background(self, global_settings: Dict, scene_data: Dict, scene_duration: float,
+                               scene_dir: str, video_dir: str):
+        print(f"[BackgroundEngine] Criando fundo para duração: {scene_duration:.2f}s")
 
-    def _create_from_video(self, config):
-        source = config.get("source")
-        if source.startswith("http"):
-            local_path = self.downloader.download_video(source)
+        global_background = global_settings.get("background", {}) or {}
+        scene_background = scene_data.get("background", None)
+
+        if scene_background is not None:
+            background_config = Config.deep_merge(global_background, scene_background)
+            storage_dir = scene_dir
+            print("[BackgroundEngine] Config de fundo: merge (global + cena)")
         else:
-            local_path = source
-        return VideoFileClip(local_path)
+            background_config = dict(global_background)
+            storage_dir = video_dir
+            print("[BackgroundEngine] Config de fundo: global")
 
-    def _create_from_image(self, config, duration):
-        source = config.get("source")
-        if source and source.startswith("http"):
-            local_path = self.downloader.download_image(source)
-        else:
-            local_path = source
-        return ImageClip(local_path)
+        visual_config = background_config.get("visual", {}) or {}
+        bg_type = visual_config.get("type", "color")
+
+        try:
+            if bg_type == "color":
+                bg_clip = self._build_color(visual_config, scene_duration)
+            elif bg_type == "image":
+                bg_clip = self._build_image(visual_config, scene_duration, storage_dir)
+            elif bg_type == "video":
+                bg_clip = self._build_video(visual_config, scene_duration, storage_dir)
+            elif bg_type == "ai":
+                bg_clip = self._build_ai(visual_config, scene_duration, storage_dir)
+            elif bg_type == "directory":
+                bg_clip = self._build_directory(visual_config, scene_duration)
+            else:
+                print(f"[BackgroundEngine] ⚠️ Tipo de fundo desconhecido: {bg_type}")
+                bg_clip = ColorClip(size=self.resolution_output, color=(0, 0, 0)).set_duration(scene_duration)
+        except Exception as e:
+            print(f"[BackgroundEngine] ❌ Falha ao criar fundo: {e}")
+            import traceback
+            traceback.print_exc()
+            print("[BackgroundEngine] Fallback: preto")
+            bg_clip = ColorClip(size=self.resolution_output, color=(0, 0, 0)).set_duration(scene_duration)
+
+        global_filters = background_config.get("filters", {}) or {}  # overlays -> filters
+        scene_filters = scene_background.get("filters") if isinstance(scene_background, dict) else None
+        return self._apply_filters(bg_clip, global_filters, scene_filters, scene_duration)

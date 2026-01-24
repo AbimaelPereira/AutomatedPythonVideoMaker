@@ -1,8 +1,6 @@
 {
     "global_settings": {
-        "tts": {
-            "voice": "pt-BR-AntonioNeural"
-        },
+        "tts": { "voice": "pt-BR-AntonioNeural" },
         "subtitle": {
             "font_path": "./assets/fonts/CormorantGaramond/CormorantGaramond-Bold.ttf",
             "font_size": 110,
@@ -13,10 +11,7 @@
             "shadow_color": "#A68A56",
             "shadow_opacity": 0.95,
             "blur_radius": 6.0,
-            "shadow_offset": [
-                4,
-                4
-            ]
+            "shadow_offset": [4, 4]
         },
         "background": {
             "visual": {
@@ -26,20 +21,17 @@
             "audio": {
                 "type": "directory",
                 "source": "./assets/audio/background/vidadeoracao"
-            }
-        },
-        "overlays": {
-            "particles": {
-                "density": 0.4,
-                "speed": 0.8,
-                "size": 0.4,
-                "movement": "float",
-                "blur_radius": 5.0,
-                "axis_ratio_range": [
-                    0.6,
-                    1.8
-                ],
-                "color": "#FFD27A"
+            },
+            "filters": {
+                "particles": {
+                    "density": 0.4,
+                    "speed": 0.8,
+                    "size": 0.4,
+                    "movement": "float",
+                    "blur_radius": 5.0,
+                    "axis_ratio_range": [0.6, 1.8],
+                    "color": "#FFD27A"
+                }
             }
         }
     },

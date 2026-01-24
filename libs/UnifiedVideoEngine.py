@@ -9,14 +9,13 @@ import gc
 import hashlib
 
 from libs.Config import Config
-from libs.BackgroundVideo import BackgroundVideo
 from libs.VisualClip import VisualClip, force_rgb
 from libs.Subtitle import Subtitle
 from libs.MediaDownloader import MediaDownloader
 from libs.TTS_Edge import EdgeTTS
 from libs.LayoutEngine import LayoutEngine
 from libs.YouTube import YouTube
-from libs.OverlayEngine import OverlayEngine
+from libs.Background.BackgroundEngine import BackgroundEngine  # NOVO
 
 try:
     from libs.AIProviders import ai_manager
@@ -67,9 +66,8 @@ class UnifiedVideoEngine:
         self.resolution_output = AVAILABLE_RESOLUTIONS.get(self.output_ratio, (1080, 1920))
         self.tts_config = self.global_settings.get("tts", {})
 
-        self.bg_cache = {}
-        self.last_used_videos = []
-        self.max_history = 3
+        # Caches
+        self.dir_media_index = {}  # path -> list[VideoClip] (DirectoryType cache)
 
         if AI_AVAILABLE:
             cache_dir = os.path.join(os.getcwd(), "cache", "ai_generated")
@@ -147,346 +145,9 @@ class UnifiedVideoEngine:
             traceback.print_exc()
             return None, 4.0, None, None
 
-    def _select_random_videos_for_duration(self, available_clips, target_duration, scene_id):
-        """Seleciona vídeos aleatórios para cobrir a duração necessária."""
-        if not available_clips:
-            return []
+    # REMOVIDOS: _select_random_videos_for_duration, _create_ai_background_clip, _create_background_clip, _apply_overlays_to_background
+    # Uso agora de BackgroundEngine para o fundo da cena (visual + filters)
 
-        selected_clips = []
-        current_duration = 0.0
-        attempts = 0
-        max_attempts = len(available_clips) * 3
-
-        available_for_selection = []
-        for clip in available_clips:
-            clip_path = getattr(clip, 'filename', str(hash(str(clip))))
-            if clip_path not in self.last_used_videos:
-                available_for_selection.append(clip)
-
-        if not available_for_selection: 
-            print(f"[UVE] Resetando histórico de vídeos para evitar deadlock")
-            available_for_selection = available_clips.copy()
-            self.last_used_videos = []
-
-        print(f"[UVE] Selecionando vídeos para duração:  {target_duration:.2f}s")
-        print(f"[UVE] Vídeos disponíveis: {len(available_for_selection)} (histórico: {len(self.last_used_videos)})")
-
-        while current_duration < target_duration and attempts < max_attempts:
-            attempts += 1
-
-            if not available_for_selection:
-                break
-
-            selected_clip = random.choice(available_for_selection)
-            clip_duration = getattr(selected_clip, 'duration', 4.0)
-
-            remaining_duration = target_duration - current_duration
-            actual_duration = min(clip_duration, remaining_duration)
-
-            if actual_duration < clip_duration:
-                start_time = random.uniform(0, max(0, clip_duration - actual_duration))
-                clip_segment = selected_clip.subclip(start_time, start_time + actual_duration)
-            else:
-                clip_segment = selected_clip.copy()
-
-            selected_clips.append(clip_segment)
-            current_duration += actual_duration
-
-            clip_path = getattr(selected_clip, 'filename', str(hash(str(selected_clip))))
-            if clip_path not in self.last_used_videos:
-                self.last_used_videos.append(clip_path)
-
-            available_for_selection.remove(selected_clip)
-
-            print(f"[UVE] Vídeo selecionado: duração {actual_duration:.2f}s (total: {current_duration:.2f}s)")
-
-            if not available_for_selection and current_duration < target_duration:
-                print(f"[UVE] ⚠️ Acabaram os vídeos únicos.  Duração atual: {current_duration:.2f}s")
-                break
-
-        if len(self.last_used_videos) > self.max_history:
-            self.last_used_videos = self.last_used_videos[-self.max_history:]
-
-        print(f"[UVE] ✅ {len(selected_clips)} vídeos selecionados para duração total: {current_duration:.2f}s")
-        return selected_clips
-
-    def _create_ai_background_clip(self, ai_config, scene_duration, storage_dir):
-        """Cria fundo usando IA"""
-        if not AI_AVAILABLE or not self.ai_cache:
-            raise ValueError("Sistema de IA não está disponível")
-
-        try:
-            provider = ai_config.get("provider", "pollinations")
-            content_type = ai_config.get("content_type", "image")
-            prompt = ai_config.get("prompt", "")
-            parameters = ai_config.get("parameters", {})
-            cache_key = ai_config.get("cache_key")
-
-            if not prompt:
-                raise ValueError("Prompt não especificado para IA background")
-
-            print(f"[UVE] 🤖 Processando background IA:  {content_type}")
-            print(f"[UVE] Prompt: {prompt[: 100]}...")
-
-            if not cache_key:
-                cache_data = {
-                    "provider": provider,
-                    "type": content_type,
-                    "prompt": prompt,
-                    "parameters": parameters
-                }
-                cache_key = hashlib.md5(json.dumps(cache_data, sort_keys=True).encode()).hexdigest()[:12]
-                print(f"[UVE] Cache key gerado: {cache_key}")
-
-            cached_file = self.ai_cache.get(cache_key, content_type)
-            if cached_file:
-                print(f"[UVE] ✅ IA background encontrado no cache:  {os.path.basename(cached_file)}")
-                file_path = cached_file
-            else:
-                print(f"[UVE] 🎨 Gerando {content_type} background com {provider}...")
-
-                if not parameters.get("width") and not parameters.get("height"):
-                    parameters["width"] = self.resolution_output[0]
-                    parameters["height"] = self.resolution_output[1]
-
-                if content_type == "image":
-                    result = ai_manager.generate_image(prompt=prompt, provider=provider, **parameters)
-                elif content_type == "video": 
-                    result = ai_manager.generate_video(prompt=prompt, provider=provider, **parameters)
-                else:
-                    raise ValueError(f"Tipo de conteúdo IA inválido: {content_type}")
-
-                if not result.get("success"):
-                    raise ValueError(f"Falha na geração IA: {result.get('error')}")
-
-                extension = "png" if content_type == "image" else "mp4"
-                filename = f"ai_bg_{cache_key}.{extension}"
-                file_path = os.path.join(storage_dir, filename)
-
-                with open(file_path, "wb") as f:
-                    f.write(result["content"])
-
-                print(f"[UVE] ✅ IA background salvo:  {filename} ({result['size']} bytes)")
-
-                # self.ai_cache.store(cache_key, file_path, content_type, {
-                #     "prompt": prompt,
-                #     "provider": provider,
-                #     "parameters": parameters,
-                #     "size": result["size"]
-                # })
-
-            if content_type == "image":
-                bg_clip = (ImageClip(file_path)
-                           .resize(newsize=self.resolution_output)
-                           .set_duration(scene_duration))
-                print(f"[UVE] ✅ IA background (imagem) criado: {scene_duration:.2f}s")
-
-            elif content_type == "video":
-                bg_clip = VideoFileClip(file_path, audio=False)
-                bg_clip = bg_clip.resize(newsize=self.resolution_output)
-
-                if bg_clip.duration < scene_duration:
-                    bg_clip = bg_clip.loop(duration=scene_duration)
-                else:
-                    bg_clip = bg_clip.subclip(0, scene_duration)
-
-                bg_clip = bg_clip.without_audio()
-                print(f"[UVE] ✅ IA background (vídeo) criado: {scene_duration:.2f}s")
-
-            return bg_clip
-
-        except Exception as e:
-            print(f"[UVE] ❌ Erro ao criar IA background: {e}")
-            import traceback
-            traceback.print_exc()
-            return ColorClip(size=self.resolution_output, color=(0, 0, 0)).set_duration(scene_duration)
-
-    def _create_background_clip(self, scene_data, scene_duration, scene_dir, video_dir):
-        """Cria clip de fundo com merge de configurações global/cena."""
-        print(f"[UVE] Criando fundo para duração: {scene_duration:.2f}s")
-
-        global_background = self.global_settings.get("background", {}) or {}
-        scene_background = scene_data.get("background", None)
-
-        if scene_background is not None:
-            background_config = deep_merge(global_background, scene_background)
-            storage_dir = scene_dir
-            print("[UVE] Usando configuração de fundo mesclada (global + cena)")
-        else:
-            background_config = dict(global_background)
-            storage_dir = video_dir
-            print("[UVE] Usando configuração de fundo global")
-
-        visual_config = background_config.get("visual", {})
-        bg_type = visual_config.get("type", "color")
-        bg_clip = None
-
-        try:
-            if bg_type == "color":
-                color = visual_config.get("source", "#000000")
-                if isinstance(color, str):
-                    color = hex_to_rgb(color)
-                print(f"[UVE] Criando fundo colorido: {color}")
-                bg_clip = ColorClip(size=self.resolution_output, color=color).set_duration(scene_duration)
-
-            elif bg_type == "image":
-                src = visual_config.get("source")
-                if not src:
-                    raise ValueError("Source da imagem não especificada")
-
-                path = MediaDownloader.resolve_source_path(src, storage_dir)
-                print(f"[UVE] Carregando imagem de fundo: {path}")
-
-                bg_clip = (ImageClip(path)
-                           .resize(newsize=self.resolution_output)
-                           .set_duration(scene_duration))
-
-            elif bg_type == "video":
-                src = visual_config.get("source")
-                if not src:
-                    raise ValueError("Source do vídeo não especificada")
-
-                path = MediaDownloader.resolve_source_path(src, storage_dir)
-                print(f"[UVE] Carregando vídeo de fundo: {path}")
-
-                bg_clip = VideoFileClip(path, audio=False)
-                bg_clip = bg_clip.resize(newsize=self.resolution_output)
-
-                if bg_clip.duration < scene_duration:
-                    bg_clip = bg_clip.loop(duration=scene_duration)
-                else:
-                    bg_clip = bg_clip.subclip(0, scene_duration)
-
-                bg_clip = bg_clip.without_audio()
-
-            elif bg_type == "ai":
-                bg_clip = self._create_ai_background_clip(visual_config, scene_duration, storage_dir)
-
-            elif bg_type == "directory":
-                source_dir = visual_config.get("source")
-                if not source_dir: 
-                    raise ValueError("Diretório source não especificado")
-
-                print(f"[UVE] Processando vídeos do diretório: {source_dir}")
-
-                if source_dir not in self.bg_cache:
-                    print(f"[UVE] Carregando vídeos do diretório para cache...")
-                    loader = BackgroundVideo({
-                        "background_videos_dir": source_dir,
-                        "resolution_output": self.resolution_output,
-                        "output_ratio": self.output_ratio,
-                        "crossfade_duration": self.global_settings.get("crossfade_duration", 0.8),
-                        "enable_crossfade": self.global_settings.get("enable_crossfade", True),
-                        "shuffle_clips": self.global_settings.get("shuffle_clips", True),
-                        "loop_background":  self.global_settings.get("loop_background", True),
-                        "max_clips":  self.global_settings.get("max_clips")
-                    })
-
-                    if hasattr(loader, "get_all_processed_clips"):
-                        self.bg_cache[source_dir] = loader.get_all_processed_clips()
-                    elif hasattr(loader, "get_processed_clips"):
-                        self.bg_cache[source_dir] = loader.get_processed_clips()
-                    else:
-                        print("[UVE] ⚠️ BackgroundVideo não tem método de cache conhecido")
-                        self.bg_cache[source_dir] = []
-
-                cached_clips = self.bg_cache.get(source_dir, [])
-                if cached_clips:
-                    print(f"[UVE] Cache contém {len(cached_clips)} vídeos processados")
-
-                    scene_id = scene_data.get('id', 'unknown')
-                    selected_clips = self._select_random_videos_for_duration(
-                        cached_clips, scene_duration, scene_id
-                    )
-
-                    if selected_clips:
-                        if len(selected_clips) == 1:
-                            bg_clip = selected_clips[0]
-                            if bg_clip.duration < scene_duration:
-                                bg_clip = bg_clip.loop(duration=scene_duration)
-                            elif bg_clip.duration > scene_duration:
-                                bg_clip = bg_clip.subclip(0, scene_duration)
-                        else:
-                            print(f"[UVE] Concatenando {len(selected_clips)} vídeos para o fundo")
-
-                            enable_crossfade = self.global_settings.get("enable_crossfade", False)
-                            crossfade_duration = self.global_settings.get("crossfade_duration", 0.5)
-
-                            if enable_crossfade and len(selected_clips) > 1:
-                                bg_clip = selected_clips[0]
-                                for next_clip in selected_clips[1:]:
-                                    bg_clip = concatenate_videoclips(
-                                        [bg_clip, next_clip],
-                                        method="compose"
-                                    )
-                                    if bg_clip.duration > crossfade_duration:
-                                        bg_clip = bg_clip.crossfadein(crossfade_duration)
-                            else:
-                                bg_clip = concatenate_videoclips(selected_clips, method="compose")
-
-                            if bg_clip.duration > scene_duration:
-                                bg_clip = bg_clip.subclip(0, scene_duration)
-                            elif bg_clip.duration < scene_duration:
-                                remaining = scene_duration - bg_clip.duration
-                                if remaining > 0 and selected_clips:
-                                    last_clip = selected_clips[-1]
-                                    if last_clip.duration >= remaining:
-                                        extra_clip = last_clip.subclip(0, remaining)
-                                    else:
-                                        extra_clip = last_clip.loop(duration=remaining)
-                                    bg_clip = concatenate_videoclips([bg_clip, extra_clip])
-
-                        print(f"[UVE] ✅ Fundo criado com duração final: {bg_clip.duration:.2f}s")
-                    else:
-                        print("[UVE] ⚠️ Nenhum vídeo selecionado, usando fundo preto")
-                        bg_clip = ColorClip(size=self.resolution_output, color=(0, 0, 0)).set_duration(scene_duration)
-                else:
-                    print("[UVE] ⚠️ Cache vazio, usando fundo preto")
-                    bg_clip = ColorClip(size=self.resolution_output, color=(0, 0, 0)).set_duration(scene_duration)
-
-            else:
-                print(f"[UVE] ⚠️ Tipo de fundo desconhecido: {bg_type}, usando preto")
-                bg_clip = ColorClip(size=self.resolution_output, color=(0, 0, 0)).set_duration(scene_duration)
-
-        except Exception as e:
-            print(f"[UVE] ❌ Falha ao criar fundo: {e}")
-            import traceback
-            traceback.print_exc()
-            print(f"[UVE] Usando fundo preto como fallback")
-            bg_clip = ColorClip(size=self.resolution_output, color=(0, 0, 0)).set_duration(scene_duration)
-
-        return self._apply_overlays_to_background(bg_clip, scene_data, scene_duration)
-
-    def _apply_overlays_to_background(self, bg_clip, scene_data, scene_duration):
-        """Aplica overlays ao fundo"""
-        global_overlays = self.global_settings.get("overlays", {}) or {}
-        scene_overlays = scene_data.get("overlays", None)
-
-        if scene_overlays is not None: 
-            overlays_config = deep_merge(global_overlays, scene_overlays)
-        else:
-            overlays_config = dict(global_overlays)
-
-        overlay_clip = None
-        if overlays_config:
-            try:
-                print("[UVE] Processando overlays...")
-                ov_engine = OverlayEngine(resolution=self.resolution_output)
-                overlay_clip = ov_engine.create_overlays_clip(overlays_config, scene_duration)
-            except Exception as e:
-                print(f"[UVE] ⚠️ Falha ao gerar overlays: {e}")
-
-        if overlay_clip is not None:
-            try:
-                print("[UVE] Compondo fundo + overlays")
-                composed = CompositeVideoClip([bg_clip, overlay_clip],
-                                              size=self.resolution_output).set_duration(scene_duration)
-                return composed.fl_image(force_rgb)
-            except Exception as e: 
-                print(f"[UVE] ❌ Falha ao compor overlay sobre fundo: {e}")
-
-        return bg_clip.fl_image(force_rgb)
-    
     def _create_visual_elements_clip(self, scene_data, scene_duration, scene_dir):
         """Cria elementos visuais da cena."""
         elements = scene_data.get("visual_elements", [])
@@ -620,13 +281,6 @@ class UnifiedVideoEngine:
     def _apply_background_audio_to_video(self, video_path: str, output_path: str) -> str:
         """
         Aplica áudio de fundo ao vídeo final concatenado.
-        
-        Args:
-            video_path: caminho do vídeo sem áudio de fundo
-            output_path:  caminho de saída do vídeo com áudio de fundo
-        
-        Returns:
-            caminho do vídeo final ou video_path original se falhar
         """
         bg_audio_config = self.global_settings.get("background", {}).get("audio", {})
         
@@ -643,10 +297,21 @@ class UnifiedVideoEngine:
             return video_path
         
         try:
-            # Seleciona arquivo de áudio
             if audio_type == "directory":
-                audio_path = self._select_random_audio_from_dir(source)
-            else:  # file
+                """Seleciona um arquivo de áudio aleatório de um diretório. (Corrigido)"""
+                if not os.path.isdir(source):
+                    print(f"[UVE] ⚠️ Diretório de áudio não encontrado: {source}")
+                    return None
+                
+                valid_extensions = ('.mp3', '.wav', '.ogg', '.m4a')
+                audio_files = [f for f in os.listdir(source) if f.lower().endswith(valid_extensions)]
+                
+                if not audio_files:
+                    print(f"[UVE] ⚠️ Nenhum arquivo de áudio válido encontrado em: {source}")
+                    return None
+                    
+                audio_path = os.path.join(source, random.choice(audio_files))
+            else:
                 audio_path = source
             
             if not audio_path or not os.path.exists(audio_path):
@@ -655,33 +320,26 @@ class UnifiedVideoEngine:
             
             print(f"[UVE] 🎵 Aplicando áudio de fundo: {os.path.basename(audio_path)}")
             
-            # Carrega vídeo para obter duração
             video_clip = VideoFileClip(video_path)
             video_duration = video_clip.duration
             
-            # Carrega áudio de fundo
             bg_audio = AudioFileClip(audio_path)
             
-            # Loop se necessário
             if bg_audio.duration < video_duration:
                 loops_needed = int(video_duration / bg_audio.duration) + 1
                 bg_clips = [bg_audio] * loops_needed
                 bg_audio = concatenate_audioclips(bg_clips)
             
-            # Ajusta duração e volume
             bg_audio = bg_audio.subclip(0, video_duration)
             bg_audio = bg_audio.volumex(volume)
             
-            # Mixa com áudio existente do vídeo
             if video_clip.audio:
                 final_audio = CompositeAudioClip([video_clip.audio, bg_audio])
             else:
                 final_audio = bg_audio
             
-            # Aplica ao vídeo
             final_video = video_clip.set_audio(final_audio)
             
-            # Exporta
             print(f"[UVE] 🎬 Renderizando vídeo com áudio de fundo...")
             final_video.write_videofile(
                 output_path,
@@ -694,7 +352,6 @@ class UnifiedVideoEngine:
                 logger=None
             )
             
-            # Limpeza
             video_clip.close()
             bg_audio.close()
             final_video.close()
@@ -729,7 +386,6 @@ class UnifiedVideoEngine:
 
         print(f"[UVE] ✅ Cena {scene_index + 1} renderizada:  {os.path.basename(temp_scene_path)}")
 
-        # Limpeza de memória
         try:
             composed_clip.close()
             if narration_clip:
@@ -741,21 +397,6 @@ class UnifiedVideoEngine:
         gc.collect()
 
         return temp_scene_path
-
-    def _select_random_audio_from_dir(self, directory):
-        """Seleciona um arquivo de áudio aleatório de um diretório. (Corrigido)"""
-        if not os.path.isdir(directory):
-            print(f"[UVE] ⚠️ Diretório de áudio não encontrado: {directory}")
-            return None
-        
-        valid_extensions = ('.mp3', '.wav', '.ogg', '.m4a')
-        audio_files = [f for f in os.listdir(directory) if f.lower().endswith(valid_extensions)]
-        
-        if not audio_files:
-            print(f"[UVE] ⚠️ Nenhum arquivo de áudio válido encontrado em: {directory}")
-            return None
-            
-        return os.path.join(directory, random.choice(audio_files))
     
     def run(self, output_filename="final_video.mp4"):
         """Método principal de renderização."""
@@ -779,10 +420,10 @@ class UnifiedVideoEngine:
             scene_dir = os.path.join(self.output_dir, scene_id)
             os.makedirs(scene_dir, exist_ok=True)
 
-            # 1. Processar narração
+            # 1. Narração
             narration_clip, duration_from_tts, word_timing, subtitle_file = self._process_narration(scene, scene_dir)
 
-            # 2. Definir duração da cena
+            # 2. Duração
             scene_duration = scene.get("duration", duration_from_tts)
             if not scene_duration or scene_duration < 0.1:
                 scene_duration = 4.0
@@ -790,9 +431,16 @@ class UnifiedVideoEngine:
             else:
                 print(f"[UVE] Duração da cena: {scene_duration}s")
 
-            # 3. Criar componentes da cena
+            # 3. Componentes
             try:
-                background_clip = self._create_background_clip(scene, scene_duration, scene_dir, self.output_dir)
+                # Fundo via BackgroundEngine (visual + background.filters)
+                bg_engine = BackgroundEngine(
+                    resolution_output=self.resolution_output,
+                    dir_clips_cache=self.dir_media_index,
+                    ai_cache=self.ai_cache,
+                )
+                background_clip = bg_engine.build_scene_background(self.global_settings, scene, float(scene_duration), scene_dir, self.output_dir)
+
                 visual_clip = self._create_visual_elements_clip(scene, scene_duration, scene_dir)
 
                 subtitle_clip = None
@@ -809,7 +457,7 @@ class UnifiedVideoEngine:
                     final_scene_clip.append(subtitle_clip)
                     print("[UVE] ✅ Legendas adicionadas")
 
-                # 5. Aplicar force_rgb em todos os clips
+                # 5. force_rgb
                 safe_clips = []
                 for c in final_scene_clip: 
                     try:
@@ -823,14 +471,13 @@ class UnifiedVideoEngine:
                 composed_clip = CompositeVideoClip(safe_clips, size=self.resolution_output).set_duration(scene_duration)
                 composed_clip = composed_clip.fl_image(force_rgb)
 
-                # 7. Adicionar narração
+                # 7. Narração
                 if narration_clip:
                     composed_clip = composed_clip.set_audio(narration_clip)
                     print("[UVE] ✅ Narração adicionada à cena")
                 else:
                     print("[UVE] Cena sem narração")
                 
-                # sem transição, renderiza imediatamente
                 temp_scene_path = self._render_scene(
                     scene_index, total_scenes, composed_clip, narration_clip, temp_dir
                 )
@@ -842,13 +489,11 @@ class UnifiedVideoEngine:
                 traceback.print_exc()
                 continue
 
-
-        # 9. Concatenar cenas em vídeo final
+        # 9. Concatenar cenas
         slug = self.data_config.get("slug", "video_final")
         if not output_filename.endswith('.mp4'):
             output_filename = f"{slug}.mp4"
 
-        # Vídeo intermediário (sem áudio de fundo)
         intermediate_path = os.path.join(temp_dir, f"{slug}_no_bg_audio.mp4")
         output_path = os.path.join(self.output_dir, output_filename)
 
@@ -872,7 +517,7 @@ class UnifiedVideoEngine:
             subprocess.run(ffmpeg_cmd, check=True, capture_output=True)
             print(f"[UVE] ✅ Vídeo concatenado:  {intermediate_path}")
 
-        except subprocess.CalledProcessError as e:
+        except subprocess.CalledProcessError:
             print("[UVE] ⚠️ Concatenação rápida falhou, tentando re-encoding...")
             try:
                 ffmpeg_cmd_reencode = [
@@ -891,24 +536,16 @@ class UnifiedVideoEngine:
             print(f"[UVE] ❌ Falha na concatenação: {e}")
             return None
 
-        # 10. Aplicar áudio de fundo ao vídeo final
+        # 10. Áudio de fundo
         bg_audio_config = self.global_settings.get("background", {}).get("audio", {})
         if bg_audio_config and bg_audio_config.get("source"):
             final_path = self._apply_background_audio_to_video(intermediate_path, output_path)
         else:
-            # Sem áudio de fundo, apenas renomeia/move
             shutil.move(intermediate_path, output_path)
             final_path = output_path
             print("[UVE] Sem áudio de fundo configurado")
 
-        # 11. Limpeza de arquivos temporários
-        # try:
-        #     shutil.rmtree(temp_dir, ignore_errors=True)
-        #     print("[UVE] 🧹 Arquivos temporários removidos")
-        # except Exception as e:
-        #     print(f"[UVE] ⚠️ Falha na limpeza: {e}")
-
-        # 12. Upload para YouTube (se configurado)
+        # 11. Upload YouTube (opcional)
         if self.data_config.get("youtube") and self.data_config.get("debug") is not True:
             try:
                 print("[UVE] 📤 Iniciando upload para o YouTube...")
@@ -919,7 +556,7 @@ class UnifiedVideoEngine:
             except Exception as e:
                 print(f"[UVE] ❌ Upload YouTube falhou: {e}")
 
-        # 13. Abrir vídeo se em modo debug
+        # 12. Abrir vídeo (debug)
         if self.data_config.get("debug") is True:
             try:
                 print("[UVE] 🎥 Abrindo vídeo final...")
@@ -933,6 +570,5 @@ class UnifiedVideoEngine:
 
         print(f"\n[UVE] 🎉 Processamento concluído com sucesso!")
         print(f"[UVE] 📁 Arquivo final:  {final_path}")
-        print(f"[UVE] ⏱️ Duração total: {self.total_duration:.2f}s")
 
         return final_path
