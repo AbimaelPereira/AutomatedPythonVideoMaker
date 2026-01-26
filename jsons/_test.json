@@ -11,21 +11,21 @@
         },
         "scenes": [
             {
-                "id": "0001",
+                "slug": "0001",
                 "narration": {
                     "text": "Bom dia, meus irmãos!",
                     "subtitles": true
                 }
             },
             {
-                "id": "0002",
+                "slug": "0002",
                 "narration": {
                     "text": "Que sua semana comece nas mãos de Deus, com paz direção e esperança. ",
                     "subtitles": true
                 }
             },
             {
-                "id": "0003",
+                "slug": "0003",
                 "narration": {
                     "text": "Quando colocamos os nossos dias em oração, Ele cuida de cada detalhe do caminho.",
                     "subtitles": true

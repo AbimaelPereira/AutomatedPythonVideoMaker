@@ -12,10 +12,10 @@ from libs.Config import Config
 from libs.VisualClip import VisualClip, force_rgb
 from libs.Subtitle import Subtitle
 from libs.MediaDownloader import MediaDownloader
+from libs.TTS_Edge import EdgeTTS
 from libs.LayoutEngine import LayoutEngine
 from libs.YouTube import YouTube
-from libs.Background.BackgroundEngine import BackgroundEngine
-from libs.NarrationEngine import NarrationEngine
+from libs.Background.BackgroundEngine import BackgroundEngine  # NOVO
 
 try:
     from libs.AIProviders import ai_manager
@@ -26,7 +26,7 @@ except ImportError as e:
     AI_AVAILABLE = False
     print(f"[UVE] ⚠️ Sistema de IA não disponível: {e}")
 
-AVAILABLE_RESOLUTIONS = {"9:16": (1080, 1920), "16:9": (1920, 1080)}
+AVAILABLE_RESOLUTIONS = {"9: 16": (1080, 1920), "16:9": (1920, 1080)}
 
 
 def hex_to_rgb(hex_value):
@@ -67,7 +67,7 @@ class UnifiedVideoEngine:
         self.tts_config = self.global_settings.get("tts", {})
 
         # Caches
-        self.dir_media_index = {}
+        self.dir_media_index = {}  # path -> list[VideoClip] (DirectoryType cache)
 
         if AI_AVAILABLE:
             cache_dir = os.path.join(os.getcwd(), "cache", "ai_generated")
@@ -95,402 +95,480 @@ class UnifiedVideoEngine:
         self.final_clips = []
         self.total_duration = 0.0
 
-        # Inicializa o gerenciador de narração
-        self.narration_manager = NarrationEngine(self.tts_config, self.output_dir)
-        
-        # Pré-processa narração se necessário
-        scenes = self.data_config.get("scenes", [])
-        if scenes:
-            self.narration_manager.preprocess_scenes(scenes)
+    def _get_tts_engine(self):
+        return EdgeTTS()
 
     def _process_narration(self, scene_data, target_dir):
-        """Delega o processamento de narração para o NarrationEngine."""
-        return self.narration_manager.process_scene_narration(scene_data, target_dir)
+        """Processa narração da cena gerando áudio e legendas."""
+        narration_config = scene_data.get("narration", {})
+        text = narration_config.get("text", "")
 
-    def process_scenes(self):
-        """Processa todas as cenas do vídeo."""
-        scenes = self.data_config.get("scenes", [])
-        
-        if not scenes:
-            print("[UVE] ⚠️ Nenhuma cena encontrada no JSON!")
-            return
-
-        print(f"[UVE] Processando {len(scenes)} cenas...")
-
-        for i, scene_data in enumerate(scenes):
-            scene_id = scene_data.get("id", f"scene_{i}")
-            print(f"\n[UVE] === Processando Cena {i+1}/{len(scenes)}: {scene_id} ===")
-            
-            try:
-                clip = self._process_scene(scene_data, i)
-                if clip:
-                    self.final_clips.append(clip)
-                    self.total_duration += clip.duration
-                    print(f"[UVE] ✅ Cena {scene_id} processada (duração: {clip.duration:.1f}s)")
-                else:
-                    print(f"[UVE] ⚠️ Cena {scene_id} falhou")
-            except Exception as e:
-                print(f"[UVE] ❌ ERRO na cena {scene_id}: {e}")
-                import traceback
-                traceback.print_exc()
-
-        print(f"\n[UVE] ✅ Processamento concluído. Total: {len(self.final_clips)} cenas, duração: {self.total_duration:.1f}s")
-
-    def _process_scene(self, scene_data, scene_index):
-        """Processa uma cena individual."""
-        scene_id = scene_data.get("id", f"scene_{scene_index}")
-        target_dir = os.path.join(self.output_dir, scene_id)
-        os.makedirs(target_dir, exist_ok=True)
-
-        # Processamento de narração
-        audio_path, duration, subtitle_path, word_boundaries = self._process_narration(scene_data, target_dir)
-        
-        if not audio_path:
-            duration = scene_data.get("duration", 4.0)
-            print(f"[UVE] Cena sem áudio, usando duração fixa: {duration}s")
-
-        # Processamento de background
-        bg_config = self._merge_background_config(scene_data)
-        background_engine = BackgroundEngine(
-            bg_config, 
-            self.resolution_output, 
-            duration, 
-            target_dir,
-            scene_id
-        )
-        background_clip = background_engine.create_background()
-
-        # Processamento de elementos visuais
-        visual_clips = self._process_visual_elements(scene_data, target_dir, duration)
-
-        # Processamento de legendas
-        subtitle_clip = None
-        if subtitle_path and os.path.exists(subtitle_path):
-            subtitle_config = self._merge_subtitle_config(scene_data)
-            subtitle_clip = self._create_subtitle_clip(subtitle_path, duration, subtitle_config)
-
-        # Composição final da cena
-        final_clip = self._compose_scene(
-            background_clip, 
-            visual_clips, 
-            subtitle_clip, 
-            audio_path, 
-            duration
-        )
-
-        # Limpeza de memória
-        self._cleanup_clips([background_clip] + visual_clips + ([subtitle_clip] if subtitle_clip else []))
-
-        return final_clip
-
-    def _merge_background_config(self, scene_data):
-        """Mescla configurações de background global com da cena."""
-        global_bg = self.global_settings.get("background", {})
-        scene_bg = scene_data.get("background", {})
-        return deep_merge(global_bg, scene_bg)
-
-    def _merge_subtitle_config(self, scene_data):
-        """Mescla configurações de legenda global com da cena."""
-        global_subtitle = self.global_settings.get("subtitle", {})
-        scene_subtitle = scene_data.get("subtitle", {})
-        return deep_merge(global_subtitle, scene_subtitle)
-
-    def _process_visual_elements(self, scene_data, target_dir, duration):
-        """Processa elementos visuais da cena."""
-        elements = scene_data.get("visual_elements", [])
-        visual_clips = []
-
-        for element in elements:
-            try:
-                clip = self._create_visual_element_clip(element, target_dir, duration)
-                if clip:
-                    visual_clips.append(clip)
-            except Exception as e:
-                print(f"[UVE] ⚠️ Erro ao processar elemento visual: {e}")
-
-        return visual_clips
-
-    def _create_visual_element_clip(self, element, target_dir, duration):
-        """Cria clip para um elemento visual específico."""
-        element_type = element.get("type")
-        
-        if element_type == "image":
-            return self._create_image_clip(element, duration)
-        elif element_type == "video":
-            return self._create_video_clip(element, duration)
-        elif element_type == "text_box":
-            return self._create_text_clip(element, duration)
-        else:
-            print(f"[UVE] Tipo de elemento não suportado: {element_type}")
-            return None
-
-    def _create_image_clip(self, element, duration):
-        """Cria clip de imagem."""
-        source = element.get("source")
-        if not source or not os.path.exists(source):
-            print(f"[UVE] Imagem não encontrada: {source}")
-            return None
-
-        try:
-            clip = ImageClip(source, duration=duration)
-            clip = self._apply_layout_and_effects(clip, element)
-            return clip
-        except Exception as e:
-            print(f"[UVE] Erro ao criar clip de imagem: {e}")
-            return None
-
-    def _create_video_clip(self, element, duration):
-        """Cria clip de vídeo."""
-        source = element.get("source")
-        if not source or not os.path.exists(source):
-            print(f"[UVE] Vídeo não encontrado: {source}")
-            return None
-
-        try:
-            clip = VideoFileClip(source)
-            if clip.duration > duration:
-                clip = clip.subclip(0, duration)
-            elif clip.duration < duration:
-                clip = clip.loop(duration=duration)
-            
-            clip = self._apply_layout_and_effects(clip, element)
-            return clip
-        except Exception as e:
-            print(f"[UVE] Erro ao criar clip de vídeo: {e}")
-            return None
-
-    def _create_text_clip(self, element, duration):
-        """Cria clip de texto."""
-        text = element.get("text", "")
         if not text:
+            print("[UVE] Cena sem narração.  Duração será fixa.")
+            return None, narration_config.get("duration", 4.0), None, None
+
+        voice = (scene_data.get("tts", {}).get("voice") or
+                 self.tts_config.get("voice") or
+                 "pt-BR-AntonioNeural")
+
+        audio_basename = os.path.join(target_dir, f"audio_{scene_data.get('id', 'unknown')}")
+
+        print(f"[UVE] Gerando áudio para cena {scene_data.get('id')} em {target_dir}...")
+
+        try:
+            tts_params = {
+                "text": text,
+                "voice_id": voice,
+                "output_basename": audio_basename,
+            }
+
+            tts_engine = EdgeTTS(params=tts_params)
+            tts_result = tts_engine.generate_audio_and_subtitles()
+
+            final_audio_path = tts_result.get("audio_file")
+            word_boundaries = tts_result.get("word_boundaries")
+            subtitle_file = tts_result.get("subtitle_file")
+
+            if not final_audio_path or not os.path.exists(final_audio_path):
+                print(f"[ERRO UVE] Arquivo de áudio não foi criado: {final_audio_path}")
+                return None, 4.0, None, None
+
+            audio_clip = AudioFileClip(final_audio_path)
+            duration = audio_clip.duration
+
+            print(f"[UVE] ✅ Áudio gerado com sucesso - Duração: {duration:.2f}s")
+            return audio_clip, duration, word_boundaries, subtitle_file
+
+        except Exception as e:
+            print(f"[ERRO UVE] Falha ao gerar TTS: {e}")
+            import traceback
+            traceback.print_exc()
+            return None, 4.0, None, None
+
+    # REMOVIDOS: _select_random_videos_for_duration, _create_ai_background_clip, _create_background_clip, _apply_overlays_to_background
+    # Uso agora de BackgroundEngine para o fundo da cena (visual + filters)
+
+    def _create_visual_elements_clip(self, scene_data, scene_duration, scene_dir):
+        """Cria elementos visuais da cena."""
+        elements = scene_data.get("visual_elements", [])
+        if not elements:
+            return None
+
+        print(f"[UVE] Processando {len(elements)} elementos visuais...")
+
+        valid_clips_info = []
+        valid_element_data_for_layout = []
+
+        for i, element_data in enumerate(elements):
+            try:
+                config = {
+                    "element_data": element_data,
+                    "resolution_output": self.resolution_output,
+                    "temp_dir": scene_dir,
+                    "duration": scene_duration,
+                }
+
+                processor = VisualClip(config)
+                raw_clip = processor.generate()
+
+                if raw_clip: 
+                    w, h = raw_clip.size
+                    element_data_copy = element_data.copy()
+                    element_data_copy['original_size'] = (w, h)
+
+                    valid_clips_info.append(raw_clip)
+                    valid_element_data_for_layout.append(element_data_copy)
+                    print(f"[UVE] ✅ Elemento {i + 1} gerado: {w}x{h}")
+                else:
+                    print(f"[UVE] ⚠️ Falha ao gerar elemento {i + 1}")
+
+            except Exception as e: 
+                print(f"[UVE] ❌ Erro no elemento {i + 1}: {e}")
+
+        if not valid_clips_info:
+            print("[UVE] ❌ Nenhum elemento visual foi gerado com sucesso")
             return None
 
         try:
-            layout_config = element.get("layout", {})
-            font_size = layout_config.get("font_size", 50)
-            color = layout_config.get("color", "white")
-            
-            clip = TextClip(text, fontsize=font_size, color=color, duration=duration)
-            clip = self._apply_layout_and_effects(clip, element)
-            return clip
-        except Exception as e:
-            print(f"[UVE] Erro ao criar clip de texto: {e}")
+            layout_results = LayoutEngine.process_stack_layout(
+                valid_element_data_for_layout,
+                self.config_instance
+            )
+
+            final_clips = []
+
+            for i, clip in enumerate(valid_clips_info):
+                if i >= len(layout_results):
+                    break
+
+                layout = layout_results[i]
+                final_size = layout['final_size']
+                final_pos = layout['final_position']
+
+                try:
+                    clip_resized = clip.resize(newsize=final_size)
+                    clip_positioned = clip_resized.set_position(final_pos)
+                    final_clips.append(clip_positioned)
+                    print(f"[UVE] ✅ Elemento {i + 1} posicionado: {final_size} @ {final_pos}")
+                except Exception as e:
+                    print(f"[UVE] ❌ Falha ao posicionar elemento {i + 1}: {e}")
+
+            if not final_clips:
+                print("[UVE] ❌ Nenhum elemento foi posicionado corretamente")
+                return None
+
+            return CompositeVideoClip(final_clips, size=self.resolution_output).set_duration(
+                scene_duration).fl_image(force_rgb)
+
+        except Exception as e: 
+            print(f"[UVE] ❌ Falha no LayoutEngine: {e}")
+            print("[UVE] Usando posicionamento centralizado como fallback")
+
+            centered_clips = []
+            for i, clip in enumerate(valid_clips_info):
+                try:
+                    clip_centered = clip.set_position('center')
+                    centered_clips.append(clip_centered)
+                except Exception as e:
+                    print(f"[UVE] ❌ Falha no fallback do elemento {i + 1}: {e}")
+
+            if centered_clips:
+                return CompositeVideoClip(centered_clips, size=self.resolution_output).set_duration(
+                    scene_duration).fl_image(force_rgb)
+
             return None
 
-    def _apply_layout_and_effects(self, clip, element):
-        """Aplica layout e efeitos a um clip."""
-        layout_config = element.get("layout", {})
-        
-        # Redimensionamento
-        width = layout_config.get("width")
-        height = layout_config.get("height")
-        
-        if width or height:
-            clip = self._resize_clip(clip, width, height)
-
-        # Posicionamento
-        position = layout_config.get("position", "center")
-        clip = self._position_clip(clip, position, layout_config)
-
-        # Efeitos
-        filters = element.get("filters", {})
-        clip = self._apply_filters(clip, filters)
-
-        # Animações
-        animation = element.get("animation", {})
-        clip = self._apply_animation(clip, animation)
-
-        return clip
-
-    def _resize_clip(self, clip, width, height):
-        """Redimensiona um clip."""
-        try:
-            if isinstance(width, str) and width.endswith('%'):
-                width = int(self.resolution_output[0] * float(width[:-1]) / 100)
-            if isinstance(height, str) and height.endswith('%'):
-                height = int(self.resolution_output[1] * float(height[:-1]) / 100)
-            
-            if width and height:
-                return clip.resize((width, height))
-            elif width:
-                return clip.resize(width=width)
-            elif height:
-                return clip.resize(height=height)
-        except Exception as e:
-            print(f"[UVE] Erro ao redimensionar clip: {e}")
-        
-        return clip
-
-    def _position_clip(self, clip, position, layout_config):
-        """Posiciona um clip na tela."""
-        try:
-            if position == "center":
-                return clip.set_position("center")
-            elif position == "top_left":
-                return clip.set_position((0, 0))
-            elif position == "top_right":
-                return clip.set_position(("right", 0))
-            elif position == "bottom_left":
-                return clip.set_position((0, "bottom"))
-            elif position == "bottom_right":
-                return clip.set_position(("right", "bottom"))
-            elif isinstance(position, dict) and position.get("type") == "custom":
-                x = position.get("x", 0)
-                y = position.get("y", 0)
-                return clip.set_position((x, y))
-        except Exception as e:
-            print(f"[UVE] Erro ao posicionar clip: {e}")
-        
-        return clip
-
-    def _apply_filters(self, clip, filters):
-        """Aplica filtros a um clip."""
-        try:
-            if filters.get("blur"):
-                # Implementar blur se necessário
-                pass
-            
-            if filters.get("brightness"):
-                brightness = filters["brightness"]
-                clip = clip.fx(lambda gf, t: gf(t) * brightness)
-                
-        except Exception as e:
-            print(f"[UVE] Erro ao aplicar filtros: {e}")
-        
-        return clip
-
-    def _apply_animation(self, clip, animation):
-        """Aplica animações a um clip."""
-        try:
-            anim_type = animation.get("type")
-            duration = animation.get("duration", 1.0)
-            start_at = animation.get("start_at", 0)
-            
-            if anim_type == "fade_in":
-                clip = clip.crossfadein(duration)
-            elif anim_type == "fade_out":
-                clip = clip.crossfadeout(duration)
-            elif anim_type == "slide_left":
-                # Implementar animação de slide se necessário
-                pass
-                
-        except Exception as e:
-            print(f"[UVE] Erro ao aplicar animação: {e}")
-        
-        return clip
-
-    def _create_subtitle_clip(self, subtitle_path, duration, subtitle_config):
+    def _create_subtitle_clip(self, scene_duration, subtitle_file, has_visual_elements=False):
         """Cria clip de legendas."""
         try:
-            subtitle = Subtitle(
-                subtitle_file=subtitle_path,
-                config=self.config_instance,
-                subtitle_config=subtitle_config
-            )
-            return subtitle.create_subtitle_clip(duration)
-        except Exception as e:
-            print(f"[UVE] Erro ao criar legendas: {e}")
-            return None
+            if not subtitle_file or not os.path.exists(subtitle_file):
+                print("[UVE] ⚠️ Arquivo de legenda não encontrado")
+                return None
 
-    def _compose_scene(self, background_clip, visual_clips, subtitle_clip, audio_path, duration):
-        """Compõe todos os elementos da cena."""
-        try:
-            clips = [background_clip]
-            
-            # Adiciona elementos visuais
-            clips.extend(visual_clips)
-            
-            # Adiciona legendas
+            print(f"[UVE] Gerando legendas do arquivo: {subtitle_file}")
+
+            subtitle_config = {
+                "subtitle_narration_file": subtitle_file,
+                "resolution_output": self.resolution_output,
+                "padding_bottom": getattr(self.config_instance, 'padding_bottom', 200),
+                "padding_side": getattr(self.config_instance, 'padding_side', 50),
+                "padding_top":  getattr(self.config_instance, 'padding_top', 200),
+                "has_visual_elements": has_visual_elements,
+            }
+
+            global_subtitle_config = self.global_settings.get("subtitle", {})
+            subtitle_config.update(global_subtitle_config)
+
+            print(f"[UVE] Configurações de legenda:  posição={'centro' if not has_visual_elements else 'inferior'}")
+
+            subtitle_generator = Subtitle(params=subtitle_config)
+            subtitle_clip = subtitle_generator.generate()
+
             if subtitle_clip:
-                clips.append(subtitle_clip)
-            
-            # Compõe vídeo
-            final_clip = CompositeVideoClip(clips, size=self.resolution_output)
-            final_clip = final_clip.set_duration(duration)
-            
-            # Adiciona áudio se existir
-            if audio_path and os.path.exists(audio_path):
-                audio_clip = AudioFileClip(audio_path)
-                final_clip = final_clip.set_audio(audio_clip)
-            
-            return final_clip
-            
+                subtitle_clip = subtitle_clip.set_duration(scene_duration)
+                print("[UVE] ✅ Legendas geradas com sucesso")
+                return subtitle_clip
+            else:
+                print("[UVE] ❌ Falha na geração das legendas")
+                return None
+
         except Exception as e:
-            print(f"[UVE] Erro ao compor cena: {e}")
-            return None
-
-    def _cleanup_clips(self, clips):
-        """Libera memória dos clips."""
-        for clip in clips:
-            if clip:
-                try:
-                    clip.close()
-                except:
-                    pass
-
-    def render_final_video(self, output_filename=None):
-        """Renderiza o vídeo final."""
-        if not self.final_clips:
-            print("[UVE] ❌ Nenhum clip para renderizar!")
-            return None
-
-        if not output_filename:
-            output_filename = f"{self.data_config.get('slug', 'video')}_final.mp4"
-        
-        output_path = os.path.join(self.output_dir, output_filename)
-        
-        try:
-            print(f"[UVE] 🎬 Renderizando vídeo final: {output_path}")
-            
-            final_video = concatenate_videoclips(self.final_clips, method="compose")
-            
-            final_video.write_videofile(
-                output_path,
-                fps=30,
-                codec='libx264',
-                audio_codec='aac',
-                temp_audiofile='temp-audio.m4a',
-                remove_temp=True
-            )
-            
-            print(f"[UVE] ✅ Vídeo renderizado: {output_path}")
-            return output_path
-            
-        except Exception as e:
-            print(f"[UVE] ❌ Erro ao renderizar vídeo: {e}")
+            print(f"[UVE] ❌ Falha ao criar legendas: {e}")
             import traceback
             traceback.print_exc()
             return None
-        finally:
-            # Limpeza final
-            self._cleanup_clips(self.final_clips)
 
-    def upload_to_youtube(self, video_path, title, description, tags=None):
-        """Faz upload do vídeo para o YouTube."""
+    def _apply_background_audio_to_video(self, video_path: str, output_path: str) -> str:
+        """
+        Aplica áudio de fundo ao vídeo final concatenado.
+        """
+        bg_audio_config = self.global_settings.get("background", {}).get("audio", {})
+        
+        if not bg_audio_config:
+            print("[UVE] Sem configuração de áudio de fundo")
+            return video_path
+        
+        audio_type = bg_audio_config.get("type", "file")
+        source = bg_audio_config.get("source")
+        volume = bg_audio_config.get("volume", 0.3)
+        
+        if not source:
+            print("[UVE] Áudio de fundo sem source configurado")
+            return video_path
+        
         try:
-            youtube = YouTube()
-            return youtube.upload_video(video_path, title, description, tags or [])
+            if audio_type == "directory":
+                """Seleciona um arquivo de áudio aleatório de um diretório. (Corrigido)"""
+                if not os.path.isdir(source):
+                    print(f"[UVE] ⚠️ Diretório de áudio não encontrado: {source}")
+                    return None
+                
+                valid_extensions = ('.mp3', '.wav', '.ogg', '.m4a')
+                audio_files = [f for f in os.listdir(source) if f.lower().endswith(valid_extensions)]
+                
+                if not audio_files:
+                    print(f"[UVE] ⚠️ Nenhum arquivo de áudio válido encontrado em: {source}")
+                    return None
+                    
+                audio_path = os.path.join(source, random.choice(audio_files))
+            else:
+                audio_path = source
+            
+            if not audio_path or not os.path.exists(audio_path):
+                print(f"[UVE] ⚠️ Áudio de fundo não encontrado:  {audio_path}")
+                return video_path
+            
+            print(f"[UVE] 🎵 Aplicando áudio de fundo: {os.path.basename(audio_path)}")
+            
+            video_clip = VideoFileClip(video_path)
+            video_duration = video_clip.duration
+            
+            bg_audio = AudioFileClip(audio_path)
+            
+            if bg_audio.duration < video_duration:
+                loops_needed = int(video_duration / bg_audio.duration) + 1
+                bg_clips = [bg_audio] * loops_needed
+                bg_audio = concatenate_audioclips(bg_clips)
+            
+            bg_audio = bg_audio.subclip(0, video_duration)
+            bg_audio = bg_audio.volumex(volume)
+            
+            if video_clip.audio:
+                final_audio = CompositeAudioClip([video_clip.audio, bg_audio])
+            else:
+                final_audio = bg_audio
+            
+            final_video = video_clip.set_audio(final_audio)
+            
+            print(f"[UVE] 🎬 Renderizando vídeo com áudio de fundo...")
+            final_video.write_videofile(
+                output_path,
+                codec='libx264',
+                audio_codec='aac',
+                fps=24,
+                preset='medium',
+                threads=4,
+                verbose=False,
+                logger=None
+            )
+            
+            video_clip.close()
+            bg_audio.close()
+            final_video.close()
+            
+            print(f"[UVE] ✅ Áudio de fundo aplicado:  {os.path.basename(output_path)}")
+            return output_path
+            
         except Exception as e:
-            print(f"[UVE] Erro no upload para YouTube: {e}")
+            print(f"[UVE] ❌ Erro ao aplicar áudio de fundo: {e}")
+            import traceback
+            traceback.print_exc()
+            return video_path
+
+    def _render_scene(self, scene_index, total_scenes, composed_clip, narration_clip, temp_dir):
+        temp_scene_path = os.path.join(temp_dir, f"scene_{scene_index:04d}.mp4")
+        temp_audiofile = os.path.join(temp_dir, f"temp-audio-{scene_index}.m4a")
+
+        print(f"[UVE] 🎬 Renderizando cena {scene_index + 1}/{total_scenes}...")
+
+        composed_clip.write_videofile(
+            temp_scene_path,
+            codec='libx264',
+            audio_codec='aac',
+            temp_audiofile=temp_audiofile,
+            remove_temp=True,
+            fps=24,
+            preset='medium',
+            threads=4,
+            verbose=False,
+            logger=None
+        )
+
+        print(f"[UVE] ✅ Cena {scene_index + 1} renderizada:  {os.path.basename(temp_scene_path)}")
+
+        try:
+            composed_clip.close()
+            if narration_clip:
+                narration_clip.close()
+        except: 
+            pass
+
+        del composed_clip
+        gc.collect()
+
+        return temp_scene_path
+    
+    def run(self, output_filename="final_video.mp4"):
+        """Método principal de renderização."""
+        print("[UVE] 🚀 Iniciando processamento do vídeo...")
+
+        scene_files = []
+        temp_dir = os.path.join(self.output_dir, "_temp")
+        os.makedirs(temp_dir, exist_ok=True)
+
+        scenes = self.data_config.get("scenes", [])
+        total_scenes = len(scenes)
+
+        if not scenes:
+            print("[UVE] ❌ Nenhuma cena encontrada na configuração")
             return None
 
-    def cleanup_temp_files(self):
-        """Remove arquivos temporários."""
-        try:
-            if os.path.exists(self.output_dir):
-                for root, dirs, files in os.walk(self.output_dir):
-                    for file in files:
-                        if file.startswith("temp-") or file.endswith(".tmp"):
-                            os.remove(os.path.join(root, file))
-        except Exception as e:
-            print(f"[UVE] Erro ao limpar arquivos temporários: {e}")
+        for scene_index, scene in enumerate(scenes):
+            scene_id = scene.get("id", f"cena_{scene_index}")
+            print(f"\n[UVE] 📝 Processando cena {scene_index + 1}/{total_scenes}:  {scene_id}")
 
-    def get_video_info(self):
-        """Retorna informações do vídeo processado."""
-        return {
-            "scenes_count": len(self.final_clips),
-            "total_duration": self.total_duration,
-            "resolution": self.resolution_output,
-            "output_ratio": self.output_ratio,
-            "output_dir": self.output_dir
-        }
+            scene_dir = os.path.join(self.output_dir, scene_id)
+            os.makedirs(scene_dir, exist_ok=True)
+
+            # 1. Narração
+            narration_clip, duration_from_tts, word_timing, subtitle_file = self._process_narration(scene, scene_dir)
+
+            # 2. Duração
+            scene_duration = scene.get("duration", duration_from_tts)
+            if not scene_duration or scene_duration < 0.1:
+                scene_duration = 4.0
+                print(f"[UVE] Usando duração padrão: {scene_duration}s")
+            else:
+                print(f"[UVE] Duração da cena: {scene_duration}s")
+
+            # 3. Componentes
+            try:
+                # Fundo via BackgroundEngine (visual + background.filters)
+                bg_engine = BackgroundEngine(
+                    resolution_output=self.resolution_output,
+                    dir_clips_cache=self.dir_media_index,
+                    ai_cache=self.ai_cache,
+                )
+                background_clip = bg_engine.build_scene_background(self.global_settings, scene, float(scene_duration), scene_dir, self.output_dir)
+
+                visual_clip = self._create_visual_elements_clip(scene, scene_duration, scene_dir)
+
+                subtitle_clip = None
+                if scene.get("narration", {}).get("subtitles", False):
+                    has_visuals = bool(scene.get("visual_elements"))
+                    subtitle_clip = self._create_subtitle_clip(scene_duration, subtitle_file, has_visuals)
+
+                # 4. Composição da cena
+                final_scene_clip = [background_clip]
+                if visual_clip: 
+                    final_scene_clip.append(visual_clip)
+                    print("[UVE] ✅ Elementos visuais adicionados")
+                if subtitle_clip:
+                    final_scene_clip.append(subtitle_clip)
+                    print("[UVE] ✅ Legendas adicionadas")
+
+                # 5. force_rgb
+                safe_clips = []
+                for c in final_scene_clip: 
+                    try:
+                        c = c.fl_image(force_rgb)
+                        safe_clips.append(c)
+                    except Exception as e:
+                        print(f"[UVE] ⚠️ Falha ao aplicar force_rgb:  {e}")
+                        safe_clips.append(c)
+
+                # 6. Compor cena final
+                composed_clip = CompositeVideoClip(safe_clips, size=self.resolution_output).set_duration(scene_duration)
+                composed_clip = composed_clip.fl_image(force_rgb)
+
+                # 7. Narração
+                if narration_clip:
+                    composed_clip = composed_clip.set_audio(narration_clip)
+                    print("[UVE] ✅ Narração adicionada à cena")
+                else:
+                    print("[UVE] Cena sem narração")
+                
+                temp_scene_path = self._render_scene(
+                    scene_index, total_scenes, composed_clip, narration_clip, temp_dir
+                )
+                scene_files.append(temp_scene_path)
+
+            except Exception as e:
+                print(f"[UVE] ❌ Erro ao processar cena {scene_index + 1}: {e}")
+                import traceback
+                traceback.print_exc()
+                continue
+
+        # 9. Concatenar cenas
+        slug = self.data_config.get("slug", "video_final")
+        if not output_filename.endswith('.mp4'):
+            output_filename = f"{slug}.mp4"
+
+        intermediate_path = os.path.join(temp_dir, f"{slug}_no_bg_audio.mp4")
+        output_path = os.path.join(self.output_dir, output_filename)
+
+        if not scene_files:
+            print("[UVE] ❌ Nenhuma cena foi renderizada com sucesso")
+            return None
+
+        try:
+            print(f"[UVE] 🔗 Concatenando {len(scene_files)} cenas...")
+
+            concat_list_path = os.path.join(temp_dir, "concat_list.txt")
+            with open(concat_list_path, "w", encoding="utf-8") as f:
+                for p in scene_files:
+                    f.write(f"file '{os.path.abspath(p)}'\n")
+
+            ffmpeg_cmd = [
+                "ffmpeg", "-y", "-f", "concat", "-safe", "0",
+                "-i", concat_list_path, "-c", "copy", intermediate_path
+            ]
+
+            subprocess.run(ffmpeg_cmd, check=True, capture_output=True)
+            print(f"[UVE] ✅ Vídeo concatenado:  {intermediate_path}")
+
+        except subprocess.CalledProcessError:
+            print("[UVE] ⚠️ Concatenação rápida falhou, tentando re-encoding...")
+            try:
+                ffmpeg_cmd_reencode = [
+                    "ffmpeg", "-y", "-f", "concat", "-safe", "0",
+                    "-i", concat_list_path,
+                    "-c: v", "libx264", "-preset", "medium", "-crf", "20",
+                    "-c:a", "aac", "-b: a", "128k",
+                    intermediate_path
+                ]
+                subprocess.run(ffmpeg_cmd_reencode, check=True, capture_output=True)
+                print(f"[UVE] ✅ Vídeo concatenado (re-encoded): {intermediate_path}")
+            except Exception as e: 
+                print(f"[UVE] ❌ Falha na concatenação: {e}")
+                return None
+        except Exception as e:
+            print(f"[UVE] ❌ Falha na concatenação: {e}")
+            return None
+
+        # 10. Áudio de fundo
+        bg_audio_config = self.global_settings.get("background", {}).get("audio", {})
+        if bg_audio_config and bg_audio_config.get("source"):
+            final_path = self._apply_background_audio_to_video(intermediate_path, output_path)
+        else:
+            shutil.move(intermediate_path, output_path)
+            final_path = output_path
+            print("[UVE] Sem áudio de fundo configurado")
+
+        # 11. Upload YouTube (opcional)
+        if self.data_config.get("youtube") and self.data_config.get("debug") is not True:
+            try:
+                print("[UVE] 📤 Iniciando upload para o YouTube...")
+                youtube_params = self.data_config.get("youtube", {}).copy()
+                youtube_params["video_path"] = final_path
+                youtube_uploader = YouTube(params=youtube_params)
+                youtube_uploader.upload()
+            except Exception as e:
+                print(f"[UVE] ❌ Upload YouTube falhou: {e}")
+
+        # 12. Abrir vídeo (debug)
+        if self.data_config.get("debug") is True:
+            try:
+                print("[UVE] 🎥 Abrindo vídeo final...")
+                if os.name == 'nt': 
+                    os.startfile(final_path)
+                elif os.name == 'posix':
+                    subprocess.run(
+                        ["open" if "darwin" in os.uname().sysname.lower() else "xdg-open", final_path])
+            except Exception as e:
+                print(f"[UVE] ⚠️ Falha ao abrir vídeo:  {e}")
+
+        print(f"\n[UVE] 🎉 Processamento concluído com sucesso!")
+        print(f"[UVE] 📁 Arquivo final:  {final_path}")
+
+        return final_path

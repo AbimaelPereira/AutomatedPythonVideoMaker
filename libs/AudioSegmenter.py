@@ -189,7 +189,7 @@ class AudioSegmenter:
         
         Args:
             scenes_data: Lista de dicionários com dados das cenas
-            output_base_dir: Diretório base onde salvar os segmentos
+            output_base_dir: Diretório base
             
         Returns:
             Dict com informações dos segmentos processados
@@ -197,28 +197,32 @@ class AudioSegmenter:
         segments_info = {}
         
         for i, scene in enumerate(scenes_data):
-            scene_id = scene.get("id", f"scene_{i}")
-            scene_text = scene.get("text", "")
+            scene_slug = scene.get("slug", f"scene_{i}")
+            scene_text = scene.get("narration", {}).get("text", "")
             
             if not scene_text:
-                print(f"[AVISO] Cena {scene_id} sem texto para segmentar")
+                print(f"[AVISO] Cena {scene_slug} sem texto para segmentar")
                 continue
+
+            # criar pasta dentro do output_base_dir com o id da cena
+            scene_output_dir = os.path.join(output_base_dir, scene_slug)
+            os.makedirs(scene_output_dir, exist_ok=True)
             
             # Define caminhos de saída
-            audio_output = os.path.join(output_base_dir, f"{scene_id}.mp3")
+            audio_output = os.path.join(scene_output_dir, f"{scene_slug}.mp3")
             
-            print(f"[Segmentação] Processando cena {scene_id}...")
+            print(f"[Segmentação] Processando cena {scene_slug}...")
             audio_path, srt_path = self.extract_scene_audio(scene_text, audio_output)
             
             if audio_path and srt_path:
-                segments_info[scene_id] = {
+                segments_info[scene_slug] = {
                     "audio_path": audio_path,
                     "srt_path": srt_path,
                     "text": scene_text
                 }
-                print(f"[Segmentação] ✅ Cena {scene_id} segmentada com sucesso")
+                print(f"[Segmentação] ✅ Cena {scene_slug} segmentada com sucesso")
             else:
-                print(f"[Segmentação] ❌ Falha ao segmentar cena {scene_id}")
+                print(f"[Segmentação] ❌ Falha ao segmentar cena {scene_slug}")
         
         print(f"[Segmentação] Processamento concluído: {len(segments_info)} cenas segmentadas")
         return segments_info
