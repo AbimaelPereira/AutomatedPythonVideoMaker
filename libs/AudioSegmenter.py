@@ -55,7 +55,7 @@ class AudioSegmenter:
         seconds = int(ms // 1000)
         milliseconds = int(ms % 1000)
         return f"{hours:02d}:{minutes:02d}:{seconds:02d},{milliseconds:03d}"
-    
+
     def _generate_srt_segment(self, matched_blocks, start_offset_ms, srt_output_path):
         """
         Gera um arquivo SRT para o segmento cortado, ajustando os timestamps
@@ -81,15 +81,14 @@ class AudioSegmenter:
             start_time = self._ms_to_time(adjusted_start)
             end_time = self._ms_to_time(adjusted_end)
             
-            srt_block = f"{idx}\n{start_time} --> {end_time}\n{block['text']}\n"
-            srt_content.append(srt_block)
+            srt_content.append(f"{idx}")
+            srt_content.append(f"{start_time} --> {end_time}")
+            srt_content.append(block['text'])
+            srt_content.append("")  # Linha em branco entre blocos
         
-        # Escrever o arquivo SRT
+        # Salvar arquivo
         with open(srt_output_path, 'w', encoding='utf-8') as f:
             f.write('\n'.join(srt_content))
-        
-        print(f"[SRT] Arquivo de legenda gerado: {srt_output_path}")
-        return srt_output_path
 
     def extract_scene_audio(self, scene_text, output_path, similarity_threshold=70):
         """
@@ -183,3 +182,43 @@ class AudioSegmenter:
         self._generate_srt_segment(matched_blocks, start_ms, srt_output_path)
         
         return output_path, srt_output_path
+
+    def segment_all_scenes(self, scenes_data, output_base_dir):
+        """
+        Segmenta automaticamente todas as cenas do vídeo.
+        
+        Args:
+            scenes_data: Lista de dicionários com dados das cenas
+            output_base_dir: Diretório base onde salvar os segmentos
+            
+        Returns:
+            Dict com informações dos segmentos processados
+        """
+        segments_info = {}
+        
+        for i, scene in enumerate(scenes_data):
+            scene_id = scene.get("id", f"scene_{i}")
+            scene_text = scene.get("text", "")
+            
+            if not scene_text:
+                print(f"[AVISO] Cena {scene_id} sem texto para segmentar")
+                continue
+            
+            # Define caminhos de saída
+            audio_output = os.path.join(output_base_dir, f"{scene_id}.mp3")
+            
+            print(f"[Segmentação] Processando cena {scene_id}...")
+            audio_path, srt_path = self.extract_scene_audio(scene_text, audio_output)
+            
+            if audio_path and srt_path:
+                segments_info[scene_id] = {
+                    "audio_path": audio_path,
+                    "srt_path": srt_path,
+                    "text": scene_text
+                }
+                print(f"[Segmentação] ✅ Cena {scene_id} segmentada com sucesso")
+            else:
+                print(f"[Segmentação] ❌ Falha ao segmentar cena {scene_id}")
+        
+        print(f"[Segmentação] Processamento concluído: {len(segments_info)} cenas segmentadas")
+        return segments_info
