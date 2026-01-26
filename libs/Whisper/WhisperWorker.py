@@ -73,7 +73,7 @@ class WhisperWorker:
             "text": text
         }
 
-    def generate_srt(self, audio_path, output_path=None, max_words_per_line=5):
+    def generate_srt(self, audio_path, output_path=None, max_words_per_line=1):
         """
         Gera o arquivo SRT a partir do áudio.
         

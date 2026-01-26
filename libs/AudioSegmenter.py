@@ -46,10 +46,63 @@ class AudioSegmenter:
         s, ms = s_full.split(',')
         return (int(h) * 3600000) + (int(m) * 60000) + (int(s) * 1000) + int(ms)
 
+    def _ms_to_time(self, ms):
+        """Converte milissegundos para formato SRT 00:00:00,000."""
+        hours = int(ms // 3600000)
+        ms %= 3600000
+        minutes = int(ms // 60000)
+        ms %= 60000
+        seconds = int(ms // 1000)
+        milliseconds = int(ms % 1000)
+        return f"{hours:02d}:{minutes:02d}:{seconds:02d},{milliseconds:03d}"
+    
+    def _generate_srt_segment(self, matched_blocks, start_offset_ms, srt_output_path):
+        """
+        Gera um arquivo SRT para o segmento cortado, ajustando os timestamps
+        para começar em 00:00:00,000.
+        
+        Args:
+            matched_blocks: Lista de blocos de legenda que fazem parte do segmento
+            start_offset_ms: Timestamp de início do primeiro bloco (para ajuste)
+            srt_output_path: Caminho onde o arquivo SRT será salvo
+        """
+        srt_content = []
+        
+        for idx, block in enumerate(matched_blocks, start=1):
+            # Ajustar os timestamps para começar do zero
+            adjusted_start = block['start_ms'] - start_offset_ms
+            adjusted_end = block['end_ms'] - start_offset_ms
+            
+            # Garantir que não haja timestamps negativos
+            adjusted_start = max(0, adjusted_start)
+            adjusted_end = max(0, adjusted_end)
+            
+            # Formatar no padrão SRT
+            start_time = self._ms_to_time(adjusted_start)
+            end_time = self._ms_to_time(adjusted_end)
+            
+            srt_block = f"{idx}\n{start_time} --> {end_time}\n{block['text']}\n"
+            srt_content.append(srt_block)
+        
+        # Escrever o arquivo SRT
+        with open(srt_output_path, 'w', encoding='utf-8') as f:
+            f.write('\n'.join(srt_content))
+        
+        print(f"[SRT] Arquivo de legenda gerado: {srt_output_path}")
+        return srt_output_path
+
     def extract_scene_audio(self, scene_text, output_path, similarity_threshold=70):
         """
         Procura o texto da cena nas legendas a partir da última posição,
-        define o tempo de inicio e fim, e salva o corte de áudio.
+        define o tempo de inicio e fim, salva o corte de áudio e gera o SRT correspondente.
+        
+        Args:
+            scene_text: Texto da cena a ser procurado
+            output_path: Caminho para salvar o arquivo de áudio (ex: "scene1.mp3")
+            similarity_threshold: Threshold de similaridade para matching (padrão: 70)
+            
+        Returns:
+            Tupla (audio_path, srt_path) ou (None, None) se não encontrar
         """
         start_index = self.current_srt_index
         matched_blocks = []
@@ -103,7 +156,7 @@ class AudioSegmenter:
         
         if not matched_blocks:
             print(f"[AVISO] Não foi possível encontrar trecho correspondente para: '{scene_text[:30]}...'")
-            return None
+            return None, None
 
         # Definir Timestamps de Corte
         start_ms = matched_blocks[0]['start_ms']
@@ -121,8 +174,12 @@ class AudioSegmenter:
 
         print(f"[Corte] Cena detectada: {start_ms}ms -> {end_ms}ms | Texto: {matched_blocks[0]['text']}...{matched_blocks[-1]['text']}")
 
-        # Cortar e Salvar
+        # Cortar e Salvar Áudio
         scene_audio = self.audio[start_ms:end_ms]
         scene_audio.export(output_path, format="mp3")
         
-        return output_path
+        # Gerar arquivo SRT correspondente
+        srt_output_path = output_path.rsplit('.', 1)[0] + '.srt'
+        self._generate_srt_segment(matched_blocks, start_ms, srt_output_path)
+        
+        return output_path, srt_output_path
