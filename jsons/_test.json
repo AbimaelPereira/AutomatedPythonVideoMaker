@@ -1,59 +1,34 @@
 [
     {
-        "slug": "teste-de-transicoes",
+        "slug": "video_exemplo",
         "channel_name": "vida_de_oracao",
         "output_ratio": "9:16",
+        "global_settings": {
+            "tts": {
+                "provider": "local_file",
+                "audio_file": "./temp/download.wav"
+            }
+        },
         "scenes": [
             {
-                "id": "cena-1",
+                "id": "0001",
                 "narration": {
-                    "text": "Primeira cena do teste de Transições.",
+                    "text": "Bom dia, meus irmãos!",
                     "subtitles": true
-                },
-                "background": {
-                    "visual": {
-                        "type": "image",
-                        "source": "./assets/image/1.png"
-                    }
                 }
             },
             {
-                "id": "cena-2",
+                "id": "0002",
                 "narration": {
-                    "text": "Segunda cena do teste de Transições.",
+                    "text": "Que sua semana comece nas mãos de Deus, com paz direção e esperança. ",
                     "subtitles": true
-                },
-                "background": {
-                    "visual": {
-                        "type": "image",
-                        "source": "./assets/image/2.png"
-                    }
                 }
             },
             {
-                "id": "cena-3",
+                "id": "0003",
                 "narration": {
-                    "text": "Terceira cena do teste de Transições.",
+                    "text": "Quando colocamos os nossos dias em oração, Ele cuida de cada detalhe do caminho.",
                     "subtitles": true
-                },
-                "background": {
-                    "visual": {
-                        "type": "image",
-                        "source": "./assets/image/1.png"
-                    }
-                }
-            },
-            {
-                "id": "cena-4",
-                "narration": {
-                    "text": "Quarta cena do teste de Transições.",
-                    "subtitles": true
-                },
-                "background": {
-                    "visual": {
-                        "type": "image",
-                        "source": "./assets/image/2.png"
-                    }
                 }
             }
         ]
