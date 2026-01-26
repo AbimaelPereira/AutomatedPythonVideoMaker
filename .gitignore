@@ -37,3 +37,15 @@ __pycache__/
 
 /cache/ai_generated/*
 !/cache/ai_generated/.gitkeep
+
+# --- Configuração do Whisper ---
+
+# Ignorar o ambiente virtual criado (Isso é o mais importante)
+venv-whisper/
+
+# Ignorar caches de compilação do Python (se já não estiver no arquivo)
+__pycache__/
+libs/Whisper/__pycache__/
+
+# qualquer __pycache__ que possa existir em todo o projeto
+**/__pycache__/
