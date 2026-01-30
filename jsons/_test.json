@@ -1,36 +1,203 @@
 [
-    {
-        "slug": "video_exemplo",
-        "channel_name": "vida_de_oracao",
-        "output_ratio": "9:16",
-        "global_settings": {
-            "tts": {
-                "provider": "local_file",
-                "audio_file": "./temp/download.wav"
-            }
+  {
+    "slug": "revelacao-eliseu-ossos",
+    "channel_name": "vida_de_oracao",
+    "output_ratio": "9:16",
+    "debug": false,
+    "scenes": [
+      {
+        "id": "scene-1",
+        "narration": {
+          "text": "Você conhece o profeta que, mesmo depois de morto, Deus ressuscitou um homem através dos seus ossos?",
+          "subtitles": true
         },
-        "scenes": [
-            {
-                "slug": "0001",
-                "narration": {
-                    "text": "Bom dia, meus irmãos!",
-                    "subtitles": true
-                }
-            },
-            {
-                "slug": "0002",
-                "narration": {
-                    "text": "Que sua semana comece nas mãos de Deus, com paz direção e esperança. ",
-                    "subtitles": true
-                }
-            },
-            {
-                "slug": "0003",
-                "narration": {
-                    "text": "Quando colocamos os nossos dias em oração, Ele cuida de cada detalhe do caminho.",
-                    "subtitles": true
-                }
-            }
-        ]
+        "background": {
+          "visual": {
+            "type": "ai",
+            "provider": "pollinations",
+            "content_type": "image",
+            "prompt": "Cinematic close-up of ancient, glowing skeletal remains inside a dark, rocky tomb, ethereal golden light radiating from the bones, mystical atmosphere, 8k resolution, photorealistic, dramatic lighting, sharp focus on the textures of the bones, sense of divine power and mystery, professional photography style."
+          }
+        }
+      },
+      {
+        "id": "scene-2",
+        "narration": {
+          "text": "No tempo em que este profeta morreu e foi sepultado, havia um grupo de saqueadores e ladrões que invadiam as cidades",
+          "subtitles": true
+        },
+        "background": {
+          "visual": {
+            "type": "ai",
+            "provider": "pollinations",
+            "content_type": "image",
+            "prompt": "Cinematic wide shot of a group of fierce ancient marauders on horseback riding through a dusty desert landscape, carrying torches and weapons, sunset lighting, dramatic clouds, hyper-realistic, 8k, intense motion blur, gritty atmosphere, epic historical scale, deep shadows."
+          }
+        }
+      },
+      {
+        "id": "scene-3",
+        "narration": {
+          "text": "semeando medo e destruição por onde passavam.",
+          "subtitles": true
+        },
+        "background": {
+          "visual": {
+            "type": "ai",
+            "provider": "pollinations",
+            "content_type": "image",
+            "prompt": "Stunning cinematic shot of an ancient village in flames at night, thick black smoke rising into the moonlight, silhouettes of frightened people fleeing, 8k resolution, realistic fire effects, high contrast, emotional atmosphere of chaos, professional color grading, dramatic lighting."
+          }
+        }
+      },
+      {
+        "id": "scene-4",
+        "narration": {
+          "text": "Em um dia, um homem estava sendo sepultado quando esse grupo de moabitas surgiu",
+          "subtitles": true
+        },
+        "background": {
+          "visual": {
+            "type": "ai",
+            "provider": "pollinations",
+            "content_type": "image",
+            "prompt": "Cinematic scene of a funeral procession in an ancient cemetery, men carrying a wooden stretcher with a shrouded body, suddenly looking back in terror at a cloud of dust on the horizon, 8k, hyper-realistic, dramatic perspective, tension and fear, natural lighting."
+          }
+        }
+      },
+      {
+        "id": "scene-5",
+        "narration": {
+          "text": "prontos a saquear e roubar tudo o que encontravam pela frente.",
+          "subtitles": true
+        },
+        "background": {
+          "visual": {
+            "type": "ai",
+            "provider": "pollinations",
+            "content_type": "image",
+            "prompt": "Close-up of an ancient looter's hand grasping a sword hilt, blurred background of a chaotic raid, gold coins and jewelry scattered on the ground, 8k, photorealistic, intense lighting, gritty textures, sharp focus, masterpiece of storytelling and detail."
+          }
+        }
+      },
+      {
+        "id": "scene-6",
+        "narration": {
+          "text": "Com medo, os homens lançaram o corpo do defunto na sepultura desse profeta.",
+          "subtitles": true
+        },
+        "background": {
+          "visual": {
+            "type": "ai",
+            "provider": "pollinations",
+            "content_type": "image",
+            "prompt": "Cinematic shot from inside a dark stone tomb looking up at the opening, a shrouded body falling through the air into the darkness, beams of light following the body, 8k resolution, dramatic motion, high contrast, mysterious and urgent, professional lighting."
+          }
+        }
+      },
+      {
+        "id": "scene-7",
+        "narration": {
+          "text": "E foi então que ao cair e tocar nos ossos do profeta",
+          "subtitles": true
+        },
+        "background": {
+          "visual": {
+            "type": "ai",
+            "provider": "pollinations",
+            "content_type": "image",
+            "prompt": "Extreme macro shot of a dead hand touching ancient glowing bones at the bottom of a cave, sparks of divine energy igniting at the point of contact, 8k, hyper-realistic, volumetric lighting, spiritual energy effects, deep shadows, masterpiece of detail."
+          }
+        }
+      },
+      {
+        "id": "scene-8",
+        "narration": {
+          "text": "o homem morto ressuscitou e ficou de pé!",
+          "subtitles": true
+        },
+        "background": {
+          "visual": {
+            "type": "ai",
+            "provider": "pollinations",
+            "content_type": "image",
+            "prompt": "Breathtaking cinematic shot of a man in ancient burial shrouds standing upright inside a glowing tomb, looking at his hands in shock, divine light overflowing, 8k resolution, hyper-realistic, awe-inspiring, masterpiece of lighting and emotion, spiritual miracle theme."
+          }
+        }
+      },
+      {
+        "id": "scene-9",
+        "narration": {
+          "text": "Foi o mesmo que recebeu a porção dobrada do espírito de Elias",
+          "subtitles": true
+        },
+        "background": {
+          "visual": {
+            "type": "ai",
+            "provider": "pollinations",
+            "content_type": "image",
+            "prompt": "Epic cinematic depiction of a prophetic mantle falling from the sky onto a man's shoulders, a chariot of fire in the distant clouds, 8k, photorealistic, majestic scale, dramatic sunset colors, sense of power and calling, professional color grading."
+          }
+        }
+      },
+      {
+        "id": "scene-10",
+        "narration": {
+          "text": "estamos falando de Eliseu, o homem de fé.",
+          "subtitles": true
+        },
+        "background": {
+          "visual": {
+            "type": "ai",
+            "provider": "pollinations",
+            "content_type": "image",
+            "prompt": "Stunning portrait of an ancient prophet (Elisha) with a wise and determined gaze, holding a wooden staff, warm divine light illuminating his face, background of an ancient landscape, 8k resolution, hyper-realistic skin details, masterpiece quality, cinematic lighting."
+          }
+        }
+      },
+      {
+        "id": "scene-11",
+        "narration": {
+          "text": "Se inscreva no canal para aprender mais sobre a Bíblia",
+          "subtitles": true
+        },
+        "background": {
+          "visual": {
+            "type": "ai",
+            "provider": "pollinations",
+            "content_type": "image",
+            "prompt": "Cinematic shot of a beautiful ancient heavy Bible resting on a stone table, a golden 'subscribe' button floating above it in light, 8k, hyper-realistic, soft bokeh, warm light, professional architectural lighting, inviting and spiritual atmosphere."
+          }
+        }
+      },
+      {
+        "id": "scene-12",
+        "narration": {
+          "text": "Deus te abençoe!",
+          "subtitles": true
+        },
+        "background": {
+          "visual": {
+            "type": "ai",
+            "provider": "pollinations",
+            "content_type": "image",
+            "prompt": "Serene cinematic landscape of a valley at dawn, sun rays piercing through clouds, a feeling of divine peace and blessing, 8k resolution, photorealistic, vibrant colors, National Geographic style, masterpiece of lighting, tranquil atmosphere."
+          }
+        }
+      }
+    ],
+    "youtube": {
+      "title": "O MORTO QUE RESSUSCITOU NOS OSSOS! 😱🦴 #Biblia #Milagre #Eliseu",
+      "tags": [
+        "eliseu",
+        "milagre",
+        "ressurreição",
+        "histórias da bíblia",
+        "profeta",
+        "curiosidade bíblica"
+      ],
+      "description": "Você conhece a impressionante história do homem que ressuscitou ao tocar nos ossos do profeta Eliseu? Descubra esse milagre bíblico agora! 📖✨\n\n#Milagre #Biblia #Deus #Fé #Shorts",
+      "publish_at": "2026-01-28 18:00:00"
     }
+  }
 ]

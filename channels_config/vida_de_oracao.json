@@ -1,6 +1,9 @@
 {
     "global_settings": {
-        "tts": { "voice": "pt-BR-AntonioNeural" },
+        "tts": {
+            "provider": "local_file",
+            "audio_file": "./temp/download.wav"
+        },
         "subtitle": {
             "font_path": "./assets/fonts/CormorantGaramond/CormorantGaramond-Bold.ttf",
             "font_size": 110,
@@ -11,7 +14,10 @@
             "shadow_color": "#A68A56",
             "shadow_opacity": 0.95,
             "blur_radius": 6.0,
-            "shadow_offset": [4, 4]
+            "shadow_offset": [
+                4,
+                4
+            ]
         },
         "background": {
             "visual": {
@@ -29,7 +35,10 @@
                     "size": 0.4,
                     "movement": "float",
                     "blur_radius": 5.0,
-                    "axis_ratio_range": [0.6, 1.8],
+                    "axis_ratio_range": [
+                        0.6,
+                        1.8
+                    ],
                     "color": "#FFD27A"
                 }
             }

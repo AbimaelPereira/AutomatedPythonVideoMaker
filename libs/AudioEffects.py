@@ -36,6 +36,50 @@ class AudioEffects:
         self.audio_path = audio_path
         self._audio = AudioSegment.from_file(audio_path)
         return self
+
+    def apply_ducking(
+        narration: AudioSegment,
+        background: AudioSegment,
+        ducking_db: float = -18.0,     # quanto abaixa a música quando há voz
+        threshold_db: float = -40.0,   # volume mínimo da voz para ativar ducking
+        attack_ms: int = 50,           # quão rápido abaixa
+        release_ms: int = 300,         # quão rápido sobe
+        chunk_ms: int = 10             # resolução da análise
+    ) -> AudioSegment:
+        """
+        Aplica ducking na música de fundo baseado na narração.
+        """
+
+        # Garante mesma duração
+        max_len = max(len(narration), len(background))
+        narration = narration.pad_end(max_len)
+        background = background.pad_end(max_len)
+
+        output = AudioSegment.silent(duration=max_len)
+
+        current_gain = 0.0
+        attack_step = abs(ducking_db) / (attack_ms / chunk_ms)
+        release_step = abs(ducking_db) / (release_ms / chunk_ms)
+
+        for i in range(0, max_len, chunk_ms):
+            voice_chunk = narration[i:i+chunk_ms]
+            bg_chunk = background[i:i+chunk_ms]
+
+            voice_db = voice_chunk.dBFS
+
+            # Se tem voz → abaixa música
+            if voice_db > threshold_db:
+                current_gain = max(ducking_db, current_gain - attack_step)
+            else:
+                current_gain = min(0.0, current_gain + release_step)
+
+            bg_chunk = bg_chunk.apply_gain(current_gain)
+            mixed = bg_chunk.overlay(voice_chunk)
+
+            output += mixed
+
+        return output
+
     
     def apply_reverb(
         self,

@@ -12,10 +12,10 @@ from libs.Config import Config
 from libs.VisualClip import VisualClip, force_rgb
 from libs.Subtitle import Subtitle
 from libs.MediaDownloader import MediaDownloader
-from libs.TTS_Edge import EdgeTTS
 from libs.LayoutEngine import LayoutEngine
 from libs.YouTube import YouTube
-from libs.Background.BackgroundEngine import BackgroundEngine  # NOVO
+from libs.Background.BackgroundEngine import BackgroundEngine
+from libs.NarrationEngine import NarrationEngine
 
 try:
     from libs.AIProviders import ai_manager
@@ -26,7 +26,7 @@ except ImportError as e:
     AI_AVAILABLE = False
     print(f"[UVE] ⚠️ Sistema de IA não disponível: {e}")
 
-AVAILABLE_RESOLUTIONS = {"9: 16": (1080, 1920), "16:9": (1920, 1080)}
+AVAILABLE_RESOLUTIONS = {"9:16": (1080, 1920), "16:9": (1920, 1080)}
 
 
 def hex_to_rgb(hex_value):
@@ -94,59 +94,6 @@ class UnifiedVideoEngine:
 
         self.final_clips = []
         self.total_duration = 0.0
-
-    def _get_tts_engine(self):
-        return EdgeTTS()
-
-    def _process_narration(self, scene_data, target_dir):
-        """Processa narração da cena gerando áudio e legendas."""
-        narration_config = scene_data.get("narration", {})
-        text = narration_config.get("text", "")
-
-        if not text:
-            print("[UVE] Cena sem narração.  Duração será fixa.")
-            return None, narration_config.get("duration", 4.0), None, None
-
-        voice = (scene_data.get("tts", {}).get("voice") or
-                 self.tts_config.get("voice") or
-                 "pt-BR-AntonioNeural")
-
-        audio_basename = os.path.join(target_dir, f"audio_{scene_data.get('id', 'unknown')}")
-
-        print(f"[UVE] Gerando áudio para cena {scene_data.get('id')} em {target_dir}...")
-
-        try:
-            tts_params = {
-                "text": text,
-                "voice_id": voice,
-                "output_basename": audio_basename,
-            }
-
-            tts_engine = EdgeTTS(params=tts_params)
-            tts_result = tts_engine.generate_audio_and_subtitles()
-
-            final_audio_path = tts_result.get("audio_file")
-            word_boundaries = tts_result.get("word_boundaries")
-            subtitle_file = tts_result.get("subtitle_file")
-
-            if not final_audio_path or not os.path.exists(final_audio_path):
-                print(f"[ERRO UVE] Arquivo de áudio não foi criado: {final_audio_path}")
-                return None, 4.0, None, None
-
-            audio_clip = AudioFileClip(final_audio_path)
-            duration = audio_clip.duration
-
-            print(f"[UVE] ✅ Áudio gerado com sucesso - Duração: {duration:.2f}s")
-            return audio_clip, duration, word_boundaries, subtitle_file
-
-        except Exception as e:
-            print(f"[ERRO UVE] Falha ao gerar TTS: {e}")
-            import traceback
-            traceback.print_exc()
-            return None, 4.0, None, None
-
-    # REMOVIDOS: _select_random_videos_for_duration, _create_ai_background_clip, _create_background_clip, _apply_overlays_to_background
-    # Uso agora de BackgroundEngine para o fundo da cena (visual + filters)
 
     def _create_visual_elements_clip(self, scene_data, scene_duration, scene_dir):
         """Cria elementos visuais da cena."""
@@ -253,13 +200,11 @@ class UnifiedVideoEngine:
                 "padding_bottom": getattr(self.config_instance, 'padding_bottom', 200),
                 "padding_side": getattr(self.config_instance, 'padding_side', 50),
                 "padding_top":  getattr(self.config_instance, 'padding_top', 200),
-                "has_visual_elements": has_visual_elements,
+                "has_visual_elements": True,
             }
 
             global_subtitle_config = self.global_settings.get("subtitle", {})
             subtitle_config.update(global_subtitle_config)
-
-            print(f"[UVE] Configurações de legenda:  posição={'centro' if not has_visual_elements else 'inferior'}")
 
             subtitle_generator = Subtitle(params=subtitle_config)
             subtitle_clip = subtitle_generator.generate()
@@ -298,7 +243,6 @@ class UnifiedVideoEngine:
         
         try:
             if audio_type == "directory":
-                """Seleciona um arquivo de áudio aleatório de um diretório. (Corrigido)"""
                 if not os.path.isdir(source):
                     print(f"[UVE] ⚠️ Diretório de áudio não encontrado: {source}")
                     return None
@@ -309,7 +253,7 @@ class UnifiedVideoEngine:
                 if not audio_files:
                     print(f"[UVE] ⚠️ Nenhum arquivo de áudio válido encontrado em: {source}")
                     return None
-                    
+                     
                 audio_path = os.path.join(source, random.choice(audio_files))
             else:
                 audio_path = source
@@ -365,14 +309,14 @@ class UnifiedVideoEngine:
             traceback.print_exc()
             return video_path
 
-    def _render_scene(self, scene_index, total_scenes, composed_clip, narration_clip, temp_dir):
-        temp_scene_path = os.path.join(temp_dir, f"scene_{scene_index:04d}.mp4")
-        temp_audiofile = os.path.join(temp_dir, f"temp-audio-{scene_index}.m4a")
+    def _render_scene(self, scene_index, scene_id, total_scenes, composed_clip, narration_clip, scene_dir):
+        scene_clip_path = os.path.join(scene_dir, f"{scene_id}.mp4")
+        temp_audiofile = os.path.join(scene_dir, f"{scene_id}.m4a")
 
         print(f"[UVE] 🎬 Renderizando cena {scene_index + 1}/{total_scenes}...")
 
         composed_clip.write_videofile(
-            temp_scene_path,
+            scene_clip_path,
             codec='libx264',
             audio_codec='aac',
             temp_audiofile=temp_audiofile,
@@ -384,7 +328,7 @@ class UnifiedVideoEngine:
             logger=None
         )
 
-        print(f"[UVE] ✅ Cena {scene_index + 1} renderizada:  {os.path.basename(temp_scene_path)}")
+        print(f"[UVE] ✅ Cena {scene_index + 1} renderizada:  {os.path.basename(scene_clip_path)}")
 
         try:
             composed_clip.close()
@@ -396,15 +340,13 @@ class UnifiedVideoEngine:
         del composed_clip
         gc.collect()
 
-        return temp_scene_path
+        return scene_clip_path
     
-    def run(self, output_filename="final_video.mp4"):
+    def run(self):
         """Método principal de renderização."""
         print("[UVE] 🚀 Iniciando processamento do vídeo...")
 
         scene_files = []
-        temp_dir = os.path.join(self.output_dir, "_temp")
-        os.makedirs(temp_dir, exist_ok=True)
 
         scenes = self.data_config.get("scenes", [])
         total_scenes = len(scenes)
@@ -413,6 +355,17 @@ class UnifiedVideoEngine:
             print("[UVE] ❌ Nenhuma cena encontrada na configuração")
             return None
 
+        # PRÉ-PROCESSAMENTO: segmentar áudio e legendas ANTES das cenas (para provider=local_file)
+        try:
+            scenes = NarrationEngine.preprocess_scenes({
+                "provider": self.tts_config.get("provider", "edge"),
+                "tts_config": self.tts_config,
+                "scenes_data": scenes,
+                "output_base_dir": self.output_dir
+            })
+        except Exception as e:
+            print(f"[UVE] ⚠️ Pré-processamento de narração falhou: {e}")
+
         for scene_index, scene in enumerate(scenes):
             scene_id = scene.get("id", f"cena_{scene_index}")
             print(f"\n[UVE] 📝 Processando cena {scene_index + 1}/{total_scenes}:  {scene_id}")
@@ -420,8 +373,20 @@ class UnifiedVideoEngine:
             scene_dir = os.path.join(self.output_dir, scene_id)
             os.makedirs(scene_dir, exist_ok=True)
 
-            # 1. Narração
-            narration_clip, duration_from_tts, word_timing, subtitle_file = self._process_narration(scene, scene_dir)
+            # 1. Narração (usa dados pré-segmentados se local_file)
+            narration_engine = NarrationEngine(self.tts_config, self.output_dir)
+            narration_clip, duration_from_tts, subtitle_file = narration_engine.process_scene_narration(scene, scene_dir)
+
+            # adicionar fixo 50ms antes e depois da narração
+            if narration_clip:
+                # silencio inicial/final
+                silence_duration = 0.05
+                audio_silencio = AudioClip(lambda t: 0, duration=silence_duration)
+                narration_clip = concatenate_audioclips([audio_silencio, narration_clip, audio_silencio])
+                duration_from_tts = narration_clip.duration
+                print(f"[UVE] Duração da narração: {duration_from_tts}s")
+            else:
+                print("[UVE] Sem narração para esta cena")
 
             # 2. Duração
             scene_duration = scene.get("duration", duration_from_tts)
@@ -452,10 +417,8 @@ class UnifiedVideoEngine:
                 final_scene_clip = [background_clip]
                 if visual_clip: 
                     final_scene_clip.append(visual_clip)
-                    print("[UVE] ✅ Elementos visuais adicionados")
                 if subtitle_clip:
                     final_scene_clip.append(subtitle_clip)
-                    print("[UVE] ✅ Legendas adicionadas")
 
                 # 5. force_rgb
                 safe_clips = []
@@ -474,27 +437,28 @@ class UnifiedVideoEngine:
                 # 7. Narração
                 if narration_clip:
                     composed_clip = composed_clip.set_audio(narration_clip)
-                    print("[UVE] ✅ Narração adicionada à cena")
-                else:
-                    print("[UVE] Cena sem narração")
-                
-                temp_scene_path = self._render_scene(
-                    scene_index, total_scenes, composed_clip, narration_clip, temp_dir
+
+                scene_clip_path = self._render_scene(
+                    scene_index,
+                    scene_id, 
+                    total_scenes, 
+                    composed_clip, 
+                    narration_clip, 
+                    scene_dir
                 )
-                scene_files.append(temp_scene_path)
+                scene_files.append(scene_clip_path)
 
             except Exception as e:
-                print(f"[UVE] ❌ Erro ao processar cena {scene_index + 1}: {e}")
+                print(f"[UVE] ❌ Erro ao processar cena {scene_id + 1}: {e}")
                 import traceback
                 traceback.print_exc()
                 continue
 
         # 9. Concatenar cenas
         slug = self.data_config.get("slug", "video_final")
-        if not output_filename.endswith('.mp4'):
-            output_filename = f"{slug}.mp4"
+        output_filename = f"{slug}.mp4"
 
-        intermediate_path = os.path.join(temp_dir, f"{slug}_no_bg_audio.mp4")
+        intermediate_path = os.path.join(self.output_dir, f"{slug}_no_bg_audio.mp4")
         output_path = os.path.join(self.output_dir, output_filename)
 
         if not scene_files:
@@ -504,7 +468,7 @@ class UnifiedVideoEngine:
         try:
             print(f"[UVE] 🔗 Concatenando {len(scene_files)} cenas...")
 
-            concat_list_path = os.path.join(temp_dir, "concat_list.txt")
+            concat_list_path = os.path.join(scene_dir, "concat_list.txt")
             with open(concat_list_path, "w", encoding="utf-8") as f:
                 for p in scene_files:
                     f.write(f"file '{os.path.abspath(p)}'\n")
@@ -523,8 +487,8 @@ class UnifiedVideoEngine:
                 ffmpeg_cmd_reencode = [
                     "ffmpeg", "-y", "-f", "concat", "-safe", "0",
                     "-i", concat_list_path,
-                    "-c: v", "libx264", "-preset", "medium", "-crf", "20",
-                    "-c:a", "aac", "-b: a", "128k",
+                    "-c:v", "libx264", "-preset", "medium", "-crf", "20",
+                    "-c:a", "aac", "-b:a", "128k",
                     intermediate_path
                 ]
                 subprocess.run(ffmpeg_cmd_reencode, check=True, capture_output=True)

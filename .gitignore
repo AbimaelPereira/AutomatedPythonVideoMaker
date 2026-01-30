@@ -35,6 +35,12 @@ __pycache__/
 /tokens/*
 !/tokens/.gitkeep
 
+/temp/*
+!/temp/.gitkeep
+
+/development/*
+!/development/.gitkeep
+
 /cache/ai_generated/*
 !/cache/ai_generated/.gitkeep
 

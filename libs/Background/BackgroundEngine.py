@@ -101,9 +101,8 @@ class BackgroundEngine:
         if cached_file:
             file_path = cached_file
         else:
-            if not parameters.get("width") and not parameters.get("height"):
-                parameters["width"] = self.resolution_output[0]
-                parameters["height"] = self.resolution_output[1]
+            parameters["width"] = self.resolution_output[0]
+            parameters["height"] = self.resolution_output[1]
 
             if content_type == "image":
                 result = ai_manager.generate_image(prompt=prompt, provider=provider, **parameters)

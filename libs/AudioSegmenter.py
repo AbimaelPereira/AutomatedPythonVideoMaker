@@ -2,6 +2,7 @@ import os
 import re
 from pydub import AudioSegment
 from thefuzz import fuzz
+from difflib import SequenceMatcher
 
 class AudioSegmenter:
     def __init__(self, audio_path, srt_path):
@@ -26,7 +27,6 @@ class AudioSegmenter:
             content = f.read()
 
         # Regex para extrair blocos de SRT
-        # Padrão: Indice -> Timestamp -> Texto
         pattern = re.compile(r'(\d+)\n(\d{2}:\d{2}:\d{2},\d{3}) --> (\d{2}:\d{2}:\d{2},\d{3})\n(.*?)(?=\n\n|\Z)', re.DOTALL)
         matches = pattern.findall(content)
 
@@ -56,15 +56,23 @@ class AudioSegmenter:
         milliseconds = int(ms % 1000)
         return f"{hours:02d}:{minutes:02d}:{seconds:02d},{milliseconds:03d}"
 
+    def _normalize_text(self, text):
+        """
+        Normaliza texto para comparação, removendo pontuação, 
+        convertendo para minúsculas e removendo espaços extras.
+        """
+        # Remove pontuação comum
+        text = re.sub(r'[,\.!?;:—\-\"\'()]', '', text)
+        # Converte para minúsculas
+        text = text.lower()
+        # Remove espaços múltiplos
+        text = ' '.join(text.split())
+        return text
+
     def _generate_srt_segment(self, matched_blocks, start_offset_ms, srt_output_path):
         """
         Gera um arquivo SRT para o segmento cortado, ajustando os timestamps
         para começar em 00:00:00,000.
-        
-        Args:
-            matched_blocks: Lista de blocos de legenda que fazem parte do segmento
-            start_offset_ms: Timestamp de início do primeiro bloco (para ajuste)
-            srt_output_path: Caminho onde o arquivo SRT será salvo
         """
         srt_content = []
         
@@ -84,145 +92,252 @@ class AudioSegmenter:
             srt_content.append(f"{idx}")
             srt_content.append(f"{start_time} --> {end_time}")
             srt_content.append(block['text'])
-            srt_content.append("")  # Linha em branco entre blocos
+            srt_content.append("")
         
         # Salvar arquivo
         with open(srt_output_path, 'w', encoding='utf-8') as f:
             f.write('\n'.join(srt_content))
 
-    def extract_scene_audio(self, scene_text, output_path, similarity_threshold=70):
+    def _find_best_match_window(self, scene_text_normalized, start_index=0):
         """
-        Procura o texto da cena nas legendas a partir da última posição,
-        define o tempo de inicio e fim, salva o corte de áudio e gera o SRT correspondente.
+        Usa uma janela deslizante para encontrar a melhor correspondência
+        entre o texto da cena e as legendas.
+        
+        Returns:
+            Tupla (start_block_index, end_block_index, confidence_score)
+        """
+        scene_words = scene_text_normalized.split()
+        num_scene_words = len(scene_words)
+        
+        best_match = None
+        best_score = 0
+        best_range = (start_index, start_index)
+        
+        # Janela deslizante através das legendas
+        max_window = min(len(self.subtitles) - start_index, num_scene_words + 10)
+        
+        for window_size in range(num_scene_words - 2, max_window + 1):
+            for i in range(start_index, len(self.subtitles) - window_size + 1):
+                # Concatena texto da janela
+                window_text = ' '.join([
+                    self._normalize_text(self.subtitles[j]['text']) 
+                    for j in range(i, i + window_size)
+                ])
+                
+                # Calcula similaridade
+                ratio = SequenceMatcher(None, scene_text_normalized, window_text).ratio()
+                
+                # Verifica se todas as palavras da cena estão presentes
+                words_found = sum(1 for word in scene_words if word in window_text)
+                coverage = words_found / num_scene_words
+                
+                # Score combinado (ratio + coverage)
+                combined_score = (ratio * 0.6) + (coverage * 0.4)
+                
+                if combined_score > best_score:
+                    best_score = combined_score
+                    best_range = (i, i + window_size - 1)
+                    best_match = window_text
+        
+        return best_range[0], best_range[1], best_score, best_match
+
+    def _find_scene_boundaries_v2(self, scene_text, start_index):
+        """
+        Algoritmo melhorado para encontrar os limites exatos da cena.
+        
+        Estratégia:
+        1. Normaliza o texto da cena e das legendas
+        2. Usa janela deslizante para encontrar melhor match
+        3. Garante que todos os tokens importantes sejam capturados
+        """
+        scene_normalized = self._normalize_text(scene_text)
+        scene_words = scene_normalized.split()
+        
+        print(f"[Debug] Procurando por: '{scene_normalized}'")
+        print(f"[Debug] Palavras esperadas: {scene_words}")
+        
+        # Encontra o melhor match usando janela deslizante
+        start_block, end_block, score, matched_text = self._find_best_match_window(
+            scene_normalized, start_index
+        )
+        
+        print(f"[Debug] Melhor match encontrado: índices {start_block} até {end_block}")
+        print(f"[Debug] Score: {score:.2f}")
+        print(f"[Debug] Texto matched: '{matched_text}'")
+        
+        # Verifica se o score é aceitável
+        if score < 0.6:
+            print(f"[AVISO] Score de matching baixo ({score:.2f}). Tentando busca linear...")
+            # Fallback para busca linear
+            return self._find_scene_boundaries_linear(scene_text, start_index)
+        
+        # Extrai os blocos matched
+        matched_blocks = []
+        for i in range(start_block, end_block + 1):
+            matched_blocks.append(self.subtitles[i])
+        
+        return matched_blocks, end_block + 1
+
+    def _find_scene_boundaries_linear(self, scene_text, start_index):
+        """
+        Método de fallback: busca linear palavra por palavra.
+        Garante capturar todo o texto, mesmo com pontuação diferente.
+        """
+        scene_normalized = self._normalize_text(scene_text)
+        scene_words = scene_normalized.split()
+        
+        matched_blocks = []
+        words_found = []
+        current_index = start_index
+        
+        # Tenta encontrar cada palavra da cena nas legendas
+        for target_word in scene_words:
+            found = False
+            # Busca a partir do índice atual
+            for i in range(current_index, len(self.subtitles)):
+                sub_text_norm = self._normalize_text(self.subtitles[i]['text'])
+                
+                if target_word in sub_text_norm or fuzz.ratio(target_word, sub_text_norm) > 80:
+                    matched_blocks.append(self.subtitles[i])
+                    words_found.append(self.subtitles[i]['text'])
+                    current_index = i + 1
+                    found = True
+                    break
+            
+            if not found:
+                # Se não encontrou a palavra, para aqui
+                print(f"[AVISO] Palavra '{target_word}' não encontrada após índice {current_index}")
+                break
+        
+        print(f"[Debug] Busca linear encontrou: {' '.join(words_found)}")
+        
+        if not matched_blocks:
+            return None, start_index
+        
+        return matched_blocks, current_index
+
+    def extract_scene_audio(self, scene_text, output_path, method='auto'):
+        """
+        Procura o texto da cena nas legendas e extrai o áudio correspondente.
         
         Args:
             scene_text: Texto da cena a ser procurado
-            output_path: Caminho para salvar o arquivo de áudio (ex: "scene1.mp3")
-            similarity_threshold: Threshold de similaridade para matching (padrão: 70)
+            output_path: Caminho para salvar o arquivo de áudio
+            method: 'auto', 'window', ou 'linear'
             
         Returns:
             Tupla (audio_path, srt_path) ou (None, None) se não encontrar
         """
         start_index = self.current_srt_index
-        matched_blocks = []
         
-        # Normalização simples para comparação
-        scene_text_clean = scene_text.lower()
-
-        accumulated_text = ""
-        found_start = False
+        print(f"\n{'='*60}")
+        print(f"[Segmentação] Iniciando busca a partir do índice {start_index}")
+        print(f"[Segmentação] Texto da cena: '{scene_text}'")
         
-        # Percorre as legendas a partir de onde parou
-        for i in range(start_index, len(self.subtitles)):
-            sub = self.subtitles[i]
-            sub_text_clean = sub['text'].lower()
-            
-            # Lógica de Matching (Busca Sequencial)
-            # Verifica se o bloco atual tem alguma relevância com o texto da cena
-            # Usamos 'partial_ratio' para ver se o trecho da legenda está dentro do texto da cena
-            ratio = fuzz.partial_ratio(sub_text_clean, scene_text_clean)
-            
-            if ratio >= similarity_threshold:
-                if not found_start:
-                    found_start = True
-                    # Salva onde começou essa cena
-                    first_block_index = i 
-                
-                matched_blocks.append(sub)
-                accumulated_text += " " + sub_text_clean
-                
-                # Se o texto acumulado já "cobriu" quase todo o texto da cena, podemos parar
-                # Verificamos se o texto da cena está contido no que já acumulamos
-                full_match_ratio = fuzz.token_set_ratio(scene_text_clean, accumulated_text)
-                
-                # Se a similaridade do conjunto for alta, consideramos que a cena acabou aqui
-                if full_match_ratio > 90 and len(accumulated_text) >= len(scene_text_clean) * 0.8:
-                    # Atualiza o ponteiro global para a próxima busca começar daqui
-                    self.current_srt_index = i + 1 
-                    break
-            
-            elif found_start:
-                # Se já tínhamos encontrado o inicio, mas agora o ratio deu baixo, 
-                # pode ser que a cena acabou e o SRT passou para a próxima frase.
-                # Mas cuidado: às vezes é só uma palavra conectiva. 
-                # Vamos simplificar: se achou start e parou de bater, assume fim.
-                # (Essa lógica pode ser refinada depois)
-                
-                # Verifica se o que já pegamos é suficiente
-                if len(accumulated_text) > len(scene_text_clean) * 0.6:
-                    self.current_srt_index = i
-                    break
+        # Escolhe o método de busca
+        if method == 'linear':
+            result = self._find_scene_boundaries_linear(scene_text, start_index)
+        else:  # 'auto' ou 'window'
+            result = self._find_scene_boundaries_v2(scene_text, start_index)
+        
+        if result is None or result[0] is None:
+            print(f"[ERRO] Não foi possível encontrar correspondência para: '{scene_text[:50]}...'")
+            return None, None
+        
+        matched_blocks, next_index = result
         
         if not matched_blocks:
-            print(f"[AVISO] Não foi possível encontrar trecho correspondente para: '{scene_text[:30]}...'")
+            print(f"[ERRO] Nenhum bloco encontrado")
             return None, None
-
-        # Definir Timestamps de Corte
+        
+        # Atualiza o ponteiro global
+        self.current_srt_index = next_index
+        
+        # Define timestamps de corte
         start_ms = matched_blocks[0]['start_ms']
         end_ms = matched_blocks[-1]['end_ms']
         
-        # Adicionar um padding de segurança (ex: 50ms) para não cortar respiração
-        start_ms = max(0, start_ms - 50)
-        # end_ms = end_ms + 50
-        # end_ms pode ser o inicio da próxima legenda, se não existir proxima, deve ser o final do áudio
-        if self.current_srt_index < len(self.subtitles):
-            next_sub_start = self.subtitles[self.current_srt_index]['start_ms']
-            end_ms = min(end_ms + 50, next_sub_start - 1)
+        # Padding de segurança (50ms antes e depois)
+        start_ms = max(0, start_ms - 15)
+        
+        # Verifica se há próxima legenda para não sobrepor
+        if next_index < len(self.subtitles):
+            next_sub_start = self.subtitles[next_index]['start_ms']
+            end_ms = min(end_ms + 15, next_sub_start - 1)
         else:
-            end_ms = min(end_ms + 50, len(self.audio))
+            end_ms = min(end_ms + 15, len(self.audio))
 
-        print(f"[Corte] Cena detectada: {start_ms}ms -> {end_ms}ms | Texto: {matched_blocks[0]['text']}...{matched_blocks[-1]['text']}")
-
-        # Cortar e Salvar Áudio
+        # Mostra resultado
+        matched_text = ' '.join([block['text'] for block in matched_blocks])
+        print(f"[Resultado] Texto capturado: '{matched_text}'")
+        print(f"[Resultado] Timestamps: {start_ms}ms → {end_ms}ms")
+        print(f"[Resultado] Próximo índice: {next_index}")
+        print(f"{'='*60}\n")
+        
+        # Corta e salva áudio
         scene_audio = self.audio[start_ms:end_ms]
         scene_audio.export(output_path, format="mp3")
         
-        # Gerar arquivo SRT correspondente
+        # Gera arquivo SRT correspondente
         srt_output_path = output_path.rsplit('.', 1)[0] + '.srt'
         self._generate_srt_segment(matched_blocks, start_ms, srt_output_path)
         
         return output_path, srt_output_path
 
-    def segment_all_scenes(self, scenes_data, output_base_dir):
+    def segment_all_scenes(self, scenes_data, output_base_dir, method='auto'):
         """
         Segmenta automaticamente todas as cenas do vídeo.
         
         Args:
             scenes_data: Lista de dicionários com dados das cenas
             output_base_dir: Diretório base
+            method: Método de matching ('auto', 'window', 'linear')
             
         Returns:
             Dict com informações dos segmentos processados
         """
         segments_info = {}
         
+        print(f"\n{'#'*60}")
+        print(f"# INICIANDO SEGMENTAÇÃO DE {len(scenes_data)} CENAS")
+        print(f"# Método: {method}")
+        print(f"{'#'*60}\n")
+        
         for i, scene in enumerate(scenes_data):
-            scene_slug = scene.get("slug", f"scene_{i}")
+            scene_id = scene.get("id", f"scene_{i}")
             scene_text = scene.get("narration", {}).get("text", "")
             
             if not scene_text:
-                print(f"[AVISO] Cena {scene_slug} sem texto para segmentar")
+                print(f"[AVISO] Cena {scene_id} sem texto para segmentar")
                 continue
 
-            # criar pasta dentro do output_base_dir com o id da cena
-            scene_output_dir = os.path.join(output_base_dir, scene_slug)
+            # Cria pasta da cena
+            scene_output_dir = os.path.join(output_base_dir, scene_id)
             os.makedirs(scene_output_dir, exist_ok=True)
             
             # Define caminhos de saída
-            audio_output = os.path.join(scene_output_dir, f"{scene_slug}.mp3")
+            audio_output = os.path.join(scene_output_dir, f"{scene_id}.mp3")
             
-            print(f"[Segmentação] Processando cena {scene_slug}...")
-            audio_path, srt_path = self.extract_scene_audio(scene_text, audio_output)
+            print(f"\n[CENA {i+1}/{len(scenes_data)}] Processando: {scene_id}")
+            audio_path, srt_path = self.extract_scene_audio(
+                scene_text, 
+                audio_output,
+                method=method
+            )
             
             if audio_path and srt_path:
-                segments_info[scene_slug] = {
+                segments_info[scene_id] = {
                     "audio_path": audio_path,
                     "srt_path": srt_path,
                     "text": scene_text
                 }
-                print(f"[Segmentação] ✅ Cena {scene_slug} segmentada com sucesso")
+                print(f"[CENA {i+1}/{len(scenes_data)}] ✅ Sucesso")
             else:
-                print(f"[Segmentação] ❌ Falha ao segmentar cena {scene_slug}")
+                print(f"[CENA {i+1}/{len(scenes_data)}] ❌ Falha")
         
-        print(f"[Segmentação] Processamento concluído: {len(segments_info)} cenas segmentadas")
+        print(f"\n{'#'*60}")
+        print(f"# SEGMENTAÇÃO CONCLUÍDA")
+        print(f"# Total processado: {len(segments_info)}/{len(scenes_data)} cenas")
+        print(f"{'#'*60}\n")
+        
         return segments_info

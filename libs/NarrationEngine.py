@@ -4,6 +4,7 @@ from libs.TTS_Edge import EdgeTTS
 from libs.TTS_Polly import PollyTTS
 from libs.AudioSegmenter import AudioSegmenter
 from libs.Whisper.WhisperWorker import WhisperWorker
+from moviepy.editor import AudioFileClip
 
 class NarrationEngine:
     """
@@ -16,24 +17,38 @@ class NarrationEngine:
         self.provider = tts_config.get("provider", "edge")
         self.segments_processed = {}
         
-    def preprocess_scenes(self, scenes_data):
+    def preprocess_scenes(params = {}):
         """
         Pré-processa todas as cenas se for narração local.
+        Não usar o self
         """
-        if self.provider == "local_file":
-            return self._preprocess_local_narration(scenes_data)
-        return None
+        defaults = {
+            "provider": "local_file",
+            "tts_config": {},
+            "scenes_data": [],
+            "output_base_dir": ""
+        }
 
-    def _preprocess_local_narration(self, scenes_data):
-        """Processa narração de arquivo local."""
-        audio_file = self.tts_config.get("audio_file")
+        for key, value in defaults.items():
+            if key not in params:
+                params[key] = value
+    
+        provider = params["provider"]
+        tts_config = params["tts_config"]
+        scenes_data = params["scenes_data"]
+        output_base_dir = params["output_base_dir"]
+
+        if provider != "local_file":
+            return scenes_data
+
+        audio_file = tts_config.get("audio_file")
         if not audio_file or not os.path.exists(audio_file):
             raise FileNotFoundError(f"Arquivo de áudio não encontrado: {audio_file}")
         
         print(f"[NarrationEngine] Processando narração local: {audio_file}")
         
         # Usa Whisper para transcrever
-        whisper_model = self.tts_config.get("whisper_model", "base")
+        whisper_model = tts_config.get("whisper_model", "base")
         whisper_worker = WhisperWorker(model_size=whisper_model)
         
         # Gera SRT completo
@@ -42,24 +57,41 @@ class NarrationEngine:
         
         # Segmenta por cenas
         segmenter = AudioSegmenter(audio_file, srt_path)
-        segments_info = segmenter.segment_all_scenes(scenes_data, self.output_base_dir)
+        segments_info = segmenter.segment_all_scenes(scenes_data, output_base_dir)
         
         # Atualiza as cenas com informações dos segmentos
         for scene in scenes_data:
-            scene_id = scene.get("id")
+            # atualizar os dados da cena adicionando audio_file e srt_file
+            scene_id = scene.get("id", "")
             if scene_id in segments_info:
-                scene["_local_narration"] = segments_info[scene_id]
-        
-        self.segments_processed = segments_info
-        return segments_info
+                scene["narration"]["audio_file"] = segments_info[scene_id]["audio_path"]
+                scene["narration"]["subtitle_file"] = segments_info[scene_id]["srt_path"]
 
-    def process_scene_narration(self, scene_data, target_dir):
+        return scenes_data
+        
+    def process_scene_narration(self, scene_data, scene_dir):
         """
         Processa narração de uma cena específica.
         
         Returns:
-            tuple: (audio_path, duration, subtitle_path, word_boundaries)
+            tuple: (audio_path, duration, subtitle_path)
+
+            scene_dir: Diretório onde os arquivos de áudio e legendas serão salvos.
         """
+
+        if self.provider == "local_file":
+            audio_file = scene_data.get("narration", {}).get("audio_file")
+            subtitle_file = scene_data.get("narration", {}).get("subtitle_file")
+
+            if not audio_file or not os.path.exists(audio_file):
+                print(f"[NarrationEngine] Arquivo de áudio local não encontrado para cena {scene_data.get('id')}: {audio_file}")
+                return None, 4.0, None, None
+
+            audio_clip = AudioFileClip(audio_file)
+            duration = float(audio_clip.duration or 4.0)
+
+            return audio_clip, duration, subtitle_file
+
         narration_config = scene_data.get("narration", {})
         text = narration_config.get("text", "")
 
@@ -67,20 +99,9 @@ class NarrationEngine:
             print("[NarrationEngine] Cena sem narração. Duração será fixa.")
             return None, narration_config.get("duration", 4.0), None, None
 
-        # Verifica se é narração local pré-processada
-        local_narration_data = scene_data.get("_local_narration")
-        if local_narration_data:
-            print(f"[NarrationEngine] Usando narração local para cena {scene_data.get('id')}")
-            return (
-                local_narration_data["audio_file"],
-                local_narration_data["audio_total_duration"],
-                local_narration_data["subtitle_file"],
-                None
-            )
-
         # Processa com TTS tradicional
         scene_id = scene_data.get('id', 'unknown')
-        audio_basename = os.path.join(target_dir, f"audio_{scene_id}")
+        audio_basename = os.path.join(scene_dir, f"{scene_id}")
 
         print(f"[NarrationEngine] Gerando áudio para cena {scene_id} com {self.provider}...")
 
@@ -94,7 +115,7 @@ class NarrationEngine:
                 
         except Exception as e:
             print(f"[NarrationEngine] ERRO ao processar narração: {e}")
-            return None, 4.0, None, None
+            return None, 4.0, None
 
     def _process_edge_tts(self, text, scene_data, audio_basename):
         """Processa TTS usando Edge."""
@@ -119,7 +140,10 @@ class NarrationEngine:
         if not audio_path or not os.path.exists(audio_path):
             raise FileNotFoundError(f"Arquivo de áudio não foi criado: {audio_path}")
 
-        return audio_path, duration, subtitle_path, word_boundaries
+        audio_clip = AudioFileClip(audio_path)
+        duration = float(audio_clip.duration or 4.0)
+
+        return audio_path, duration, subtitle_path
 
     def _process_polly_tts(self, text, scene_data, audio_basename):
         """Processa TTS usando AWS Polly."""
@@ -148,7 +172,10 @@ class NarrationEngine:
         if not audio_path or not os.path.exists(audio_path):
             raise FileNotFoundError(f"Arquivo de áudio não foi criado: {audio_path}")
 
-        return audio_path, duration, subtitle_path, None
+        audio_clip = AudioFileClip(audio_path)
+        duration = float(audio_clip.duration or 4.0)
+
+        return audio_clip, duration, subtitle_path
 
     def validate_config(self):
         """Valida se a configuração TTS está correta."""
