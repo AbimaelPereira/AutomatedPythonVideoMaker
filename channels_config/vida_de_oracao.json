@@ -5,13 +5,13 @@
             "audio_file": "./temp/download.wav"
         },
         "subtitle": {
-            "font_path": "./assets/fonts/CormorantGaramond/CormorantGaramond-Bold.ttf",
+            "font_path": "./assets/fonts/Montserrat/Montserrat-Black.ttf",
             "font_size": 110,
-            "color": "#E5C687",
+            "color": "#FFFFFF",
             "uppercase": true,
             "stroke_enabled": false,
             "shadow_enabled": true,
-            "shadow_color": "#A68A56",
+            "shadow_color": "#000000",
             "shadow_opacity": 0.95,
             "blur_radius": 6.0,
             "shadow_offset": [
@@ -41,6 +41,12 @@
                         1.8
                     ],
                     "color": "#FFD27A"
+                }
+            },
+            "filters//": {
+                "light_leak": {
+                    "speed": 5.0,
+                    "intensity": 0.2
                 }
             }
         },
