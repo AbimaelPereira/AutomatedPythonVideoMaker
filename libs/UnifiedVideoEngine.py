@@ -16,6 +16,7 @@ from libs.LayoutEngine import LayoutEngine
 from libs.YouTube import YouTube
 from libs.Background.BackgroundEngine import BackgroundEngine
 from libs.NarrationEngine import NarrationEngine
+from libs.TransitionEngine import TransitionEngine
 
 try:
     from libs.AIProviders import ai_manager
@@ -324,8 +325,7 @@ class UnifiedVideoEngine:
             fps=24,
             preset='medium',
             threads=4,
-            verbose=False,
-            logger=None
+            verbose=False
         )
 
         print(f"[UVE] ✅ Cena {scene_index + 1} renderizada:  {os.path.basename(scene_clip_path)}")
@@ -437,6 +437,25 @@ class UnifiedVideoEngine:
                 # 7. Narração
                 if narration_clip:
                     composed_clip = composed_clip.set_audio(narration_clip)
+
+                transitions_config = self.global_settings.get("transitions")
+    
+                if transitions_config and transitions_config.get("enabled", False):
+                    print(f"[UVE] 🎬 Aplicando transição Zoom na cena {scene_index + 1}...")
+                    
+                    try:
+                        transition_engine = TransitionEngine({
+                            "clip": composed_clip,
+                            "transitions_settings": transitions_config,
+                            "resolution": self.resolution_output
+                        })
+                        
+                        composed_clip = transition_engine.apply_transition()
+                        print(f"[UVE] ✅ Transição aplicada com sucesso")
+                        
+                    except Exception as e:
+                        print(f"[UVE] ⚠️ Falha ao aplicar transição: {e}")
+                        # Continua com o clip original
 
                 scene_clip_path = self._render_scene(
                     scene_index,

@@ -1,56 +1,52 @@
 import os
 import random
 from moviepy.editor import AudioFileClip
-from libs.Transitions.Slide import Slide
 from libs.Transitions.Zoom import Zoom
 
-class TransitionEngine:
-    def __init__(self, config: dict):
 
+class TransitionEngine:
+    """
+    Engine de transição simplificado que aplica zoom out + zoom in em clips individuais.
+    """
+    def __init__(self, config: dict):
         defaults = {
-            "clips": None,
+            "clip": None,  # Clip único a ser processado
             "transitions_settings": None,
             "resolution": (1920, 1080),
-
             "audio_settings": None,
             "visual_settings": None,
-            "transition_type": None,
         }
 
-        # adicionar todos os atributos no self
         self.config = {**defaults, **config}
         for key, value in self.config.items():
             setattr(self, key, value)
 
-        # clips, transitions_settings, resolution são obrigatórios
-        list_required = ["clips", "transitions_settings", "resolution"]
-        for item in list_required:
-            if getattr(self, item) is None:
-                raise ValueError(f"[TransitionEngine] Parâmetro obrigatório ausente: {item}")
+        # Validar parâmetros obrigatórios
+        if self.clip is None:
+            raise ValueError("[TransitionEngine] Parâmetro obrigatório ausente: clip")
+        
+        if self.transitions_settings is None:
+            raise ValueError("[TransitionEngine] Parâmetro obrigatório ausente: transitions_settings")
 
-        # se tiver self.transitions_settings.audio setar audio_settings
+        # Extrair configurações
         if self.transitions_settings.get("audio"):
             self.audio_settings = self.transitions_settings["audio"]
 
         if self.transitions_settings.get("visual"):
             self.visual_settings = self.transitions_settings["visual"]
 
-        if self.transitions_settings.get("type"):
-            self.transition_type = self.transitions_settings["type"]        
-
     def _get_clip_audio(self):
         """
-        Retorna o áudio do clipe, se disponível.
+        Retorna o áudio do efeito de transição, se disponível.
         """
         if not self.audio_settings:
             return None
 
-        type = self.audio_settings.get("type") # 'directory' ou 'file'
-        source = self.audio_settings.get("source") # diretório ou arquivo
+        audio_type = self.audio_settings.get("type")  # 'directory' ou 'file'
+        source = self.audio_settings.get("source")  # diretório ou arquivo
         volume = self.audio_settings.get("volume", 1.0)
 
-        if type == "directory":
-            # validar source
+        if audio_type == "directory":
             if not source or not os.path.exists(source):
                 return None
             
@@ -59,7 +55,8 @@ class TransitionEngine:
                 return None
             
             audio_path = os.path.join(source, random.choice(files))
-        elif type == "file":
+        
+        elif audio_type == "file":
             audio_path = source
             if not audio_path or not os.path.exists(audio_path):
                 return None
@@ -73,42 +70,36 @@ class TransitionEngine:
             print(f"[TransitionEngine] ⚠️ Erro ao carregar áudio: {e}")
             return None
 
-
-    def apply_transitions(self):
-        if not self.clips:
+    def apply_transition(self):
+        """
+        Aplica a transição de zoom no clip fornecido.
+        """
+        if not self.clip:
             return None
-        if len(self.clips) == 1:
-            return self.clips[0]
 
-        # Define os parâmetros base para a transição
+        # Configurar parâmetros da transição
         params = {
             "resolution_output": self.resolution,
-            **self.visual_settings,
+            "clip": self.clip,
         }
 
-        clip_1 = self.clips[0]
-        clip_2 = self. clips[1]
-        
-        params["clip_1"] = clip_1
-        params["clip_2"] = clip_2
+        # Adicionar configurações visuais se fornecidas
+        if self.visual_settings:
+            params.update(self.visual_settings)
 
-        # audio
+        # Adicionar áudio se configurado
         audio_clip = self._get_clip_audio()
-        if audio_clip: 
+        if audio_clip:
             params["audio_file_clip"] = audio_clip
-        # print debug params
-        print(f"[TransitionEngine] Params: {params}")
 
-        # Seleciona a classe de transição
-        transition_map = {
-            "slide": Slide,
-            "zoom":  Zoom,
-            "random":  random.choice([Slide, Zoom])
-        }
+        print(f"[TransitionEngine] Aplicando transição Zoom com params: {params.keys()}")
 
-        TransitionClass = transition_map.get(self.transition_type)
-        if not TransitionClass: 
-            raise ValueError(f"[TransitionEngine] Tipo de transição desconhecido: {self.transition_type}")
-
-        transition_instance = TransitionClass(params)
-        return transition_instance.process()
+        # Criar e processar transição
+        try:
+            transition_instance = Zoom(params)
+            return transition_instance.process()
+        except Exception as e:
+            print(f"[TransitionEngine] ❌ Erro ao aplicar transição: {e}")
+            import traceback
+            traceback.print_exc()
+            return self.clip  # Retorna clip original em caso de erro

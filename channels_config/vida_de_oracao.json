@@ -26,9 +26,10 @@
             },
             "audio": {
                 "type": "directory",
-                "source": "./assets/audio/background/vidadeoracao"
+                "source": "./assets/audio/background/vidadeoracao",
+                "//source": "./assets/audio/background/inspiration"
             },
-            "filters": {
+            "filters//": {
                 "particles": {
                     "density": 0.4,
                     "speed": 0.8,
@@ -41,6 +42,14 @@
                     ],
                     "color": "#FFD27A"
                 }
+            }
+        },
+        "transitions": {
+            "enabled": true,
+            "audio": {
+                "type": "directory",
+                "source": "./assets/audio/effects/transitions",
+                "volume": 1.0
             }
         }
     },

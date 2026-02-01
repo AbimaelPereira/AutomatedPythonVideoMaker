@@ -143,7 +143,7 @@ class NarrationEngine:
         audio_clip = AudioFileClip(audio_path)
         duration = float(audio_clip.duration or 4.0)
 
-        return audio_path, duration, subtitle_path
+        return audio_clip, duration, subtitle_path
 
     def _process_polly_tts(self, text, scene_data, audio_basename):
         """Processa TTS usando AWS Polly."""

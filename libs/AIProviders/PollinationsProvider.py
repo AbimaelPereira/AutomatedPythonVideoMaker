@@ -9,9 +9,24 @@ class PollinationsProvider:
     """
     Provider para integração com a API Pollinations
     Suporta geração de imagens e vídeos usando o mesmo endpoint /image/
+    Implementa sistema de fallback automático para modelos indisponíveis
     """
     
     BASE_URL = "https://gen.pollinations.ai"
+    
+    # Modelos de fallback para imagens (em ordem de preferência)
+    IMAGE_FALLBACK_MODELS = [
+        "zimage",      # Modelo padrão, rápido e de boa qualidade
+        "flux",        # Alta qualidade, mais lento
+        "turbo"       # Muito rápido, qualidade média
+    ]
+    
+    # Modelos de fallback para vídeos (em ordem de preferência)
+    VIDEO_FALLBACK_MODELS = [
+        "veo",         # Modelo padrão do Google
+        "seedance",    # Alternativa rápida
+        "seedance-pro" # Versão pro se disponível
+    ]
     
     def __init__(self, api_token: Optional[str] = None):
         """
@@ -41,9 +56,10 @@ class PollinationsProvider:
                       safe: bool = False,
                       quality: str = "medium",
                       transparent: bool = False,
-                      timeout: int = 60) -> Dict[str, Any]:
+                      timeout: int = 60,
+                      enable_fallback: bool = True) -> Dict[str, Any]:
         """
-        Gera uma imagem usando a API Pollinations
+        Gera uma imagem usando a API Pollinations com sistema de fallback automático
         
         Args: 
             prompt:  Descrição da imagem desejada
@@ -57,51 +73,99 @@ class PollinationsProvider:
             quality:  Qualidade da imagem (low, medium, high, hd)
             transparent: Fundo transparente (apenas gptimage)
             timeout: Timeout da requisição
+            enable_fallback: Se True, tenta modelos alternativos em caso de falha
             
         Returns:
             Dict com informações da imagem gerada
         """
-        url = f"{self.BASE_URL}/image/{quote(prompt)}"
+        # Prepara lista de modelos para tentar
+        models_to_try = [model]
         
-        params = {
-            "model": model,
-            "width":  width,
-            "height": height,
-            "enhance": str(enhance).lower(),
-            "negative_prompt": negative_prompt,
-            "safe": str(safe).lower(),
-            "quality": quality,
-            "transparent": str(transparent).lower()
+        if enable_fallback:
+            # Adiciona outros modelos da lista de fallback (exceto o já usado)
+            for fallback_model in self.IMAGE_FALLBACK_MODELS:
+                if fallback_model != model and fallback_model not in models_to_try:
+                    models_to_try.append(fallback_model)
+        
+        print(f"[Pollinations] 🎨 Tentando gerar imagem com modelo '{model}'")
+        if enable_fallback:
+            print(f"[Pollinations] 📋 Modelos de fallback disponíveis: {models_to_try[1:]}")
+        
+        # Tenta cada modelo em sequência
+        last_error = None
+        for attempt, current_model in enumerate(models_to_try, 1):
+            try:
+                if attempt > 1:
+                    print(f"[Pollinations] 🔄 Tentativa {attempt}/{len(models_to_try)} com modelo '{current_model}'...")
+                
+                url = f"{self.BASE_URL}/image/{quote(prompt)}"
+                
+                params = {
+                    "model": current_model,
+                    "width":  width,
+                    "height": height,
+                    "enhance": str(enhance).lower(),
+                    "negative_prompt": negative_prompt,
+                    "safe": str(safe).lower(),
+                    "quality": quality,
+                    "transparent": str(transparent).lower()
+                }
+                
+                if seed is not None:
+                    params["seed"] = seed
+                
+                response = self.session.get(url, params=params, timeout=timeout)
+                response.raise_for_status()
+                
+                # Verifica se é realmente uma imagem
+                content_type = response.headers.get("content-type", "")
+                if not content_type.startswith("image"):
+                    raise ValueError(f"Resposta não é uma imagem. Content-Type: {content_type}")
+                
+                print(f"[Pollinations] ✅ Imagem gerada com sucesso usando modelo '{current_model}'")
+                
+                return {
+                    "success": True,
+                    "content": response.content,
+                    "content_type": content_type,
+                    "size": len(response.content),
+                    "parameters": params,
+                    "prompt": prompt,
+                    "model_used": current_model,  # Indica qual modelo funcionou
+                    "attempts": attempt  # Quantas tentativas foram necessárias
+                }
+                
+            except requests.exceptions.RequestException as e:
+                last_error = str(e)
+                print(f"[Pollinations] ⚠️ Falha com modelo '{current_model}': {e}")
+                
+                # Se não for a última tentativa, continua
+                if attempt < len(models_to_try):
+                    continue
+                else:
+                    # Última tentativa falhou
+                    print(f"[Pollinations] ❌ Todos os modelos falharam após {attempt} tentativas")
+                    break
+            
+            except ValueError as e:
+                last_error = str(e)
+                print(f"[Pollinations] ⚠️ Erro de validação com modelo '{current_model}': {e}")
+                
+                if attempt < len(models_to_try):
+                    continue
+                else:
+                    print(f"[Pollinations] ❌ Todos os modelos falharam após {attempt} tentativas")
+                    break
+        
+        # Se chegou aqui, todas as tentativas falharam
+        return {
+            "success": False,
+            "error":  f"Falha em todos os modelos testados. Último erro: {last_error}",
+            "parameters": params,
+            "prompt": prompt,
+            "models_tried": models_to_try,
+            "attempts": len(models_to_try)
         }
-        
-        if seed is not None:
-            params["seed"] = seed
-            
-        try:
-            response = self.session.get(url, params=params, timeout=timeout)
-            response.raise_for_status()
-            
-            # Verifica se é realmente uma imagem
-            content_type = response.headers.get("content-type", "")
-            if not content_type.startswith("image"):
-                raise ValueError(f"Resposta não é uma imagem.  Content-Type: {content_type}")
-            
-            return {
-                "success": True,
-                "content": response.content,
-                "content_type": content_type,
-                "size": len(response.content),
-                "parameters": params,
-                "prompt": prompt
-            }
-            
-        except requests.exceptions.RequestException as e: 
-            return {
-                "success": False,
-                "error":  str(e),
-                "parameters": params,
-                "prompt": prompt
-            }
     
     def generate_video(self, 
                       prompt: str,
@@ -116,9 +180,10 @@ class PollinationsProvider:
                       safe: bool = False,
                       audio: bool = False,
                       image: Optional[str] = None,
-                      timeout: int = 300) -> Dict[str, Any]:
+                      timeout: int = 300,
+                      enable_fallback: bool = True) -> Dict[str, Any]:
         """
-        Gera um vídeo usando a API Pollinations (mesmo endpoint /image/)
+        Gera um vídeo usando a API Pollinations com sistema de fallback automático
         
         Args:
             prompt: Descrição do vídeo desejado
@@ -134,61 +199,106 @@ class PollinationsProvider:
             audio:  Gerar áudio para o vídeo (apenas veo)
             image: URL de imagem de referência
             timeout:  Timeout da requisição (vídeos demoram mais)
+            enable_fallback: Se True, tenta modelos alternativos em caso de falha
             
         Returns: 
             Dict com informações do vídeo gerado
         """
-        # CORRIGIDO: Usar o mesmo endpoint /image/ para vídeos
-        url = f"{self.BASE_URL}/image/{quote(prompt)}"
+        # Prepara lista de modelos para tentar
+        models_to_try = [model]
         
-        params = {
-            "model": model,
-            "width":  width,
-            "height": height,
-            "duration": duration,
-            "aspectRatio": aspectRatio,
-            "enhance": str(enhance).lower(),
-            "negative_prompt": negative_prompt,
-            "safe": str(safe).lower(),
-            "audio": str(audio).lower()
+        if enable_fallback:
+            # Adiciona outros modelos da lista de fallback (exceto o já usado)
+            for fallback_model in self.VIDEO_FALLBACK_MODELS:
+                if fallback_model != model and fallback_model not in models_to_try:
+                    models_to_try.append(fallback_model)
+        
+        print(f"[Pollinations] 🎬 Tentando gerar vídeo com modelo '{model}', duração {duration}s...")
+        if enable_fallback:
+            print(f"[Pollinations] 📋 Modelos de fallback disponíveis: {models_to_try[1:]}")
+        
+        # Tenta cada modelo em sequência
+        last_error = None
+        for attempt, current_model in enumerate(models_to_try, 1):
+            try:
+                if attempt > 1:
+                    print(f"[Pollinations] 🔄 Tentativa {attempt}/{len(models_to_try)} com modelo '{current_model}'...")
+                
+                url = f"{self.BASE_URL}/image/{quote(prompt)}"
+                
+                params = {
+                    "model": current_model,
+                    "width":  width,
+                    "height": height,
+                    "duration": duration,
+                    "aspectRatio": aspectRatio,
+                    "enhance": str(enhance).lower(),
+                    "negative_prompt": negative_prompt,
+                    "safe": str(safe).lower(),
+                    "audio": str(audio).lower()
+                }
+                
+                if seed is not None: 
+                    params["seed"] = seed
+                    
+                if image: 
+                    params["image"] = image
+                
+                response = self.session.get(url, params=params, timeout=timeout)
+                response.raise_for_status()
+                
+                # Verifica se é realmente um vídeo
+                content_type = response.headers.get("content-type", "")
+                if not content_type.startswith("video"):
+                    # Log para debug
+                    print(f"[Pollinations] ⚠️ Content-Type inesperado: {content_type}")
+                    print(f"[Pollinations] 📝 Primeiros 200 chars da resposta:  {response.text[:200]}")
+                    raise ValueError(f"Resposta não é um vídeo. Content-Type: {content_type}")
+                
+                print(f"[Pollinations] ✅ Vídeo gerado com sucesso usando modelo '{current_model}': {len(response.content)} bytes")
+                
+                return {
+                    "success": True,
+                    "content": response.content,
+                    "content_type": content_type,
+                    "size": len(response.content),
+                    "parameters": params,
+                    "prompt": prompt,
+                    "model_used": current_model,  # Indica qual modelo funcionou
+                    "attempts": attempt  # Quantas tentativas foram necessárias
+                }
+                
+            except requests.exceptions.RequestException as e:
+                last_error = str(e)
+                print(f"[Pollinations] ⚠️ Falha com modelo '{current_model}': {e}")
+                
+                # Se não for a última tentativa, continua
+                if attempt < len(models_to_try):
+                    continue
+                else:
+                    # Última tentativa falhou
+                    print(f"[Pollinations] ❌ Todos os modelos falharam após {attempt} tentativas")
+                    break
+            
+            except ValueError as e:
+                last_error = str(e)
+                print(f"[Pollinations] ⚠️ Erro de validação com modelo '{current_model}': {e}")
+                
+                if attempt < len(models_to_try):
+                    continue
+                else:
+                    print(f"[Pollinations] ❌ Todos os modelos falharam após {attempt} tentativas")
+                    break
+        
+        # Se chegou aqui, todas as tentativas falharam
+        return {
+            "success": False,
+            "error": f"Falha em todos os modelos testados. Último erro: {last_error}",
+            "parameters": params,
+            "prompt": prompt,
+            "models_tried": models_to_try,
+            "attempts": len(models_to_try)
         }
-        
-        if seed is not None: 
-            params["seed"] = seed
-            
-        if image: 
-            params["image"] = image
-            
-        try: 
-            print(f"[Pollinations] 🎬 Gerando vídeo com modelo '{model}', duração {duration}s...")
-            response = self.session.get(url, params=params, timeout=timeout)
-            response.raise_for_status()
-            
-            # Verifica se é realmente um vídeo
-            content_type = response.headers.get("content-type", "")
-            if not content_type.startswith("video"):
-                # Log para debug
-                print(f"[Pollinations] ⚠️ Content-Type inesperado: {content_type}")
-                print(f"[Pollinations] 📝 Primeiros 200 chars da resposta:  {response.text[: 200]}")
-                raise ValueError(f"Resposta não é um vídeo. Content-Type: {content_type}")
-            
-            print(f"[Pollinations] ✅ Vídeo gerado:  {len(response.content)} bytes")
-            return {
-                "success": True,
-                "content": response.content,
-                "content_type": content_type,
-                "size": len(response.content),
-                "parameters": params,
-                "prompt": prompt
-            }
-            
-        except requests.exceptions.RequestException as e: 
-            return {
-                "success": False,
-                "error": str(e),
-                "parameters": params,
-                "prompt": prompt
-            }
     
     def save_media(self, media_data: Dict[str, Any], output_path: str) -> bool:
         """
