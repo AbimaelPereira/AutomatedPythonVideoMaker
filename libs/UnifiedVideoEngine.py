@@ -290,7 +290,7 @@ class UnifiedVideoEngine:
                 output_path,
                 codec='libx264',
                 audio_codec='aac',
-                fps=24,
+                fps=30,  # CORRIGIDO: FPS consistente
                 preset='medium',
                 threads=4,
                 verbose=False,
@@ -316,16 +316,18 @@ class UnifiedVideoEngine:
 
         print(f"[UVE] 🎬 Renderizando cena {scene_index + 1}/{total_scenes}...")
 
+        # CORREÇÃO APLICADA: FPS de 24 para 30
         composed_clip.write_videofile(
             scene_clip_path,
             codec='libx264',
             audio_codec='aac',
             temp_audiofile=temp_audiofile,
             remove_temp=True,
-            fps=24,
+            fps=30,  # CORRIGIDO: Era 24, agora 30 para evitar trancos
             preset='medium',
             threads=4,
-            verbose=False
+            verbose=False,
+            logger=None  # Remove logs excessivos
         )
 
         print(f"[UVE] ✅ Cena {scene_index + 1} renderizada:  {os.path.basename(scene_clip_path)}")
@@ -378,15 +380,15 @@ class UnifiedVideoEngine:
             narration_clip, duration_from_tts, subtitle_file = narration_engine.process_scene_narration(scene, scene_dir)
 
             # adicionar fixo 50ms antes e depois da narração
-            if narration_clip:
-                # silencio inicial/final
-                silence_duration = 0.05
-                audio_silencio = AudioClip(lambda t: 0, duration=silence_duration)
-                narration_clip = concatenate_audioclips([audio_silencio, narration_clip, audio_silencio])
-                duration_from_tts = narration_clip.duration
-                print(f"[UVE] Duração da narração: {duration_from_tts}s")
-            else:
-                print("[UVE] Sem narração para esta cena")
+            # if narration_clip:
+            #     # silencio inicial/final
+            #     silence_duration = 0.05
+            #     audio_silencio = AudioClip(lambda t: 0, duration=silence_duration)
+            #     narration_clip = concatenate_audioclips([audio_silencio, narration_clip, audio_silencio])
+            #     duration_from_tts = narration_clip.duration
+            #     print(f"[UVE] Duração da narração: {duration_from_tts}s")
+            # else:
+            #     print("[UVE] Sem narração para esta cena")
 
             # 2. Duração
             scene_duration = scene.get("duration", duration_from_tts)
@@ -487,34 +489,33 @@ class UnifiedVideoEngine:
         try:
             print(f"[UVE] 🔗 Concatenando {len(scene_files)} cenas...")
 
-            concat_list_path = os.path.join(scene_dir, "concat_list.txt")
+            concat_list_path = os.path.join(self.output_dir, "concat_list.txt")
             with open(concat_list_path, "w", encoding="utf-8") as f:
                 for p in scene_files:
                     f.write(f"file '{os.path.abspath(p)}'\n")
 
+            # CORREÇÃO APLICADA: Re-encoding ao invés de -c copy para evitar trancos
+            print("[UVE] 🎬 Concatenando com re-encoding para transições suaves...")
             ffmpeg_cmd = [
                 "ffmpeg", "-y", "-f", "concat", "-safe", "0",
-                "-i", concat_list_path, "-c", "copy", intermediate_path
+                "-i", concat_list_path,
+                "-c:v", "libx264",  # Re-encode de vídeo (evita trancos)
+                "-preset", "medium",
+                "-crf", "20",  # Qualidade alta
+                "-pix_fmt", "yuv420p",
+                "-c:a", "aac",  # Re-encode de áudio
+                "-b:a", "192k",
+                "-movflags", "+faststart",  # Otimiza para streaming
+                intermediate_path
             ]
 
             subprocess.run(ffmpeg_cmd, check=True, capture_output=True)
             print(f"[UVE] ✅ Vídeo concatenado:  {intermediate_path}")
 
-        except subprocess.CalledProcessError:
-            print("[UVE] ⚠️ Concatenação rápida falhou, tentando re-encoding...")
-            try:
-                ffmpeg_cmd_reencode = [
-                    "ffmpeg", "-y", "-f", "concat", "-safe", "0",
-                    "-i", concat_list_path,
-                    "-c:v", "libx264", "-preset", "medium", "-crf", "20",
-                    "-c:a", "aac", "-b:a", "128k",
-                    intermediate_path
-                ]
-                subprocess.run(ffmpeg_cmd_reencode, check=True, capture_output=True)
-                print(f"[UVE] ✅ Vídeo concatenado (re-encoded): {intermediate_path}")
-            except Exception as e: 
-                print(f"[UVE] ❌ Falha na concatenação: {e}")
-                return None
+        except subprocess.CalledProcessError as e:
+            print(f"[UVE] ❌ Falha na concatenação: {e}")
+            print(f"[UVE] stderr: {e.stderr.decode() if e.stderr else 'N/A'}")
+            return None
         except Exception as e:
             print(f"[UVE] ❌ Falha na concatenação: {e}")
             return None

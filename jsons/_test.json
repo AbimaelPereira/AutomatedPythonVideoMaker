@@ -54,21 +54,6 @@
             "prompt": "Stunning cinematic shot of an ancient village in flames at night, thick black smoke rising into the moonlight, silhouettes of frightened people fleeing, 8k resolution, realistic fire effects, high contrast, emotional atmosphere of chaos, professional color grading, dramatic lighting."
           }
         }
-      },
-      {
-        "id": "scene-4",
-        "narration": {
-          "text": "Em um dia, um homem estava",
-          "subtitles": true
-        },
-        "background": {
-          "visual": {
-            "type": "ai",
-            "provider": "pollinations",
-            "content_type": "image",
-            "prompt": "Cinematic scene of a funeral procession in an ancient cemetery, men carrying a wooden stretcher with a shrouded body, suddenly looking back in terror at a cloud of dust on the horizon, 8k, hyper-realistic, dramatic perspective, tension and fear, natural lighting."
-          }
-        }
       }
     ]
   }
