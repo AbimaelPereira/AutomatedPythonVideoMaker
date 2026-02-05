@@ -227,6 +227,7 @@ class UnifiedVideoEngine:
     def _apply_background_audio_to_video(self, video_path: str, output_path: str) -> str:
         """
         Aplica áudio de fundo ao vídeo final concatenado.
+        🔧 VERSÃO CORRIGIDA: Garante FPS constante no output final
         """
         bg_audio_config = self.global_settings.get("background", {}).get("audio", {})
         
@@ -286,15 +287,18 @@ class UnifiedVideoEngine:
             final_video = video_clip.set_audio(final_audio)
             
             print(f"[UVE] 🎬 Renderizando vídeo com áudio de fundo...")
+            
+            # 🔧 CORREÇÃO: FPS fixo e CFR garantidos
             final_video.write_videofile(
                 output_path,
                 codec='libx264',
                 audio_codec='aac',
-                fps=30,  # CORRIGIDO: FPS consistente
+                fps=30,  # FPS fixo
                 preset='medium',
                 threads=4,
                 verbose=False,
-                logger=None
+                logger=None,
+                ffmpeg_params=['-vsync', 'cfr']  # 🔧 FORCE CONSTANT FRAME RATE
             )
             
             video_clip.close()
@@ -311,23 +315,31 @@ class UnifiedVideoEngine:
             return video_path
 
     def _render_scene(self, scene_index, scene_id, total_scenes, composed_clip, narration_clip, scene_dir):
+        """
+        🔧 VERSÃO CORRIGIDA: Renderiza cena com FPS fixo e CFR garantido
+        """
         scene_clip_path = os.path.join(scene_dir, f"{scene_id}.mp4")
         temp_audiofile = os.path.join(scene_dir, f"{scene_id}.m4a")
 
         print(f"[UVE] 🎬 Renderizando cena {scene_index + 1}/{total_scenes}...")
 
-        # CORREÇÃO APLICADA: FPS de 24 para 30
+        # 🔧 CORREÇÃO CRÍTICA: Adicionar ffmpeg_params para forçar CFR
         composed_clip.write_videofile(
             scene_clip_path,
             codec='libx264',
             audio_codec='aac',
             temp_audiofile=temp_audiofile,
             remove_temp=True,
-            fps=30,  # CORRIGIDO: Era 24, agora 30 para evitar trancos
+            fps=30,  # FPS fixo
             preset='medium',
             threads=4,
             verbose=False,
-            logger=None  # Remove logs excessivos
+            logger=None,
+            ffmpeg_params=[
+                '-vsync', 'cfr',  # 🔧 CONSTANT FRAME RATE (elimina micro-stuttering)
+                '-g', '60',       # 🔧 Keyframe a cada 2 segundos (melhora concatenação)
+                '-bf', '2'        # 🔧 B-frames para compressão eficiente
+            ]
         )
 
         print(f"[UVE] ✅ Cena {scene_index + 1} renderizada:  {os.path.basename(scene_clip_path)}")
@@ -379,17 +391,6 @@ class UnifiedVideoEngine:
             narration_engine = NarrationEngine(self.tts_config, self.output_dir)
             narration_clip, duration_from_tts, subtitle_file = narration_engine.process_scene_narration(scene, scene_dir)
 
-            # adicionar fixo 50ms antes e depois da narração
-            # if narration_clip:
-            #     # silencio inicial/final
-            #     silence_duration = 0.05
-            #     audio_silencio = AudioClip(lambda t: 0, duration=silence_duration)
-            #     narration_clip = concatenate_audioclips([audio_silencio, narration_clip, audio_silencio])
-            #     duration_from_tts = narration_clip.duration
-            #     print(f"[UVE] Duração da narração: {duration_from_tts}s")
-            # else:
-            #     print("[UVE] Sem narração para esta cena")
-
             # 2. Duração
             scene_duration = scene.get("duration", duration_from_tts)
             if not scene_duration or scene_duration < 0.1:
@@ -440,6 +441,7 @@ class UnifiedVideoEngine:
                 if narration_clip:
                     composed_clip = composed_clip.set_audio(narration_clip)
 
+                # 8. Transições (🔧 OPÇÃO DE DESABILITAR PARA TESTE)
                 transitions_config = self.global_settings.get("transitions")
     
                 if transitions_config and transitions_config.get("enabled", False):
@@ -458,6 +460,8 @@ class UnifiedVideoEngine:
                     except Exception as e:
                         print(f"[UVE] ⚠️ Falha ao aplicar transição: {e}")
                         # Continua com o clip original
+                else:
+                    print(f"[UVE] ⏭️ Transições desabilitadas - renderizando sem efeitos")
 
                 scene_clip_path = self._render_scene(
                     scene_index,
@@ -494,30 +498,52 @@ class UnifiedVideoEngine:
                 for p in scene_files:
                     f.write(f"file '{os.path.abspath(p)}'\n")
 
-            # CORREÇÃO APLICADA: Re-encoding ao invés de -c copy para evitar trancos
-            print("[UVE] 🎬 Concatenando com re-encoding para transições suaves...")
+            # 🔧 CORREÇÃO CRÍTICA: Concatenação com FPS e sample rate fixos
+            print("[UVE] 🎬 Concatenando com re-encoding e FPS constante...")
             ffmpeg_cmd = [
-                "ffmpeg", "-y", "-f", "concat", "-safe", "0",
+                "ffmpeg", "-y", 
+                "-f", "concat", 
+                "-safe", "0",
                 "-i", concat_list_path,
-                "-c:v", "libx264",  # Re-encode de vídeo (evita trancos)
+                
+                # 🔧 VÍDEO: Parâmetros críticos para eliminar stuttering
+                "-c:v", "libx264",
                 "-preset", "medium",
-                "-crf", "20",  # Qualidade alta
+                "-crf", "20",
+                "-r", "30",           # 🔧 FORÇA FPS FIXO em 30
+                "-vsync", "cfr",      # 🔧 CONSTANT FRAME RATE (CRÍTICO!)
+                "-g", "60",           # 🔧 Keyframe interval (2 segundos)
+                "-bf", "2",           # 🔧 B-frames
                 "-pix_fmt", "yuv420p",
-                "-c:a", "aac",  # Re-encode de áudio
+                "-keyint_min", "60",      # ⭐ Força MÍNIMO = MÁXIMO (60 frames)
+                "-sc_threshold", "0",     # ⭐ Desabilita scene detection automática  
+                "-force_key_frames", "expr:gte(t,n_forced*2)",  # ⭐ Força a cada 2s EXATOS
+                
+                # 🔧 ÁUDIO: Sample rate fixo
+                "-c:a", "aac",
                 "-b:a", "192k",
-                "-movflags", "+faststart",  # Otimiza para streaming
+                "-ar", "44100",       # 🔧 Sample rate fixo
+                "-ac", "2",           # 🔧 Stereo fixo
+                
+                # Otimizações
+                "-movflags", "+faststart",
+                
                 intermediate_path
             ]
 
-            subprocess.run(ffmpeg_cmd, check=True, capture_output=True)
-            print(f"[UVE] ✅ Vídeo concatenado:  {intermediate_path}")
+            result = subprocess.run(ffmpeg_cmd, check=True, capture_output=True, text=True)
+            print(f"[UVE] ✅ Vídeo concatenado com sucesso:  {intermediate_path}")
 
         except subprocess.CalledProcessError as e:
-            print(f"[UVE] ❌ Falha na concatenação: {e}")
-            print(f"[UVE] stderr: {e.stderr.decode() if e.stderr else 'N/A'}")
+            print(f"[UVE] ❌ Falha na concatenação FFmpeg")
+            print(f"[UVE] Comando: {' '.join(ffmpeg_cmd)}")
+            print(f"[UVE] stderr: {e.stderr if e.stderr else 'N/A'}")
+            print(f"[UVE] stdout: {e.stdout if e.stdout else 'N/A'}")
             return None
         except Exception as e:
-            print(f"[UVE] ❌ Falha na concatenação: {e}")
+            print(f"[UVE] ❌ Erro inesperado na concatenação: {e}")
+            import traceback
+            traceback.print_exc()
             return None
 
         # 10. Áudio de fundo
