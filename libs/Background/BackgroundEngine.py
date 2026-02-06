@@ -8,6 +8,8 @@ from libs.VisualClip import force_rgb
 from libs.MediaDownloader import MediaDownloader
 from libs.Background.DirectoryType import DirectoryType
 from libs.Background.FiltersEngine import FiltersEngine
+from PIL import Image, ImageFilter
+import numpy as np
 
 try:
     from libs.AIProviders import ai_manager
@@ -32,36 +34,60 @@ def _hex_to_rgb(hex_value):
 
 
 class BackgroundEngine:
-    """
-    Engine unificada para geração do fundo e aplicação de filtros.
-    Contempla todos os tipos suportados previamente em UVE._create_background_clip:
-      - color, image, video, ai, directory
-    - DirectoryType: carrega e redimensiona, retornando lista de clips por diretório (cache por path).
-    - Seleção/concatenação/loop para cobrir a duração ocorre aqui.
-    - Aplica background.filters (substitui overlays).
-    """
     def __init__(self, resolution_output: Tuple[int, int], dir_clips_cache: Dict[str, List],
                  ai_cache=None):
         self.resolution_output = tuple(map(int, resolution_output))
-        self.dir_clips_cache = dir_clips_cache  # key: dir path -> List[VideoClip]
+        self.dir_clips_cache = dir_clips_cache
         self.ai_cache = ai_cache if AI_AVAILABLE else None
-        # histórico simples (opcional)
         self.last_used_videos: List[str] = []
         self.max_history = 3
 
-    # ---- Tipos visuais ----
     def _build_color(self, cfg: Dict, scene_duration: float):
         color = cfg.get("source", "#000000")
         if isinstance(color, str):
             color = _hex_to_rgb(color)
         return ColorClip(size=self.resolution_output, color=color).set_duration(scene_duration)
 
+    def _create_blurred_background(self, image_path: str, scene_duration: float):
+        pil_img = Image.open(image_path).convert("RGB")
+        pil_img = pil_img.resize(self.resolution_output, Image.LANCZOS)
+        pil_img = pil_img.filter(ImageFilter.GaussianBlur(radius=50))
+        
+        temp_blur_path = image_path.replace(".png", "_blur.png").replace(".jpg", "_blur.jpg")
+        pil_img.save(temp_blur_path)
+        
+        return ImageClip(temp_blur_path).resize(newsize=self.resolution_output).set_duration(scene_duration)
+
     def _build_image(self, cfg: Dict, scene_duration: float, storage_dir: str):
         src = cfg.get("source")
         if not src:
             raise ValueError("Source da imagem não especificada")
+        
         path = MediaDownloader.resolve_source_path(src, storage_dir)
-        return ImageClip(path).resize(newsize=self.resolution_output).set_duration(scene_duration)
+        
+        fit_mode = cfg.get("fit_mode", "cover")
+        
+        if fit_mode == "contain-blur":
+            blur_clip = self._create_blurred_background(path, scene_duration)
+            
+            main_clip = ImageClip(path).set_duration(scene_duration)
+            
+            w, h = main_clip.size
+            target_w, target_h = self.resolution_output
+            
+            scale_w = target_w / w
+            scale_h = target_h / h
+            scale = min(scale_w, scale_h)
+            
+            new_w = int(w * scale)
+            new_h = int(h * scale)
+            
+            main_clip = main_clip.resize(newsize=(new_w, new_h))
+            main_clip = main_clip.set_position("center")
+            
+            return CompositeVideoClip([blur_clip, main_clip], size=self.resolution_output).set_duration(scene_duration)
+        else:
+            return ImageClip(path).resize(newsize=self.resolution_output).set_duration(scene_duration)
 
     def _build_video(self, cfg: Dict, scene_duration: float, storage_dir: str):
         src = cfg.get("source")
@@ -132,7 +158,6 @@ class BackgroundEngine:
             return clip.without_audio()
 
     def _select_random_videos_for_duration(self, available_clips: List, target_duration: float) -> List:
-        """Seleciona vídeos aleatórios para cobrir a duração necessária (realocado da UVE)."""
         if not available_clips:
             return []
 
@@ -151,6 +176,7 @@ class BackgroundEngine:
             available_for_selection = available_clips.copy()
             self.last_used_videos = []
 
+        import random
         while current_duration < target_duration and attempts < max_attempts:
             attempts += 1
             if not available_for_selection:
@@ -217,7 +243,50 @@ class BackgroundEngine:
             bg_clip = concatenate_videoclips([bg_clip, extra_clip], method="compose")
         return bg_clip
 
-    # ---- Filtros ----
+    def _apply_animation(self, clip, animation_config: Dict):
+        anim_type = animation_config.get("type", "none")
+        
+        if anim_type == "zoom":
+            duration = animation_config.get("duration", 20.0)
+            intensity = animation_config.get("intensity", 0.1)
+            
+            def zoom_effect(get_frame, t):
+                frame = get_frame(t)
+                progress = (t % duration) / duration
+                scale = 1.0 + (intensity * np.sin(progress * 2 * np.pi))
+                
+                h, w = frame.shape[:2]
+                new_h, new_w = int(h * scale), int(w * scale)
+                
+                if scale > 1.0:
+                    from PIL import Image
+                    pil_img = Image.fromarray(frame)
+                    pil_img = pil_img.resize((new_w, new_h), Image.LANCZOS)
+                    resized = np.array(pil_img)
+                    
+                    y_start = (new_h - h) // 2
+                    x_start = (new_w - w) // 2
+                    cropped = resized[y_start:y_start+h, x_start:x_start+w]
+                    return cropped
+                else:
+                    return frame
+            
+            return clip.fl(zoom_effect)
+        
+        elif anim_type == "fade":
+            duration = animation_config.get("duration", 20.0)
+            min_opacity = animation_config.get("min_opacity", 0.7)
+            
+            def fade_effect(get_frame, t):
+                frame = get_frame(t)
+                progress = (t % duration) / duration
+                opacity = min_opacity + (1.0 - min_opacity) * (0.5 + 0.5 * np.sin(progress * 2 * np.pi))
+                return (frame * opacity).astype('uint8')
+            
+            return clip.fl(fade_effect)
+        
+        return clip
+
     def _apply_filters(self, bg_clip, global_filters_cfg: Dict, scene_filters_cfg: Optional[Dict], scene_duration: float):
         if scene_filters_cfg is not None and isinstance(scene_filters_cfg, dict):
             filters_cfg = Config.deep_merge(global_filters_cfg or {}, scene_filters_cfg)
@@ -234,7 +303,6 @@ class BackgroundEngine:
         composed = CompositeVideoClip([bg_clip, fclip], size=self.resolution_output).set_duration(scene_duration)
         return composed.fl_image(force_rgb)
 
-    # ---- API principal ----
     def build_scene_background(self, global_settings: Dict, scene_data: Dict, scene_duration: float,
                                scene_dir: str, video_dir: str):
         print(f"[BackgroundEngine] Criando fundo para duração: {scene_duration:.2f}s")
@@ -275,6 +343,11 @@ class BackgroundEngine:
             print("[BackgroundEngine] Fallback: preto")
             bg_clip = ColorClip(size=self.resolution_output, color=(0, 0, 0)).set_duration(scene_duration)
 
-        global_filters = background_config.get("filters", {}) or {}  # overlays -> filters
+        animation_config = visual_config.get("animation", {})
+        if animation_config and animation_config.get("type", "none") != "none":
+            print(f"[BackgroundEngine] Aplicando animação: {animation_config.get('type')}")
+            bg_clip = self._apply_animation(bg_clip, animation_config)
+
+        global_filters = background_config.get("filters", {}) or {}
         scene_filters = scene_background.get("filters") if isinstance(scene_background, dict) else None
         return self._apply_filters(bg_clip, global_filters, scene_filters, scene_duration)

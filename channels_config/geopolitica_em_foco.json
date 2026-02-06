@@ -1,16 +1,17 @@
 {
     "global_settings": {
         "tts": {
-            "voice": "pt-BR-AntonioNeural"
+            "provider": "local_file",
+            "audio_file": "./temp/geo.wav"
         },
         "subtitle": {
             "font_path": "./assets/fonts/Montserrat/Montserrat-Bold.ttf",
             "font_size": 110,
-            "color": "#E5C687",
+            "color": "#FFFFFF",
             "uppercase": true,
             "stroke_enabled": false,
             "shadow_enabled": true,
-            "shadow_color": "#A68A56",
+            "shadow_color": "#000000",
             "shadow_opacity": 0.95,
             "blur_radius": 6.0,
             "shadow_offset": [
@@ -22,20 +23,22 @@
             "audio": {
                 "type": "directory",
                 "source": "./assets/audio/background/geopolitica"
+            },
+            "visual": {
+                "fit_mode": "contain-blur",
+                "animation": {
+                    "type": "zoom",
+                    "duration": 15.0,
+                    "intensity": 0.12
+                }
             }
         },
-        "//overlays": {
-            "particles": {
-                "density": 0.4,
-                "speed": 0.8,
-                "size": 0.4,
-                "movement": "float",
-                "blur_radius": 5.0,
-                "axis_ratio_range": [
-                    0.6,
-                    1.8
-                ],
-                "color": "#FFD27A"
+        "transitions": {
+            "enabled": true,
+            "audio": {
+                "type": "directory",
+                "source": "./assets/audio/effects/transitions",
+                "volume": 1.0
             }
         }
     },
