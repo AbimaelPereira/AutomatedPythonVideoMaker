@@ -35,10 +35,11 @@ def _hex_to_rgb(hex_value):
 
 class BackgroundEngine:
     def __init__(self, resolution_output: Tuple[int, int], dir_clips_cache: Dict[str, List],
-                 ai_cache=None):
+                 ai_cache=None, remote_asset_manager=None):
         self.resolution_output = tuple(map(int, resolution_output))
         self.dir_clips_cache = dir_clips_cache
         self.ai_cache = ai_cache if AI_AVAILABLE else None
+        self.remote_asset_manager = remote_asset_manager  # NOVO
         self.last_used_videos: List[str] = []
         self.max_history = 3
 
@@ -59,11 +60,62 @@ class BackgroundEngine:
         return ImageClip(temp_blur_path).resize(newsize=self.resolution_output).set_duration(scene_duration)
 
     def _build_image(self, cfg: Dict, scene_duration: float, storage_dir: str):
+        """
+        MODIFICADO: Suporta type='remote_asset' e registro automático via 'register_remote_asset_as'
+        """
+        src_type = cfg.get("type", "image")
         src = cfg.get("source")
+        
+        # NOVO: Suporte a remote_asset
+        if src_type == "remote_asset":
+            if not self.remote_asset_manager:
+                print("[BackgroundEngine] ⚠️ RemoteAssetManager não disponível")
+                return ColorClip(size=self.resolution_output, color=(0, 0, 0)).set_duration(scene_duration)
+            
+            slug = src  # source é o slug
+            if not slug:
+                print("[BackgroundEngine] ❌ Slug não especificado para remote_asset")
+                return ColorClip(size=self.resolution_output, color=(0, 0, 0)).set_duration(scene_duration)
+            
+            # Seleciona URL do slug
+            selected_url = self.remote_asset_manager.select_url(slug)
+            
+            if not selected_url:
+                print(f"[BackgroundEngine] ⚠️ Nenhuma URL disponível no slug '{slug}', usando cor sólida")
+                return ColorClip(size=self.resolution_output, color=(0, 0, 0)).set_duration(scene_duration)
+            
+            # Usa a URL selecionada
+            src = selected_url
+            print(f"[BackgroundEngine] 🎯 Usando URL do slug '{slug}': {src[:50]}...")
+        
         if not src:
             raise ValueError("Source da imagem não especificada")
         
-        path = MediaDownloader.resolve_source_path(src, storage_dir)
+        # Callbacks para o RemoteAssetManager
+        def on_success(url):
+            if self.remote_asset_manager and src_type == "remote_asset":
+                self.remote_asset_manager.mark_download_success(url)
+        
+        def on_fail(url):
+            if self.remote_asset_manager and src_type == "remote_asset":
+                self.remote_asset_manager.mark_download_failed(url)
+        
+        # Download/resolve com callbacks
+        path = MediaDownloader.resolve_source_path(
+            src, 
+            storage_dir,
+            on_success_callback=on_success,
+            on_fail_callback=on_fail
+        )
+        
+        if not path:
+            print("[BackgroundEngine] ❌ Falha ao obter imagem, usando cor sólida")
+            return ColorClip(size=self.resolution_output, color=(0, 0, 0)).set_duration(scene_duration)
+        
+        # NOVO: Registro automático se especificado
+        register_slug = cfg.get("register_remote_asset_as")
+        if register_slug and self.remote_asset_manager and src.startswith("http"):
+            self.remote_asset_manager.register_url(register_slug, src)
         
         fit_mode = cfg.get("fit_mode", "cover")
         
@@ -90,10 +142,60 @@ class BackgroundEngine:
             return ImageClip(path).resize(newsize=self.resolution_output).set_duration(scene_duration)
 
     def _build_video(self, cfg: Dict, scene_duration: float, storage_dir: str):
+        """
+        MODIFICADO: Suporta type='remote_asset' e registro automático
+        """
+        src_type = cfg.get("type", "video")
         src = cfg.get("source")
+        
+        # NOVO: Suporte a remote_asset
+        if src_type == "remote_asset":
+            if not self.remote_asset_manager:
+                print("[BackgroundEngine] ⚠️ RemoteAssetManager não disponível")
+                return ColorClip(size=self.resolution_output, color=(0, 0, 0)).set_duration(scene_duration)
+            
+            slug = src
+            if not slug:
+                print("[BackgroundEngine] ❌ Slug não especificado para remote_asset")
+                return ColorClip(size=self.resolution_output, color=(0, 0, 0)).set_duration(scene_duration)
+            
+            selected_url = self.remote_asset_manager.select_url(slug)
+            
+            if not selected_url:
+                print(f"[BackgroundEngine] ⚠️ Nenhuma URL disponível no slug '{slug}', usando cor sólida")
+                return ColorClip(size=self.resolution_output, color=(0, 0, 0)).set_duration(scene_duration)
+            
+            src = selected_url
+            print(f"[BackgroundEngine] 🎯 Usando vídeo do slug '{slug}': {src[:50]}...")
+        
         if not src:
             raise ValueError("Source do vídeo não especificada")
-        path = MediaDownloader.resolve_source_path(src, storage_dir)
+        
+        # Callbacks
+        def on_success(url):
+            if self.remote_asset_manager and src_type == "remote_asset":
+                self.remote_asset_manager.mark_download_success(url)
+        
+        def on_fail(url):
+            if self.remote_asset_manager and src_type == "remote_asset":
+                self.remote_asset_manager.mark_download_failed(url)
+        
+        path = MediaDownloader.resolve_source_path(
+            src, 
+            storage_dir,
+            on_success_callback=on_success,
+            on_fail_callback=on_fail
+        )
+        
+        if not path:
+            print("[BackgroundEngine] ❌ Falha ao obter vídeo, usando cor sólida")
+            return ColorClip(size=self.resolution_output, color=(0, 0, 0)).set_duration(scene_duration)
+        
+        # NOVO: Registro automático
+        register_slug = cfg.get("register_remote_asset_as")
+        if register_slug and self.remote_asset_manager and src.startswith("http"):
+            self.remote_asset_manager.register_url(register_slug, src)
+        
         clip = VideoFileClip(path, audio=False).resize(newsize=self.resolution_output)
         if clip.duration < scene_duration:
             clip = clip.loop(duration=scene_duration)
@@ -333,6 +435,9 @@ class BackgroundEngine:
                 bg_clip = self._build_ai(visual_config, scene_duration, storage_dir)
             elif bg_type == "directory":
                 bg_clip = self._build_directory(visual_config, scene_duration)
+            elif bg_type == "remote_asset":
+                # Detecta se é imagem ou vídeo pela extensão da URL selecionada
+                bg_clip = self._build_image(visual_config, scene_duration, storage_dir)
             else:
                 print(f"[BackgroundEngine] ⚠️ Tipo de fundo desconhecido: {bg_type}")
                 bg_clip = ColorClip(size=self.resolution_output, color=(0, 0, 0)).set_duration(scene_duration)

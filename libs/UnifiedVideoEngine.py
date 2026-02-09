@@ -17,6 +17,7 @@ from libs.YouTube import YouTube
 from libs.Background.BackgroundEngine import BackgroundEngine
 from libs.NarrationEngine import NarrationEngine
 from libs.TransitionEngine import TransitionEngine
+from libs.RemoteAssetManager import RemoteAssetManager
 
 try:
     from libs.AIProviders import ai_manager
@@ -70,11 +71,24 @@ class UnifiedVideoEngine:
         # Caches
         self.dir_media_index = {}  # path -> list[VideoClip] (DirectoryType cache)
 
+        # AI Cache
         if AI_AVAILABLE:
             cache_dir = os.path.join(os.getcwd(), "cache", "ai_generated")
             self.ai_cache = AICache(cache_dir)
         else:
             self.ai_cache = None
+
+        # ========== NOVO: Remote Asset Manager ==========
+        print("[UVE] 🔧 Inicializando Remote Asset Manager...")
+        remote_assets_config = self.global_settings.get("remote_assets", {})
+        self.remote_asset_manager = RemoteAssetManager(config=remote_assets_config)
+        print("[UVE] ✅ Remote Asset Manager inicializado")
+        
+        # Exibe estatísticas iniciais
+        stats = self.remote_asset_manager.get_stats()
+        if stats["total_slugs"] > 0:
+            print(f"[UVE] 📊 Remote Assets: {stats['total_slugs']} slugs, {stats['valid_media']} URLs válidas")
+        # ================================================
 
         self.config_instance = Config()
 
@@ -114,6 +128,7 @@ class UnifiedVideoEngine:
                     "resolution_output": self.resolution_output,
                     "temp_dir": scene_dir,
                     "duration": scene_duration,
+                    "remote_asset_manager": self.remote_asset_manager,  # NOVO: Passa manager
                 }
 
                 processor = VisualClip(config)
@@ -406,8 +421,15 @@ class UnifiedVideoEngine:
                     resolution_output=self.resolution_output,
                     dir_clips_cache=self.dir_media_index,
                     ai_cache=self.ai_cache,
+                    remote_asset_manager=self.remote_asset_manager,  # NOVO: Passa manager
                 )
-                background_clip = bg_engine.build_scene_background(self.global_settings, scene, float(scene_duration), scene_dir, self.output_dir)
+                background_clip = bg_engine.build_scene_background(
+                    self.global_settings, 
+                    scene, 
+                    float(scene_duration), 
+                    scene_dir, 
+                    self.output_dir
+                )
 
                 visual_clip = self._create_visual_elements_clip(scene, scene_duration, scene_dir)
 
@@ -554,6 +576,14 @@ class UnifiedVideoEngine:
             shutil.move(intermediate_path, output_path)
             final_path = output_path
             print("[UVE] Sem áudio de fundo configurado")
+
+        # ========== NOVO: Estatísticas finais do Remote Asset Manager ==========
+        print("\n[UVE] 📊 Estatísticas de Remote Assets:")
+        final_stats = self.remote_asset_manager.get_stats()
+        print(f"[UVE]    Total de slugs: {final_stats['total_slugs']}")
+        print(f"[UVE]    URLs válidas: {final_stats['valid_media']}")
+        print(f"[UVE]    URLs inválidas: {final_stats['invalid_media']}")
+        # =======================================================================
 
         # 11. Upload YouTube (opcional)
         if self.data_config.get("youtube") and self.data_config.get("debug") is not True:
