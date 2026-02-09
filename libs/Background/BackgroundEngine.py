@@ -260,7 +260,7 @@ class BackgroundEngine:
                 
                 if scale > 1.0:
                     from PIL import Image
-                    pil_img = Image.fromarray(frame)
+                    pil_img = Image.fromarray(frame.astype('uint8'))
                     pil_img = pil_img.resize((new_w, new_h), Image.LANCZOS)
                     resized = np.array(pil_img)
                     

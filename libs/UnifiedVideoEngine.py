@@ -474,7 +474,7 @@ class UnifiedVideoEngine:
                 scene_files.append(scene_clip_path)
 
             except Exception as e:
-                print(f"[UVE] ❌ Erro ao processar cena {scene_id + 1}: {e}")
+                print("[UVE] ❌ Erro ao processar cena " + str(scene_id + 1) + ": " + str(e))
                 import traceback
                 traceback.print_exc()
                 continue

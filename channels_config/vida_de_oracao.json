@@ -22,7 +22,13 @@
         "background": {
             "visual": {
                 "type": "directory",
-                "source": "./assets/video/defaults/IA/CEU"
+                "source": "./assets/video/defaults/IA/CEU",
+                "fit_mode": "contain-blur",
+                "animation": {
+                    "type": "zoom",
+                    "duration": 20.0,
+                    "intensity": 0.12
+                }
             },
             "audio": {
                 "type": "directory",

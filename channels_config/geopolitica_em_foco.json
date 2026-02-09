@@ -22,13 +22,13 @@
         "background": {
             "audio": {
                 "type": "directory",
-                "source": "./assets/audio/background/geopolitica"
+                "source": "./assets/audio/background/inspiration"
             },
             "visual": {
                 "fit_mode": "contain-blur",
                 "animation": {
                     "type": "zoom",
-                    "duration": 15.0,
+                    "duration": 20.0,
                     "intensity": 0.12
                 }
             }
