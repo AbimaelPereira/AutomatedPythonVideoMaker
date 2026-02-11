@@ -252,7 +252,7 @@ class UnifiedVideoEngine:
         
         audio_type = bg_audio_config.get("type", "file")
         source = bg_audio_config.get("source")
-        volume = bg_audio_config.get("volume", 0.3)
+        volume = bg_audio_config.get("volume", 0.2)
         
         if not source:
             print("[UVE] Áudio de fundo sem source configurado")
@@ -496,7 +496,7 @@ class UnifiedVideoEngine:
                 scene_files.append(scene_clip_path)
 
             except Exception as e:
-                print("[UVE] ❌ Erro ao processar cena " + str(scene_id + 1) + ": " + str(e))
+                print(f"[UVE] ❌ Erro ao processar cena {scene_index + 1} (ID: {scene_id}): {e}")
                 import traceback
                 traceback.print_exc()
                 continue

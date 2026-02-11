@@ -57,7 +57,9 @@ class BackgroundEngine:
         temp_blur_path = image_path.replace(".png", "_blur.png").replace(".jpg", "_blur.jpg")
         pil_img.save(temp_blur_path)
         
-        return ImageClip(temp_blur_path).resize(newsize=self.resolution_output).set_duration(scene_duration)
+        clip = ImageClip(temp_blur_path).resize(newsize=self.resolution_output).set_duration(scene_duration)
+        # CORREÇÃO: Força RGB
+        return clip.fl_image(force_rgb)
 
     def _build_image(self, cfg: Dict, scene_duration: float, storage_dir: str):
         """
@@ -137,9 +139,13 @@ class BackgroundEngine:
             main_clip = main_clip.resize(newsize=(new_w, new_h))
             main_clip = main_clip.set_position("center")
             
-            return CompositeVideoClip([blur_clip, main_clip], size=self.resolution_output).set_duration(scene_duration)
+            final_clip = CompositeVideoClip([blur_clip, main_clip], size=self.resolution_output).set_duration(scene_duration)
+            # CORREÇÃO: Força RGB
+            return final_clip.fl_image(force_rgb)
         else:
-            return ImageClip(path).resize(newsize=self.resolution_output).set_duration(scene_duration)
+            clip = ImageClip(path).resize(newsize=self.resolution_output).set_duration(scene_duration)
+            # CORREÇÃO: Força RGB
+            return clip.fl_image(force_rgb)
 
     def _build_video(self, cfg: Dict, scene_duration: float, storage_dir: str):
         """
@@ -354,6 +360,10 @@ class BackgroundEngine:
             
             def zoom_effect(get_frame, t):
                 frame = get_frame(t)
+                
+                # CORREÇÃO: Força RGB (3 canais)
+                frame = force_rgb(frame)
+                
                 progress = (t % duration) / duration
                 scale = 1.0 + (intensity * np.sin(progress * 2 * np.pi))
                 
@@ -381,6 +391,10 @@ class BackgroundEngine:
             
             def fade_effect(get_frame, t):
                 frame = get_frame(t)
+                
+                # CORREÇÃO: Força RGB (3 canais)
+                frame = force_rgb(frame)
+                
                 progress = (t % duration) / duration
                 opacity = min_opacity + (1.0 - min_opacity) * (0.5 + 0.5 * np.sin(progress * 2 * np.pi))
                 return (frame * opacity).astype('uint8')
