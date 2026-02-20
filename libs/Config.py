@@ -63,6 +63,9 @@ class Config:
             "debug": self._to_bool(os.getenv("DEBUG", False)),
             "shuffle_clips": self._to_bool(os.getenv("SHUFFLE_CLIPS", True)),
             "max_clips": int(os.getenv("MAX_CLIPS", 0)) or None,
+            
+            # 🔧 NOVO: Paralelização de Cenas
+            "max_parallel_scenes": int(os.getenv("MAX_PARALLEL_SCENES", 2)),
         }
 
         # --- 2. CARREGAR CONFIGURAÇÃO DO CANAL ---
