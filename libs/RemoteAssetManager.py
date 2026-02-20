@@ -36,14 +36,14 @@ class RemoteAssetManager:
         # Configurações
         self.config = config or {}
         self.selection_mode = self.config.get("selection_mode", self.DEFAULT_SELECTION_MODE)
-        self.cleanup_days = self.config.get("cleanup_invalid_after_days", self.DEFAULT_CLEANUP_DAYS)
+        # self.cleanup_days = self.config.get("cleanup_invalid_after_days", self.DEFAULT_CLEANUP_DAYS)
         
         print(f"[RemoteAssetManager] ✅ Inicializado")
         print(f"[RemoteAssetManager] Modo de seleção: {self.selection_mode}")
-        print(f"[RemoteAssetManager] Limpeza após: {self.cleanup_days} dias")
+        # print(f"[RemoteAssetManager] Limpeza após: {self.cleanup_days} dias")
         
         # Limpeza automática ao inicializar
-        self._auto_cleanup()
+        # self._auto_cleanup()
     
     def _auto_cleanup(self):
         """Executa limpeza automática de URLs inválidas antigas."""

@@ -6,10 +6,10 @@
         },
         "tts": {
             "provider": "edge",
-            "voice": "pt-BR-AntonioNeural"
+            "voice": "en-US-AndrewNeural"
         },
         "subtitle": {
-            "font_path": "./assets/fonts/Montserrat/Montserrat-Bold.ttf",
+            "font_path": "./assets/fonts/BebasNeue/BebasNeue-Regular.ttf",
             "font_size": 110,
             "color": "#FFFFFF",
             "uppercase": true,
@@ -40,14 +40,14 @@
         "transitions": {
             "enabled": true,
             "audio": {
-                "type": "directory",
-                "source": "./assets/audio/effects/transitions",
+                "type": "file",
+                "source": "./assets/audio/effects/transitions/Rake Swing Whoosh Close-001.mp3",
                 "volume": 1.0
             }
         }
     },
     "youtube": {
-        "token_file_name": "geopolitica_em_foco.json",
+        "token_file_name": "broke_to_millionaire.json",
         "privacy_status": "private",
         "category_id": "22"
     }

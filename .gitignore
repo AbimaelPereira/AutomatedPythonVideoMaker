@@ -41,8 +41,8 @@ __pycache__/
 /development/*
 !/development/.gitkeep
 
-/cache/ai_generated/*
-!/cache/ai_generated/.gitkeep
+/cache/*
+!/cache/.gitkeep
 
 # --- Configuração do Whisper ---
 
@@ -55,3 +55,5 @@ libs/Whisper/__pycache__/
 
 # qualquer __pycache__ que possa existir em todo o projeto
 **/__pycache__/
+
+prompts/

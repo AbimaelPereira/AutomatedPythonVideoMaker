@@ -4,13 +4,6 @@
     "description": "",
     "media": [
       {
-        "url": "https://www12.senado.leg.br/noticias/materias/2024/10/11/ciro-nogueira-propoe-punicao-para-erros-de-pesquisas-eleitorais/20231004_02251pf.jpg/mural/imagem_materia",
-        "type": "unknown",
-        "extension": "unknown",
-        "lastUsed": "2026-02-09 16:24:20",
-        "invalid": false
-      },
-      {
         "url": "https://ofator.com.br/wp-content/uploads/2026/02/Ciro-Nogueira_CCJ_09.jul_.2025.jpg",
         "type": "image",
         "extension": "jpg",
@@ -31,17 +24,31 @@
     "description": "",
     "media": [
       {
-        "url": "https://www12.senado.leg.br/noticias/materias/2021/02/12/projeto-que-preve-depositos-voluntarios-no-banco-central-aguarda-votacao-na-camara/Banco-central__20191212_04673.jpg/mural/imagem_materia",
-        "type": "unknown",
-        "extension": "unknown",
-        "lastUsed": "2026-02-11 11:52:27",
-        "invalid": false
-      },
-      {
         "url": "https://imagens-cdn.canalrural.com.br/wp-content/uploads/Boletim-Focus-Banco-Central.jpg",
         "type": "image",
         "extension": "jpg",
-        "lastUsed": "2026-02-10 14:07:43",
+        "lastUsed": "2026-02-20 00:47:50",
+        "invalid": false
+      },
+      {
+        "url": "https://www.onze.com.br/blog/wp-content/uploads/2019/11/shutterstock_1486752722-770x478.jpg",
+        "type": "image",
+        "extension": "jpg",
+        "lastUsed": "2026-02-20 01:05:51",
+        "invalid": false
+      },
+      {
+        "url": "https://investidorsardinha.r7.com/wp-content/uploads/2020/09/banco-central-do-brasil-o-que-e-como-funciona-e-funcoes-do-bacen.jpg",
+        "type": "image",
+        "extension": "jpg",
+        "lastUsed": "2026-02-20 02:22:10",
+        "invalid": false
+      },
+      {
+        "url": "https://media.gazetadopovo.com.br/2026/01/05153529/banco-central-foto-marcello-casal-jr-agencia-brasil-1-960x540.jpg",
+        "type": "image",
+        "extension": "jpg",
+        "lastUsed": "2026-02-20 00:58:39",
         "invalid": false
       }
     ]
@@ -54,14 +61,14 @@
         "url": "https://s2-oglobo.glbimg.com/4XJFbDZcmkklKZElvWAu1CcPtdo=/0x0:6000x4000/888x0/smart/filters:strip_icc()/i.s3.glbimg.com/v1/AUTH_da025474c0c44edd99332dddb09cabe8/internal_photos/bs/2026/S/v/Dv7NzFTiml5LLRLBYKXw/0g0a6467.jpg",
         "type": "image",
         "extension": "jpg",
-        "lastUsed": "2026-02-09 16:18:33",
+        "lastUsed": "2026-02-12 17:14:30",
         "invalid": false
       },
       {
         "url": "https://f.i.uol.com.br/fotografia/2025/08/30/175660676968b3b1314ec4b_1756606769_3x2_md.jpg",
         "type": "image",
         "extension": "jpg",
-        "lastUsed": "2026-02-09 16:26:30",
+        "lastUsed": "2026-02-12 17:41:32",
         "invalid": false
       },
       {
@@ -79,17 +86,10 @@
         "invalid": false
       },
       {
-        "url": "https://s2-cbn.glbimg.com/LT1-l__Kfi3geLIy_dfA_H2nbjE=/0x0:768x512/888x0/smart/filters:strip_icc()/i.s3.glbimg.com/v1/AUTH_d975fad146a14bbfad9e763717b09688/internal_photos/bs/2025/8/5/BcB0thQh2cFLGGayspOg/175660676968b3b1314ec4b-1756606769-3x2-md.jpg",
-        "type": "image",
-        "extension": "jpg",
-        "lastUsed": "2026-02-09 16:37:57",
-        "invalid": false
-      },
-      {
         "url": "https://ichef.bbci.co.uk/ace/ws/640/cpsprodpb/ccc9/live/97f2def0-fbee-11f0-a422-4ba8a094a8fa.jpg",
         "type": "image",
         "extension": "jpg",
-        "lastUsed": "2026-02-10 14:08:25",
+        "lastUsed": "2026-02-19 22:02:26",
         "invalid": false
       }
     ]
@@ -115,14 +115,14 @@
         "url": "https://www.estadao.com.br/resizer/v2/TQMLMVSJMJCOXPPZFPW6FY2WUU.jpg?quality=80&auth=5db8205655cda17ec5dcf9fded8125d7c69bb68d021ccff6b2611df2e78dede5&width=1200&height=1200&smart=true",
         "type": "image",
         "extension": "jpg",
-        "lastUsed": "2026-02-09 16:31:49",
+        "lastUsed": "2026-02-19 23:04:16",
         "invalid": false
       },
       {
         "url": "https://ofator.com.br/wp-content/uploads/2025/09/carlos-viana.jpg",
         "type": "image",
         "extension": "jpg",
-        "lastUsed": "2026-02-09 16:34:56",
+        "lastUsed": "2026-02-20 00:22:43",
         "invalid": false
       }
     ]
@@ -135,7 +135,7 @@
         "url": "https://admin.cnnbrasil.com.br/wp-content/uploads/sites/12/2026/02/CPMI-INSS-05-02-26.jpg?w=1200&h=1200&crop=1",
         "type": "image",
         "extension": "jpg",
-        "lastUsed": "2026-02-09 16:32:55",
+        "lastUsed": "2026-02-20 02:27:32",
         "invalid": false
       }
     ]
@@ -148,7 +148,35 @@
         "url": "https://www.gov.br/gestao/pt-br/assuntos/noticias/2025/maio/senado-federal-aprova-recomposicao-salarial-e-reestruturacao-de-carreiras/adobestock_1324718098_editorial_use_only.jpeg/@@images/242d6654-c694-4c20-8a4f-e12158877ed6.jpeg",
         "type": "image",
         "extension": "jpeg",
-        "lastUsed": "2026-02-10 14:07:00",
+        "lastUsed": "2026-02-20 02:38:52",
+        "invalid": false
+      },
+      {
+        "url": "https://upload.wikimedia.org/wikipedia/commons/e/e4/Congresso_do_Brasil.jpg",
+        "type": "image",
+        "extension": "jpg",
+        "lastUsed": "2026-02-12",
+        "invalid": true
+      },
+      {
+        "url": "https://www.politize.com.br/wp-content/uploads/2024/07/image-1.png",
+        "type": "image",
+        "extension": "png",
+        "lastUsed": "2026-02-12",
+        "invalid": true
+      },
+      {
+        "url": "https://www.camara.leg.br/midias/image/2025/04/img20230523102312132-768x576.jpg",
+        "type": "image",
+        "extension": "jpg",
+        "lastUsed": "2026-02-20 01:25:54",
+        "invalid": false
+      },
+      {
+        "url": "https://miro.medium.com/1*DU5HWtT-XFvhnhN0bLIf5w.jpeg",
+        "type": "image",
+        "extension": "jpeg",
+        "lastUsed": "2026-02-20 01:44:33",
         "invalid": false
       }
     ]
@@ -161,7 +189,28 @@
         "url": "https://s2-valor.glbimg.com/AlKZ1SWEiaoBjPYyzL9RESb4RBk=/0x0:2321x1545/888x0/smart/filters:strip_icc()/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2024/O/8/tAj8LYSj6FcRAkAf3w2Q/renan-calheiros.jpg",
         "type": "image",
         "extension": "jpg",
-        "lastUsed": "2026-02-10 14:09:04",
+        "lastUsed": "2026-02-19 22:03:03",
+        "invalid": false
+      },
+      {
+        "url": "https://admin.cnnbrasil.com.br/wp-content/uploads/sites/12/2025/02/Renan-Calheiros-2-e1752609054823.jpg",
+        "type": "image",
+        "extension": "jpg",
+        "lastUsed": "2026-02-12 18:48:43",
+        "invalid": false
+      },
+      {
+        "url": "https://static.poder360.com.br/2021/05/MarceloQueiroga-CPI-Pandemia-RenanCalheiros-RandolfeRodrigues-OmarAziz-127-scaled.jpg",
+        "type": "image",
+        "extension": "jpg",
+        "lastUsed": "2026-02-12",
+        "invalid": false
+      },
+      {
+        "url": "https://imagens.ebc.com.br/boERWU3N5CAp0-_rk1n-VIm0_2k=/1170x700/smart/https://agenciabrasil.ebc.com.br/sites/default/files/atoms/image/1058361-df_ebcdf_13.12.2016-8718.jpg",
+        "type": "image",
+        "extension": "jpg",
+        "lastUsed": "2026-02-12",
         "invalid": false
       }
     ]
@@ -174,21 +223,56 @@
         "url": "https://admin.cnnbrasil.com.br/wp-content/uploads/sites/12/2025/08/Lula-4-e1756342280766.jpg",
         "type": "image",
         "extension": "jpg",
-        "lastUsed": "2026-02-11 11:41:22",
+        "lastUsed": "2026-02-20 02:20:29",
         "invalid": false
       },
       {
         "url": "https://static.poder360.com.br/2026/01/Lula-Cidade-do-Panama-27-jan-2026-848x477.jpg",
         "type": "image",
         "extension": "jpg",
-        "lastUsed": "2026-02-11 11:48:08",
+        "lastUsed": "2026-02-20 02:25:40",
         "invalid": false
       },
       {
         "url": "https://www.estadao.com.br/resizer/v2/NTNPO6WKVZDF5LFDD3LWUBMTN4.JPG?quality=80&auth=826679706a948e58a041459095314b1fb318aaa48f325d66478f04dc958b3cee&width=380",
         "type": "image",
         "extension": "jpg",
-        "lastUsed": "2026-02-11 11:53:49",
+        "lastUsed": "2026-02-20 02:16:25",
+        "invalid": false
+      },
+      {
+        "url": "https://f.i.uol.com.br/fotografia/2023/11/08/1699468831654bd61f4bc3c_1699468831_3x2_rt.jpg",
+        "type": "image",
+        "extension": "jpg",
+        "lastUsed": "2026-02-20",
+        "invalid": false
+      },
+      {
+        "url": "https://g1.globo.com/Noticias/Politica/foto/0,,38903581-EX,00.jpg",
+        "type": "image",
+        "extension": "jpg",
+        "lastUsed": "2026-02-20",
+        "invalid": false
+      },
+      {
+        "url": "https://www.brasilagro.com.br/uploads/conteudo/conteudo/2023/03/QoXw0/lula-chorando-foto-victor-moriyama-getty-images-IynJGL_918x474.jpg",
+        "type": "image",
+        "extension": "jpg",
+        "lastUsed": "2026-02-20",
+        "invalid": false
+      },
+      {
+        "url": "https://s2.glbimg.com/SmCpg8xY05sxuHdASK4VWWD4VU4=/620x465/s2.glbimg.com/vO6xX9nZwKT7Y-1TBefswsCzPJc=/620x465/s.glbimg.com/jo/g1/f/original/2016/09/15/lula-chora1.jpg",
+        "type": "image",
+        "extension": "jpg",
+        "lastUsed": "2026-02-20",
+        "invalid": false
+      },
+      {
+        "url": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRNpfSNtQ-zT6iCuIhzXRTgcn9L5zwtnD_svg&s",
+        "type": "image",
+        "extension": "com/images?q=tbn:ANd9GcRNpfSNtQ-zT6iCuIhzXRTgcn9L5zwtnD_svg&s",
+        "lastUsed": "2026-02-20",
         "invalid": false
       }
     ]
@@ -201,14 +285,7 @@
         "url": "https://cdn.borainvestir.b3.com.br/borainvestir/2022/08/19185446/B3-Fachada.jpg",
         "type": "image",
         "extension": "jpg",
-        "lastUsed": "2026-02-10 14:10:49",
-        "invalid": false
-      },
-      {
-        "url": "https://cdn.borainvestir.b3.com.br/borainvestir/2022/08/19185446/B3-Fachada.jpg.webp",
-        "type": "image",
-        "extension": "webp",
-        "lastUsed": "2026-02-10 14:15:54",
+        "lastUsed": "2026-02-20 02:00:00",
         "invalid": false
       }
     ]
@@ -218,10 +295,31 @@
     "description": "",
     "media": [
       {
+        "url": "https://republicanos10.org.br/wp-content/uploads/2025/02/plenario-camara-dos-deputados-foto-douglas-gomes-31-01-2025.jpg",
+        "type": "image",
+        "extension": "jpg",
+        "lastUsed": "2026-02-19 22:55:31",
+        "invalid": false
+      },
+      {
+        "url": "https://olb.org.br/wp-content/uploads/2018/09/camara.jpg",
+        "type": "image",
+        "extension": "jpg",
+        "lastUsed": "2026-02-20 00:20:36",
+        "invalid": false
+      },
+      {
+        "url": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQN2x-7KiW07Bu2L2EvdCO9IS6oCv5MpcNw9Q&s",
+        "type": "image",
+        "extension": "com/images?q=tbn:ANd9GcQN2x-7KiW07Bu2L2EvdCO9IS6oCv5MpcNw9Q&s",
+        "lastUsed": "2026-02-20 01:28:07",
+        "invalid": false
+      },
+      {
         "url": "https://www12.senado.leg.br/noticias/materias/2025/05/07/senadores-se-posicionam-contra-o-aumento-do-numero-de-deputados/img20250506202512966.jpg",
         "type": "image",
         "extension": "jpg",
-        "lastUsed": "2026-02-10 14:11:56",
+        "lastUsed": "2026-02-19 22:04:53",
         "invalid": false
       }
     ]
@@ -234,14 +332,14 @@
         "url": "https://juvenilalves.com.br/wp-content/uploads/2022/03/receita-federal.jpg",
         "type": "image",
         "extension": "jpg",
-        "lastUsed": "2026-02-11 11:39:40",
+        "lastUsed": "2026-02-19 23:18:58",
         "invalid": false
       },
       {
         "url": "https://noticias.iob.com.br/wp-content/uploads/2024/09/Receita-Federal-scaled.jpg",
         "type": "image",
         "extension": "jpg",
-        "lastUsed": "2026-02-11 11:44:33",
+        "lastUsed": "2026-02-20 00:56:26",
         "invalid": false
       }
     ]
@@ -254,20 +352,979 @@
         "url": "https://www.tre-ms.jus.br/imagens/fotos/urna-eletronica-1611316387844/@@images/8c01645d-f95c-455a-a644-44387bc55548.jpeg",
         "type": "image",
         "extension": "jpeg",
-        "lastUsed": "2026-02-11 11:42:57",
+        "lastUsed": "2026-02-20 02:34:33",
         "invalid": false
       }
     ]
   },
   {
-    "slug": "imposto_renda",
-    "description": "",
+    "slug": "plenario_senado_federal",
+    "description": "Newly created asset group.",
     "media": [
       {
-        "url": "https://sintero.org.br/noticias/impostoderenda-1024x640_15-02-17.jpg",
+        "url": "https://static.preparaenem.com/2022/08/plenario-senado-federal.jpg",
         "type": "image",
         "extension": "jpg",
-        "lastUsed": "2026-02-11 11:50:36",
+        "lastUsed": "2026-02-20 00:25:00",
+        "invalid": false
+      },
+      {
+        "url": "https://static.mundoeducacao.uol.com.br/mundoeducacao/2022/08/senado-federal.jpg",
+        "type": "image",
+        "extension": "jpg",
+        "lastUsed": "2026-02-20 01:46:05",
+        "invalid": false
+      },
+      {
+        "url": "https://www.boletimdaliberdade.com.br/wp-content/uploads/2019/01/Senado-Federal.jpg",
+        "type": "image",
+        "extension": "jpg",
+        "lastUsed": "2026-02-12 19:00:18",
+        "invalid": false
+      },
+      {
+        "url": "https://images.metroimg.com/2025/08/27190945/Senadores-iniciam-sessao-que-discute-o-projeto-de-lei-no-2.628-chamado-de-ECA-Digital-que-cria-regras-para-a-protecao-de-criancas-e-adolescentes-em-ambientes-digitais-Metropoles-adultizacao-2.jpeg",
+        "type": "image",
+        "extension": "jpeg",
+        "lastUsed": "2026-02-19 23:38:02",
+        "invalid": false
+      }
+    ]
+  },
+  {
+    "slug": "banco_maxima",
+    "description": "Newly created asset group.",
+    "media": [
+      {
+        "url": "https://www.feebpr.org.br/images/media/12266119486810a93c8ccb5.jpg",
+        "type": "image",
+        "extension": "jpg",
+        "lastUsed": "2026-02-12 17:37:44",
+        "invalid": false
+      }
+    ]
+  },
+  {
+    "slug": "stf_fachada",
+    "description": "Newly created asset group.",
+    "media": [
+      {
+        "url": "https://imagens.ebc.com.br/K5NDyFWpd_fViTQRXjMUgF8Lu8Q=/770x0/https://agenciabrasil.ebc.com.br/sites/default/files/thumbnails/image/11042023-pzzb9243.jpg",
+        "type": "image",
+        "extension": "jpg",
+        "lastUsed": "2026-02-20 01:23:48",
+        "invalid": false
+      },
+      {
+        "url": "https://www.stf.jus.br/arquivo/cms/bancoImagemFotoAudiencia/bancoImagemFotoAudiencia_IA_168567.jpg",
+        "type": "image",
+        "extension": "jpg",
+        "lastUsed": "2026-02-12",
+        "invalid": true
+      },
+      {
+        "url": "https://imagens.ebc.com.br/oMs3mwbc4Nj9w8cvfsTZziFewHM=/770x0/https://agenciabrasil.ebc.com.br/sites/default/files/thumbnails/image/11042023-pzzb9197.jpg",
+        "type": "image",
+        "extension": "jpg",
+        "lastUsed": "2026-02-20 02:23:54",
+        "invalid": false
+      },
+      {
+        "url": "https://live.staticflickr.com/65535/48636697307_8be1b00da6_b.jpg",
+        "type": "image",
+        "extension": "jpg",
+        "lastUsed": "2026-02-20 01:16:14",
+        "invalid": false
+      }
+    ]
+  },
+  {
+    "slug": "praca_dos_tres_poderes",
+    "description": "Newly created asset group.",
+    "media": [
+      {
+        "url": "https://upload.wikimedia.org/wikipedia/commons/f/fc/Pra%C3%A7a_dos_Tr%C3%AAs_Poderes_em_Bras%C3%ADlia.jpg",
+        "type": "image",
+        "extension": "jpg",
+        "lastUsed": "2026-02-12",
+        "invalid": true
+      },
+      {
+        "url": "https://static.poder360.com.br/2021/09/Brasilia-60Anos-2020-74-848x477.jpg",
+        "type": "image",
+        "extension": "jpg",
+        "lastUsed": "2026-02-20 02:36:54",
+        "invalid": false
+      },
+      {
+        "url": "https://bsbcapital.com.br/wp-content/uploads/2022/02/Esplanada.jpg",
+        "type": "image",
+        "extension": "jpg",
+        "lastUsed": "2026-02-20 02:29:55",
+        "invalid": false
+      }
+    ]
+  },
+  {
+    "slug": "stj_fachada",
+    "description": "Newly created asset group.",
+    "media": [
+      {
+        "url": "https://gcb.adv.br/novo/wp-content/uploads/2016/12/STJ-Fachada.jpg",
+        "type": "image",
+        "extension": "jpg",
+        "lastUsed": "2026-02-12",
+        "invalid": true
+      },
+      {
+        "url": "https://imagens.ebc.com.br/Oss5jO9LR8vOKJxlvLEyhjctgoU=/1024x768/https://agenciabrasil.ebc.com.br/sites/default/files/thumbnails/image/stj_1908200979_0.jpg",
+        "type": "image",
+        "extension": "jpg",
+        "lastUsed": "2026-02-12 20:30:57",
+        "invalid": false
+      },
+      {
+        "url": "https://static.poder360.com.br/2024/03/STJ-Fachada-Justica-7-848x477.jpg",
+        "type": "image",
+        "extension": "jpg",
+        "lastUsed": "2026-02-12",
+        "invalid": false
+      }
+    ]
+  },
+  {
+    "slug": "dias_toffoli",
+    "description": "Newly created asset group.",
+    "media": [
+      {
+        "url": "https://static.poder360.com.br/2026/02/STF-Judiciario-AberturaDoAno-Judiciario-Fachin-Lula-DiasToffoli-AlexandreDeMoraes-02Fev2026-55-848x477.jpg",
+        "type": "image",
+        "extension": "jpg",
+        "lastUsed": "2026-02-12 19:53:04",
+        "invalid": false
+      },
+      {
+        "url": "https://imagens.ebc.com.br/q-U8_8AsGb9Z7kIiUL-QS4GUtYs=/1170x700/smart/https://agenciabrasil.ebc.com.br/sites/default/files/thumbnails/image/bancoimagemfotoaudiencia_ap_381863.jpg?itok=1Qq0WMPm",
+        "type": "image",
+        "extension": "jpg?itok=1Qq0WMPm",
+        "lastUsed": "2026-02-12 20:38:32",
+        "invalid": false
+      },
+      {
+        "url": "https://i.metroimg.com/pSaQGlsb01_KSEk_ioSR5bty1N_pBS4p13fwqHoIymc/w:900/q:85/f:webp/plain/https://images.metroimg.com/65176c9c-ministro-do-supremo-tribunal-federal-stf-jose-antonio-dias-toffoli-metropoles-6-scaled.jpg",
+        "type": "image",
+        "extension": "jpg",
+        "lastUsed": "2026-02-12",
+        "invalid": false
+      },
+      {
+        "url": "https://c.files.bbci.co.uk/100B4/production/_103361756_diastoffoli.jpg",
+        "type": "image",
+        "extension": "jpg",
+        "lastUsed": "2026-02-12",
+        "invalid": false
+      },
+      {
+        "url": "https://s2-oglobo.glbimg.com/mH7ZWhzhPRxf2iMSsIdrNp0TMF4=/0x0:4211x2807/888x0/smart/filters:strip_icc()/i.s3.glbimg.com/v1/AUTH_da025474c0c44edd99332dddb09cabe8/internal_photos/bs/2026/n/y/pi0vtKQUKWGCeEA4T7OA/bre-0233.jpg",
+        "type": "image",
+        "extension": "jpg",
+        "lastUsed": "2026-02-12",
+        "invalid": false
+      }
+    ]
+  },
+  {
+    "slug": "mpf_fachada",
+    "description": "Newly created asset group.",
+    "media": [
+      {
+        "url": "https://admin.cnnbrasil.com.br/wp-content/uploads/sites/12/2025/05/53904272409_37c2d1f18b_o.jpg?w=1024",
+        "type": "image",
+        "extension": "jpg?w=1024",
+        "lastUsed": "2026-02-12 19:53:48",
+        "invalid": false
+      },
+      {
+        "url": "https://f.i.uol.com.br/fotografia/2023/08/23/169283158564e68f616d057_1692831585_3x2_rt.jpg",
+        "type": "image",
+        "extension": "jpg",
+        "lastUsed": "2026-02-12 20:39:13",
+        "invalid": false
+      },
+      {
+        "url": "https://s3.sa-east-1.amazonaws.com/files-site/cms/b0799ddb-1b1b-4d74-b1a6-d81da9361646.jpg",
+        "type": "image",
+        "extension": "jpg",
+        "lastUsed": "2026-02-20 00:29:33",
+        "invalid": false
+      }
+    ]
+  },
+  {
+    "slug": "banco_brb",
+    "description": "Newly created asset group.",
+    "media": [
+      {
+        "url": "https://admin.cnnbrasil.com.br/wp-content/uploads/sites/12/Reuters_Direct_Media/BrazilOnlineReportBusinessNews/tagreuters.com2025binary_LYNXMPEL8313E-BASEIMAGE.jpg",
+        "type": "image",
+        "extension": "jpg",
+        "lastUsed": "2026-02-12 20:01:49",
+        "invalid": false
+      },
+      {
+        "url": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTqtr-4M1Jg7J-2myJe0WWUoFhVHlSu3cPR3Q&s",
+        "type": "image",
+        "extension": "com/images?q=tbn:ANd9GcTqtr-4M1Jg7J-2myJe0WWUoFhVHlSu3cPR3Q&s",
+        "lastUsed": "2026-02-12 20:46:33",
+        "invalid": false
+      },
+      {
+        "url": "https://s2-oglobo.glbimg.com/2u_gO0DU_fsyq4WJhCPIvR3hikY=/0x0:1536x1023/888x0/smart/filters:strip_icc()/i.s3.glbimg.com/v1/AUTH_da025474c0c44edd99332dddb09cabe8/internal_photos/bs/2025/M/y/a3bU39S0GZh3VatBZQ7Q/28.5.-brb.-foto-rafael-lavenere-brb-1536x1023.jpg",
+        "type": "image",
+        "extension": "jpg",
+        "lastUsed": "2026-02-12",
+        "invalid": false
+      },
+      {
+        "url": "https://www.cartacapital.com.br/wp-content/uploads/2025/11/sede-brb_.jpg",
+        "type": "image",
+        "extension": "jpg",
+        "lastUsed": "2026-02-12",
+        "invalid": false
+      }
+    ]
+  },
+  {
+    "slug": "faria_lima_sp",
+    "description": "Newly created asset group.",
+    "media": [
+      {
+        "url": "https://classic.exame.com/wp-content/uploads/2018/12/avenida-brigadeiro-faria-lima-sao-paulo-20120528-03-original.jpeg",
+        "type": "image",
+        "extension": "jpeg",
+        "lastUsed": "2026-02-19 23:11:56",
+        "invalid": false
+      },
+      {
+        "url": "https://www.zimoveis.com.br/blog/wp-content/uploads/2025/05/avenida-faria-lima.jpg",
+        "type": "image",
+        "extension": "jpg",
+        "lastUsed": "2026-02-20 00:52:05",
+        "invalid": false
+      },
+      {
+        "url": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSvQhoNwinK5BoH3EeDY2Ojx9gAZS7BqUjrZQ&s",
+        "type": "image",
+        "extension": "com/images?q=tbn:ANd9GcSvQhoNwinK5BoH3EeDY2Ojx9gAZS7BqUjrZQ&s",
+        "lastUsed": "2026-02-20 01:01:01",
+        "invalid": false
+      },
+      {
+        "url": "https://www.papoimobiliario.com/wp-content/uploads/2023/05/capa-faria-lima.jpg",
+        "type": "image",
+        "extension": "jpg",
+        "lastUsed": "2026-02-20 01:08:40",
+        "invalid": false
+      },
+      {
+        "url": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRR7E7CVEzL_VQ9nUTCvrMuqA2tNu1c_2QM2A&s",
+        "type": "image",
+        "extension": "com/images?q=tbn:ANd9GcRR7E7CVEzL_VQ9nUTCvrMuqA2tNu1c_2QM2A&s",
+        "lastUsed": "2026-02-20 02:02:33",
+        "invalid": false
+      }
+    ]
+  },
+  {
+    "slug": "jeffrey_epstein",
+    "description": "jeffrey_epstein",
+    "media": [
+      {
+        "url": "https://stories.cnnbrasil.com.br/wp-content/uploads/sites/9/2025/11/image_6bd97f.png",
+        "type": "image",
+        "extension": "png",
+        "lastUsed": "2026-02-17 10:55:48",
+        "invalid": false
+      },
+      {
+        "url": "http://media.newyorker.com/photos/5d7299a5af596b00089f162b/master/pass/Farrow-JeffreyEpstein-2.jpg",
+        "type": "image",
+        "extension": "jpg",
+        "lastUsed": "2026-02-13",
+        "invalid": true
+      },
+      {
+        "url": "https://s2-oglobo.glbimg.com/8YoQ1X5PX5D9D4yY3XiL7jO8L_0=/0x0:1200x921/888x0/smart/filters:strip_icc()/i.s3.glbimg.com/v1/AUTH_da025474c0c44edd99332dddb09cabe8/internal_photos/bs/2026/3/g/9lwuuRTPyGu2trWFea8g/afp-20260210-96v92ke-v1-midres-uspoliticsjusticeepstein.jpg",
+        "type": "image",
+        "extension": "jpg",
+        "lastUsed": "2026-02-13",
+        "invalid": true
+      },
+      {
+        "url": "https://stories.cnnbrasil.com.br/wp-content/uploads/sites/9/2025/11/jeffrey-epstein.jpg",
+        "type": "image",
+        "extension": "jpg",
+        "lastUsed": "2026-02-13",
+        "invalid": false
+      },
+      {
+        "url": "https://ichef.bbci.co.uk/images/ic/512xn/p0mytfvs.jpg.webp",
+        "type": "image",
+        "extension": "webp",
+        "lastUsed": "2026-02-13",
+        "invalid": false
+      },
+      {
+        "url": "https://s.abcnews.com/images/Politics/jeffrey-epstein-rt-gmh-230602_1685726052800_hpMain_2_16x9_1600.jpg",
+        "type": "image",
+        "extension": "jpg",
+        "lastUsed": "2026-02-13",
+        "invalid": false
+      }
+    ]
+  },
+  {
+    "slug": "ilha_epstein",
+    "description": "ilha epstein",
+    "media": [
+      {
+        "url": "https://imagens.publico.pt/imagens.aspx/2050040?tp=UH&db=IMAGENS&type=JPG",
+        "type": "image",
+        "extension": "aspx/2050040?tp=UH&db=IMAGENS&type=JPG",
+        "lastUsed": "2026-02-17 11:16:19",
+        "invalid": false
+      },
+      {
+        "url": "https://s2-valor.glbimg.com/OOj1czIP9blAVYSTYjiKw_rvWJ0=/0x0:1760x1084/600x0/smart/filters:gifv():strip_icc()/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2026/q/a/rRBpKbTxiFwTZCeiAifg/ilha-jeffrey-epstein.webp",
+        "type": "image",
+        "extension": "webp",
+        "lastUsed": "2026-02-13",
+        "invalid": true
+      },
+      {
+        "url": "https://cdn.prod.website-files.com/60ff690cd7b0537edb99a29a/6930c401ef5a2bf10f1063aa_Ilha%20Epstein%20%201920%20x%201080.webp",
+        "type": "image",
+        "extension": "webp",
+        "lastUsed": "2026-02-13",
+        "invalid": false
+      },
+      {
+        "url": "https://s2-g1.glbimg.com/KD00VFLyf_N4V6I722BT30j8rWE=/0x0:4024x2683/984x0/smart/filters:strip_icc()/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2025/h/e/6MOCfYSuOO6hpGZfJcIw/2025-11-29t232022z-1987363674-rc2b6iacxryf-rtrmadp-3-usa-trump-epstein-files.jpg",
+        "type": "image",
+        "extension": "jpg",
+        "lastUsed": "2026-02-13",
+        "invalid": false
+      }
+    ]
+  },
+  {
+    "slug": "robert_maxwell",
+    "description": "robert maxwell",
+    "media": [
+      {
+        "url": "https://upload.wikimedia.org/wikipedia/commons/7/7c/Robert_Maxwell_1989.jpg",
+        "type": "image",
+        "extension": "jpg",
+        "lastUsed": "2026-02-13",
+        "invalid": true
+      },
+      {
+        "url": "https://cdn.britannica.com/74/160074-050-CF445811/Robert-Maxwell-1991.jpg",
+        "type": "image",
+        "extension": "jpg",
+        "lastUsed": "2026-02-13",
+        "invalid": true
+      },
+      {
+        "url": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTlPsODUA21WPKaLH5ki0rdlYGC5UEoShhieQ&s",
+        "type": "image",
+        "extension": "com/images?q=tbn:ANd9GcTlPsODUA21WPKaLH5ki0rdlYGC5UEoShhieQ&s",
+        "lastUsed": "2026-02-13",
+        "invalid": false
+      },
+      {
+        "url": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSP6YMSfwWj4J3xCY1ekrO56jJCVYIKZJR9Pg&s",
+        "type": "image",
+        "extension": "com/images?q=tbn:ANd9GcSP6YMSfwWj4J3xCY1ekrO56jJCVYIKZJR9Pg&s",
+        "lastUsed": "2026-02-13",
+        "invalid": false
+      },
+      {
+        "url": "https://m.media-amazon.com/images/M/MV5BOWU0YTBhYTYtYjVhNi00ODZiLWI1ZjYtZGIzNWU3MTg2MDFhXkEyXkFqcGc@._V1_FMjpg_UX1000_.jpg",
+        "type": "image",
+        "extension": "jpg",
+        "lastUsed": "2026-02-13",
+        "invalid": false
+      }
+    ]
+  },
+  {
+    "slug": "ghislaine_maxwell",
+    "description": "Novo grupo de assets criado.",
+    "media": [
+      {
+        "url": "https://i.abcnewsfe.com/a/579d65f7-5348-40d6-b4cc-60192c0e30bc/Ghislaine-gty-er-250723_1753310128508_hpMain_16x9.jpg?w=992",
+        "type": "image",
+        "extension": "jpg?w=992",
+        "lastUsed": "2026-02-17 11:48:45",
+        "invalid": false
+      },
+      {
+        "url": "https://s2-valor.glbimg.com/07HsuBwzI0Uq5mOANW4goJmSGAQ=/0x0:4000x2743/888x0/smart/filters:strip_icc()/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2026/u/V/yDS9UkTAmG7jiBUNmDng/449283822.jpg",
+        "type": "image",
+        "extension": "jpg",
+        "lastUsed": "2026-02-13",
+        "invalid": true
+      },
+      {
+        "url": "https://i.abcnewsfe.com/a/579d65f7-5348-40d6-b4cc-60192c0e30bc/Ghislaine-gty-er-250723_1753310128508_hpMain.jpg",
+        "type": "image",
+        "extension": "jpg",
+        "lastUsed": "2026-02-13",
+        "invalid": true
+      },
+      {
+        "url": "https://img.lemde.fr/2021/12/03/0/0/5760/3840/664/0/75/0/a9a9ef2_01795ea676b84aa394bcec1afae8fae4-01795ea676b84aa394bcec1afae8fae4-0.jpg",
+        "type": "image",
+        "extension": "jpg",
+        "lastUsed": "2026-02-13",
+        "invalid": false
+      }
+    ]
+  },
+  {
+    "slug": "leslie_wexner",
+    "description": "leslie_wexner",
+    "media": [
+      {
+        "url": "https://images.wsj.net/im-313336",
+        "type": "image",
+        "extension": "net/im-313336",
+        "lastUsed": "2026-02-14",
+        "invalid": true
+      },
+      {
+        "url": "https://forbes.com.br/wp-content/uploads/2020/01/negocios_lesliewexner_290120_Nicholas-Hunt-Getty.jpg",
+        "type": "image",
+        "extension": "jpg",
+        "lastUsed": "2026-02-14",
+        "invalid": false
+      },
+      {
+        "url": "https://upload.wikimedia.org/wikipedia/commons/7/7f/Leslie_Wexner_receives_woodrow_wilson_award_%28cropped2%29.JPG",
+        "type": "image",
+        "extension": "JPG",
+        "lastUsed": "2026-02-14",
+        "invalid": false
+      },
+      {
+        "url": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQDBepWJpK8bFOJ-UzO_NMORwbD8Dxao9VdFQ&s",
+        "type": "image",
+        "extension": "com/images?q=tbn:ANd9GcQDBepWJpK8bFOJ-UzO_NMORwbD8Dxao9VdFQ&s",
+        "lastUsed": "2026-02-14",
+        "invalid": false
+      },
+      {
+        "url": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQuEViThEBTJdFM6KWAVJUCnR6Rou-foGTJZg&s",
+        "type": "image",
+        "extension": "com/images?q=tbn:ANd9GcQuEViThEBTJdFM6KWAVJUCnR6Rou-foGTJZg&s",
+        "lastUsed": "2026-02-14",
+        "invalid": false
+      }
+    ]
+  },
+  {
+    "slug": "mit_harvard",
+    "description": "mit_harvard",
+    "media": [
+      {
+        "url": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTipu7ucc01voK9oVioqrcMNSSpioFTtvwdDA&s",
+        "type": "image",
+        "extension": "com/images?q=tbn:ANd9GcTipu7ucc01voK9oVioqrcMNSSpioFTtvwdDA&s",
+        "lastUsed": "2026-02-14",
+        "invalid": true
+      },
+      {
+        "url": "https://img1.wsimg.com/isteam/ip/70fce6d0-d9e3-4eba-99ab-1d62087d203c/banner_Mesa%20de%20trabajo%201.jpg",
+        "type": "image",
+        "extension": "jpg",
+        "lastUsed": "2026-02-14",
+        "invalid": false
+      },
+      {
+        "url": "https://media.licdn.com/dms/image/v2/D4E12AQHfiYuxHH92JA/article-cover_image-shrink_720_1280/article-cover_image-shrink_720_1280/0/1734459204837?e=2147483647&v=beta&t=C0SjMldsO-uwZF8n5HtFHETn2Emb9seIx_HRcK3i0NU",
+        "type": "image",
+        "extension": "com/dms/image/v2/D4E12AQHfiYuxHH92JA/article-cover_image-shrink_720_1280/article-cover_image-shrink_720_1280/0/1734459204837?e=2147483647&v=beta&t=C0SjMldsO-uwZF8n5HtFHETn2Emb9seIx_HRcK3i0NU",
+        "lastUsed": "2026-02-14",
+        "invalid": false
+      },
+      {
+        "url": "https://thumb.mytentacle.com.br/hbITuMo9c5XJgoIuxccGfw_7_b8=/764x0/filters:format(webp)/https://udi-s.sfo3.cdn.digitaloceanspaces.com/wp-content/uploads/2020/12/1280px-Harvard_University_Widener_Library-1024x683.jpg",
+        "type": "image",
+        "extension": "jpg",
+        "lastUsed": "2026-02-14",
+        "invalid": false
+      },
+      {
+        "url": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRI64PsenuqFHcKTqoArrSYyYZCwCLHapx5_g&s",
+        "type": "image",
+        "extension": "com/images?q=tbn:ANd9GcRI64PsenuqFHcKTqoArrSYyYZCwCLHapx5_g&s",
+        "lastUsed": "2026-02-14",
+        "invalid": false
+      },
+      {
+        "url": "https://media-cdn.tripadvisor.com/media/attractions-splice-spp-674x446/15/67/53/c4.jpg",
+        "type": "image",
+        "extension": "jpg",
+        "lastUsed": "2026-02-14",
+        "invalid": false
+      }
+    ]
+  },
+  {
+    "slug": "aviao_epstein",
+    "description": "Novo grupo de assets criado.",
+    "media": [
+      {
+        "url": "https://admin.cnnbrasil.com.br/wp-content/uploads/sites/12/2026/01/Jeffrey-Epstein-e-Ghislaine-Maxwell.jpg",
+        "type": "image",
+        "extension": "jpg",
+        "lastUsed": "2026-02-14",
+        "invalid": true
+      },
+      {
+        "url": "https://cdn.prod.website-files.com/60ff690cd7b0537edb99a29a/698e0c5915d7d502375640d8_Epstein%20%20%201920%20x%201080%20(44).jpg",
+        "type": "image",
+        "extension": "jpg",
+        "lastUsed": "2026-02-14",
+        "invalid": false
+      },
+      {
+        "url": "https://www.miamiherald.com/public/latest-news/8ffrxt/picture290994315/alternates/LANDSCAPE_1140/240810_Trump%20in%20Aspen_JC-6.jpg",
+        "type": "image",
+        "extension": "jpg",
+        "lastUsed": "2026-02-14",
+        "invalid": false
+      },
+      {
+        "url": "https://www.thetimes.com/imageserver/image/%2Fmethode%2Ftimes%2Fprod%2Fweb%2Fbin%2Fe5e28f0e-c85d-11ea-b1ec-faab6f383ba1.jpg?crop=2721%2C1531%2C156%2C325",
+        "type": "image",
+        "extension": "jpg?crop=2721%2C1531%2C156%2C325",
+        "lastUsed": "2026-02-14",
+        "invalid": false
+      }
+    ]
+  },
+  {
+    "slug": "mansao_epstein",
+    "description": "Novo grupo de assets criado.",
+    "media": [
+      {
+        "url": "https://www.estadao.com.br/resizer/v2/YPTMEUHYQ5EVHALEVSH7E3IK34.jpg?quality=80&auth=583646574531faf59ff6cde9b13d693b39cdbeaad598192d64644ece64b68b43&width=380",
+        "type": "image",
+        "extension": "jpg?quality=80&auth=583646574531faf59ff6cde9b13d693b39cdbeaad598192d64644ece64b68b43&width=380",
+        "lastUsed": "2026-02-14",
+        "invalid": true
+      },
+      {
+        "url": "https://i-invdn-com.investing.com/trkd-images/LYNXMPEJ4M0W2_L.jpg",
+        "type": "image",
+        "extension": "jpg",
+        "lastUsed": "2026-02-14",
+        "invalid": false
+      },
+      {
+        "url": "https://s2.glbimg.com/Wqns3l4KoMLLTfucyrbSbLExXjQ=/e.glbimg.com/og/ed/f/original/2021/12/13/epstein-virgin-05.jpg",
+        "type": "image",
+        "extension": "jpg",
+        "lastUsed": "2026-02-14",
+        "invalid": false
+      }
+    ]
+  },
+  {
+    "slug": "principe_andrew",
+    "description": "Novo grupo de assets criado.",
+    "media": [
+      {
+        "url": "https://admin.cnnbrasil.com.br/wp-content/uploads/sites/12/2025/11/Principe-Andrew-em-evento-de-Natal-na-Inglaterra.jpg?w=1200&h=900&crop=1",
+        "type": "image",
+        "extension": "jpg?w=1200&h=900&crop=1",
+        "lastUsed": "2026-02-14",
+        "invalid": true
+      },
+      {
+        "url": "https://admin.cnnbrasil.com.br/wp-content/uploads/sites/12/2024/12/2024-12-16T185938Z_1_LYNXMPEKBF0S8_RTROPTP_4_BRITAIN-SECURITY-CHINA-ANDREW.jpg?w=419&h=283&crop=0",
+        "type": "image",
+        "extension": "jpg?w=419&h=283&crop=0",
+        "lastUsed": "2026-02-14",
+        "invalid": false
+      },
+      {
+        "url": "https://www.cartacapital.com.br/wp-content/uploads/2022/01/nossomundorealeza.jpg",
+        "type": "image",
+        "extension": "jpg",
+        "lastUsed": "2026-02-14",
+        "invalid": false
+      },
+      {
+        "url": "https://veja.abril.com.br/wp-content/uploads/2019/11/principe-andrew.jpg.jpg?crop=1&resize=1212,909",
+        "type": "image",
+        "extension": "jpg?crop=1&resize=1212,909",
+        "lastUsed": "2026-02-14",
+        "invalid": false
+      },
+      {
+        "url": "https://www.cartacapital.com.br/wp-content/uploads/2025/10/principe_andrew-1024x614.jpg",
+        "type": "image",
+        "extension": "jpg",
+        "lastUsed": "2026-02-14",
+        "invalid": false
+      }
+    ]
+  },
+  {
+    "slug": "cia",
+    "description": "Novo grupo de assets criado.",
+    "media": [
+      {
+        "url": "https://ichef.bbci.co.uk/ace/ws/640/amz/worldservice/live/assets/images/2010/07/19/100719121956_sp_inteligencia_eeuu_gi_.jpg.webp",
+        "type": "image",
+        "extension": "webp",
+        "lastUsed": "2026-02-14",
+        "invalid": true
+      },
+      {
+        "url": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSpEmNTiy5DVXN4CJubqvGIyUjwNHW7Q7XISw&s",
+        "type": "image",
+        "extension": "com/images?q=tbn:ANd9GcSpEmNTiy5DVXN4CJubqvGIyUjwNHW7Q7XISw&s",
+        "lastUsed": "2026-02-20 02:07:15",
+        "invalid": false
+      },
+      {
+        "url": "https://s2.glbimg.com/iuV68g_VnDxD-KzVGHoXVbIudj4=/620x620/e.glbimg.com/og/ed/f/original/2015/11/18/cia-headquarters-getty.jpg",
+        "type": "image",
+        "extension": "jpg",
+        "lastUsed": "2026-02-20 02:10:01",
+        "invalid": false
+      },
+      {
+        "url": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSdQOIVYc2wKGrsJ0udBEe3PKBGFQlLfJtIqQ&s",
+        "type": "image",
+        "extension": "com/images?q=tbn:ANd9GcSdQOIVYc2wKGrsJ0udBEe3PKBGFQlLfJtIqQ&s",
+        "lastUsed": "2026-02-20 02:13:57",
+        "invalid": false
+      }
+    ]
+  },
+  {
+    "slug": "alexander_acosta",
+    "description": "Novo grupo de assets criado.",
+    "media": [
+      {
+        "url": "https://hls.harvard.edu/wp-content/uploads/2022/05/Alexander_Acosta_2550px-scaled.jpg",
+        "type": "image",
+        "extension": "jpg",
+        "lastUsed": "2026-02-14",
+        "invalid": true
+      },
+      {
+        "url": "https://nwlc.org/wp-content/uploads/2017/02/Alexander_Acosta.jpg",
+        "type": "image",
+        "extension": "jpg",
+        "lastUsed": "2026-02-14",
+        "invalid": false
+      },
+      {
+        "url": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSxjaBfCUtW9oWsqi4T5GxAqTY_X7T5iaetoA&s",
+        "type": "image",
+        "extension": "com/images?q=tbn:ANd9GcSxjaBfCUtW9oWsqi4T5GxAqTY_X7T5iaetoA&s",
+        "lastUsed": "2026-02-14",
+        "invalid": false
+      }
+    ]
+  },
+  {
+    "slug": "fbi_raid",
+    "description": "Novo grupo de assets criado.",
+    "media": [
+      {
+        "url": "https://georgiarecorder.com/wp-content/uploads/2026/01/DSC_9895-1-1536x1024.jpg",
+        "type": "image",
+        "extension": "jpg",
+        "lastUsed": "2026-02-14",
+        "invalid": true
+      },
+      {
+        "url": "https://images.foxtv.com/static-media.fox.com/fmcv3/prod/fts/90w1itxiq38cnyi5/1184/666/f8ppjpc5t0o039bl.jpg?ve=1&tl=1",
+        "type": "image",
+        "extension": "jpg?ve=1&tl=1",
+        "lastUsed": "2026-02-14",
+        "invalid": false
+      },
+      {
+        "url": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ4qaxSp4gZz5C6e9vg6b-33k6DgT-erOGc0A&s",
+        "type": "image",
+        "extension": "com/images?q=tbn:ANd9GcQ4qaxSp4gZz5C6e9vg6b-33k6DgT-erOGc0A&s",
+        "lastUsed": "2026-02-14",
+        "invalid": false
+      }
+    ]
+  },
+  {
+    "slug": "ilhas_virgens_mapa",
+    "description": "Novo grupo de assets criado.",
+    "media": [
+      {
+        "url": "https://thumbs.dreamstime.com/z/mapa-pol%C3%ADtico-de-ilhas-virgens-brit%C3%A2nicas-52685442.jpg",
+        "type": "image",
+        "extension": "jpg",
+        "lastUsed": "2026-02-14",
+        "invalid": true
+      },
+      {
+        "url": "https://sites.usp.br/portalatinoamericano/wp-content/uploads/sites/922/2022/03/Mapa-Ilhas-virgens-dos-Estados-Unidos.png",
+        "type": "image",
+        "extension": "png",
+        "lastUsed": "2026-02-14",
+        "invalid": false
+      }
+    ]
+  },
+  {
+    "slug": "mcc_prison_new_york",
+    "description": "Novo grupo de assets criado.",
+    "media": [
+      {
+        "url": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQPi4bmwpik5ITz2SIysrbQK7iPlhcagNpgMA&s",
+        "type": "image",
+        "extension": "com/images?q=tbn:ANd9GcQPi4bmwpik5ITz2SIysrbQK7iPlhcagNpgMA&s",
+        "lastUsed": "2026-02-14",
+        "invalid": true
+      },
+      {
+        "url": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRZj3BomifBcdvX27FywTFuzjwdHbycqi-Eyg&s",
+        "type": "image",
+        "extension": "com/images?q=tbn:ANd9GcRZj3BomifBcdvX27FywTFuzjwdHbycqi-Eyg&s",
+        "lastUsed": "2026-02-14",
+        "invalid": false
+      },
+      {
+        "url": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQEWPqy3AvTYuN6uvRsXXv4KAQUai7S-RWmiQ&s",
+        "type": "image",
+        "extension": "com/images?q=tbn:ANd9GcQEWPqy3AvTYuN6uvRsXXv4KAQUai7S-RWmiQ&s",
+        "lastUsed": "2026-02-14",
+        "invalid": false
+      },
+      {
+        "url": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT7Njg3cG1ARIOG1RpK6Er44rErjUfPgfWMQQ&s",
+        "type": "image",
+        "extension": "com/images?q=tbn:ANd9GcT7Njg3cG1ARIOG1RpK6Er44rErjUfPgfWMQQ&s",
+        "lastUsed": "2026-02-14",
+        "invalid": false
+      },
+      {
+        "url": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT4qJMogzkaS4sM95ema8pI1SAPM3g9LwlK2A&s",
+        "type": "image",
+        "extension": "com/images?q=tbn:ANd9GcT4qJMogzkaS4sM95ema8pI1SAPM3g9LwlK2A&s",
+        "lastUsed": "2026-02-14",
+        "invalid": false
+      },
+      {
+        "url": "https://images.squarespace-cdn.com/content/v1/57c5a333e58c625a7e36a989/1523052118274-NIVKP9JJUHTRLBEX0I05/MCC+2.jpg?format=1000w",
+        "type": "image",
+        "extension": "jpg?format=1000w",
+        "lastUsed": "2026-02-14",
+        "invalid": false
+      },
+      {
+        "url": "https://images.squarespace-cdn.com/content/v1/57c5a333e58c625a7e36a989/1523051299575-5DXGVJXKGD6FTI0F6GGD/MCC5+%281+of+1%29.jpg",
+        "type": "image",
+        "extension": "jpg",
+        "lastUsed": "2026-02-14",
+        "invalid": false
+      }
+    ]
+  },
+  {
+    "slug": "william_barr",
+    "description": "Novo grupo de assets criado.",
+    "media": [
+      {
+        "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0b/William_Barr%2C_official_photo_as_Attorney_General.jpg/250px-William_Barr%2C_official_photo_as_Attorney_General.jpg",
+        "type": "image",
+        "extension": "jpg",
+        "lastUsed": "2026-02-14",
+        "invalid": true
+      },
+      {
+        "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/45/William_Barr.jpg/960px-William_Barr.jpg",
+        "type": "image",
+        "extension": "jpg",
+        "lastUsed": "2026-02-14",
+        "invalid": false
+      },
+      {
+        "url": "https://media-cldnry.s-nbcnews.com/image/upload/newscms/2019_07/2752716/190213-william-barr-ew-645p.jpg",
+        "type": "image",
+        "extension": "jpg",
+        "lastUsed": "2026-02-14",
+        "invalid": false
+      },
+      {
+        "url": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ1WScqUgarD8XTdAXynTF1q8xayuqlb2u7zg&s",
+        "type": "image",
+        "extension": "com/images?q=tbn:ANd9GcQ1WScqUgarD8XTdAXynTF1q8xayuqlb2u7zg&s",
+        "lastUsed": "2026-02-14",
+        "invalid": false
+      }
+    ]
+  },
+  {
+    "slug": "inss_sede",
+    "description": "inss_sede",
+    "media": [
+      {
+        "url": "https://live.staticflickr.com/65535/53308026540_fb77ed4d5c_b.jpg",
+        "type": "image",
+        "extension": "jpg",
+        "lastUsed": "2026-02-20 00:45:52",
+        "invalid": false
+      },
+      {
+        "url": "https://as1.ftcdn.net/jpg/04/04/39/38/1000_F_404393806_1Nu6gVXcO5FwbFm6DTN2zwohnYksEBL5.jpg",
+        "type": "image",
+        "extension": "jpg",
+        "lastUsed": "2026-02-20 02:32:24",
+        "invalid": false
+      },
+      {
+        "url": "https://live.staticflickr.com/65535/46975656014_33a8b99fbc_b.jpg",
+        "type": "image",
+        "extension": "jpg",
+        "lastUsed": "2026-02-20 00:10:30",
+        "invalid": false
+      }
+    ]
+  },
+  {
+    "slug": "cgu_fachada",
+    "description": "Novo grupo de assets criado.",
+    "media": [
+      {
+        "url": "https://live.staticflickr.com/65535/54556725559_628589ba6d.jpg",
+        "type": "image",
+        "extension": "jpg",
+        "lastUsed": "2026-02-20 00:03:13",
+        "invalid": false
+      },
+      {
+        "url": "https://s2-cbn.glbimg.com/qXgPWWvfTBnnOVRSem7YoMBWhJI=/0x0:620x430/888x0/smart/filters:strip_icc()/i.s3.glbimg.com/v1/AUTH_d975fad146a14bbfad9e763717b09688/internal_photos/bs/2023/J/V/FRhnKzQDSmOCGk5RNYug/d82d1868-e77e-45d8-8347-c988662c70b6.jpg",
+        "type": "image",
+        "extension": "jpg",
+        "lastUsed": "2026-02-20 00:36:36",
+        "invalid": false
+      },
+      {
+        "url": "https://live.staticflickr.com/65535/54556725639_ea29c5747e.jpg",
+        "type": "image",
+        "extension": "jpg",
+        "lastUsed": "2026-02-20 00:38:56",
+        "invalid": false
+      }
+    ]
+  },
+  {
+    "slug": "carlos_lupi",
+    "description": "Novo grupo de assets criado.",
+    "media": [
+      {
+        "url": "https://s2-g1.glbimg.com/s7LHjRFD5wNQ8kRzCDmb3PbBVxk=/0x0:1000x617/984x0/smart/filters:strip_icc()/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2025/3/k/CJCqOfSUyzH7x2Bz5ElA/img20250429144559500med.jpg",
+        "type": "image",
+        "extension": "jpg",
+        "lastUsed": "2026-02-20 00:12:19",
+        "invalid": false
+      },
+      {
+        "url": "https://www.infomoney.com.br/wp-content/uploads/2025/04/Captura-de-Tela-2025-04-28-as-19.06.52.png",
+        "type": "image",
+        "extension": "png",
+        "lastUsed": "2026-02-20 00:14:30",
+        "invalid": false
+      },
+      {
+        "url": "https://static.poder360.com.br/2025/09/Carlos-Lupi-na-CPI-do-INSS-8set2025-scaled.jpg",
+        "type": "image",
+        "extension": "jpg",
+        "lastUsed": "2026-02-20",
+        "invalid": false
+      },
+      {
+        "url": "https://static.poder360.com.br/2025/09/carlos-lupi-cpi-inss-8set2025-848x477.jpg",
+        "type": "image",
+        "extension": "jpg",
+        "lastUsed": "2026-02-20",
+        "invalid": false
+      }
+    ]
+  },
+  {
+    "slug": "flavio_bolsonaro",
+    "description": "Novo grupo de assets criado.",
+    "media": [
+      {
+        "url": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSTkT0b1yTLDfLJQ_l5xQUrjAWcEmdfVBbefQ&s",
+        "type": "image",
+        "extension": "com/images?q=tbn:ANd9GcSTkT0b1yTLDfLJQ_l5xQUrjAWcEmdfVBbefQ&s",
+        "lastUsed": "2026-02-20 01:38:32",
+        "invalid": false
+      },
+      {
+        "url": "https://s2-oglobo.glbimg.com/mk3QjTELFRENcUkg2T8MOQqK0k0=/0x0:4630x3223/888x0/smart/filters:strip_icc()/i.s3.glbimg.com/v1/AUTH_da025474c0c44edd99332dddb09cabe8/internal_photos/bs/2025/b/d/7eMNEtSCmUVWzOXB2DWA/110082566-pa-brasilia-df-19-02-2025-entrevista-exclusiva-senador-flavio-bolsonaro-fotografia-bre.jpg",
+        "type": "image",
+        "extension": "jpg",
+        "lastUsed": "2026-02-20 01:48:22",
+        "invalid": false
+      },
+      {
+        "url": "https://otempo.scene7.com/is/image/sempreeditora/pol%C3%ADtica%20congresso-brasilia-bras%C3%ADlia-df-flavio_bolsonaro-1762545852?qlt=90&ts=1762545944433&dpr=off",
+        "type": "image",
+        "extension": "com/is/image/sempreeditora/pol%C3%ADtica%20congresso-brasilia-bras%C3%ADlia-df-flavio_bolsonaro-1762545852?qlt=90&ts=1762545944433&dpr=off",
+        "lastUsed": "2026-02-20",
+        "invalid": false
+      }
+    ]
+  },
+  {
+    "slug": "flavio_dino",
+    "description": "Novo grupo de assets criado.",
+    "media": [
+      {
+        "url": "https://www.rbsdirect.com.br/filestore/0/2/8/8/8/2/5_c4dc4fadf0733c5/5288820_c385f3ac8a0bfaa.jpg",
+        "type": "image",
+        "extension": "jpg",
+        "lastUsed": "2026-02-20 01:18:24",
+        "invalid": false
+      },
+      {
+        "url": "https://s2-oglobo.glbimg.com/_ohPuXcJ-vr-TsRXykoLzigxW7o=/0x0:4776x3184/888x0/smart/filters:strip_icc()/i.s3.glbimg.com/v1/AUTH_da025474c0c44edd99332dddb09cabe8/internal_photos/bs/2025/r/e/UCpIvdTeiZG77u7JXRXA/6p3a1108.jpg",
+        "type": "image",
+        "extension": "jpg",
+        "lastUsed": "2026-02-20 01:21:44",
+        "invalid": false
+      },
+      {
+        "url": "https://noticias-stf-wp-prd.s3.sa-east-1.amazonaws.com/wp-content/uploads/wpallimport/uploads/2025/02/21200224/54325678543_e39b4c6d4b_c.jpg",
+        "type": "image",
+        "extension": "jpg",
+        "lastUsed": "2026-02-20",
+        "invalid": false
+      },
+      {
+        "url": "https://static.ndmais.com.br/2025/08/flavio-dino-2025-1200x675.jpg",
+        "type": "image",
+        "extension": "jpg",
+        "lastUsed": "2026-02-20",
         "invalid": false
       }
     ]
