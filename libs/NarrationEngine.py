@@ -61,7 +61,6 @@ class NarrationEngine:
         
         # Atualiza as cenas com informações dos segmentos
         for scene in scenes_data:
-            # atualizar os dados da cena adicionando audio_file e srt_file
             scene_id = scene.get("id", "")
             if scene_id in segments_info:
                 scene["narration"]["audio_file"] = segments_info[scene_id]["audio_path"]
@@ -123,10 +122,22 @@ class NarrationEngine:
                  self.tts_config.get("voice") or
                  "pt-BR-AntonioNeural")
 
+        # Rate: cena > global > default "+15%"
+        rate = (scene_data.get("tts", {}).get("rate") or
+                self.tts_config.get("rate") or
+                "+15%")
+
+        # Pitch: cena > global > default "+0Hz"
+        pitch = (scene_data.get("tts", {}).get("pitch") or
+                 self.tts_config.get("pitch") or
+                 "+0Hz")
+
         tts_params = {
             "text": text,
             "voice_id": voice,
             "output_basename": audio_basename,
+            "rate": rate,
+            "pitch": pitch,
         }
 
         tts_engine = EdgeTTS(params=tts_params)

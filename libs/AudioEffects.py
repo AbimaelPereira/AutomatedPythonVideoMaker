@@ -30,60 +30,162 @@ class AudioEffects:
         self._audio = None
         if self.audio_path and os.path.exists(self.audio_path):
             self._audio = AudioSegment.from_file(self.audio_path)
-    
-    def load(self, audio_path:  str) -> "AudioEffects":
+
+    def load(self, audio_path: str) -> "AudioEffects":
         """Carrega um arquivo de áudio."""
         self.audio_path = audio_path
         self._audio = AudioSegment.from_file(audio_path)
         return self
 
+    @staticmethod
+    def _pad_to_length(audio: AudioSegment, length_ms: int) -> AudioSegment:
+        """Estende um AudioSegment com silêncio até atingir length_ms."""
+        if len(audio) >= length_ms:
+            return audio
+        silence = AudioSegment.silent(
+            duration=length_ms - len(audio),
+            frame_rate=audio.frame_rate
+        )
+        return audio + silence
+
+    @staticmethod
+    def _to_numpy(audio: AudioSegment) -> tuple:
+        """
+        Converte AudioSegment para array numpy float32.
+
+        Retorna (samples, sample_rate, channels) onde:
+          - samples shape é (N,) para mono ou (N, 2) para stereo
+          - N é sempre par (garante reshape seguro para stereo)
+        """
+        sample_rate = audio.frame_rate
+        channels    = audio.channels
+        raw         = np.array(audio.get_array_of_samples(), dtype=np.float32)
+
+        if channels == 2:
+            # Garante que o total de elementos seja par antes do reshape
+            if len(raw) % 2 != 0:
+                raw = raw[:-1]
+            samples = raw.reshape(-1, 2)
+        else:
+            samples = raw
+
+        return samples, sample_rate, channels
+
+    @staticmethod
+    def _from_numpy(samples: np.ndarray, sample_rate: int, channels: int) -> AudioSegment:
+        """Reconstrói um AudioSegment a partir de array numpy int16."""
+        data = np.clip(samples, -32768, 32767).astype(np.int16)
+        if channels == 2:
+            data = data.flatten()
+        return AudioSegment(
+            data=data.tobytes(),
+            sample_width=2,
+            frame_rate=sample_rate,
+            channels=channels
+        )
+
+    @staticmethod
     def apply_ducking(
         narration: AudioSegment,
         background: AudioSegment,
-        ducking_db: float = -18.0,     # quanto abaixa a música quando há voz
-        threshold_db: float = -40.0,   # volume mínimo da voz para ativar ducking
-        attack_ms: int = 50,           # quão rápido abaixa
-        release_ms: int = 300,         # quão rápido sobe
-        chunk_ms: int = 10             # resolução da análise
+        ducking_db: float = -18.0,
+        threshold_db: float = -40.0, # nível de detecção de voz para iniciar
+        attack_ms: int = 50, # tempo para atingir ducking_db
+        release_ms: int = 150, # tempo para retornar ao volume normal   
+        chunk_ms: int = 10 # tamanho do chunk para análise (menor = mais preciso, mas mais CPU)
     ) -> AudioSegment:
         """
         Aplica ducking na música de fundo baseado na narração.
+
+        A curva de gain é calculada por chunk e interpolada linearmente
+        para nível de amostra, eliminando clicks e chiados.
         """
+        # --- 1. Equaliza sample_rate e channels ---
+        # Converte narração para o mesmo formato do background se necessário
+        if narration.frame_rate != background.frame_rate:
+            narration = narration.set_frame_rate(background.frame_rate)
+        if narration.channels != background.channels:
+            narration = narration.set_channels(background.channels)
 
-        # Garante mesma duração
+        # --- 2. Padding para mesma duração ---
         max_len = max(len(narration), len(background))
-        narration = narration.pad_end(max_len)
-        background = background.pad_end(max_len)
 
-        output = AudioSegment.silent(duration=max_len)
+        if len(narration) < max_len:
+            narration = narration + AudioSegment.silent(
+                duration=max_len - len(narration),
+                frame_rate=narration.frame_rate
+            )
+        if len(background) < max_len:
+            background = background + AudioSegment.silent(
+                duration=max_len - len(background),
+                frame_rate=background.frame_rate
+            )
+
+        # --- 3. Converte para numpy (trata arrays com tamanho ímpar) ---
+        nar_samples, sample_rate, channels = AudioEffects._to_numpy(narration)
+        bg_samples,  _,           _        = AudioEffects._to_numpy(background)
+
+        # Alinha tamanhos após possível trim do reshape
+        min_len     = min(len(nar_samples), len(bg_samples))
+        nar_samples = nar_samples[:min_len]
+        bg_samples  = bg_samples[:min_len]
+        total_samples = min_len
+
+        # --- 4. Calcula curva de gain por chunk (em dB) ---
+        chunk_samples  = max(1, int(sample_rate * chunk_ms / 1000))
+        attack_chunks  = max(1, attack_ms  / chunk_ms)
+        release_chunks = max(1, release_ms / chunk_ms)
+
+        attack_step  = abs(ducking_db) / attack_chunks
+        release_step = abs(ducking_db) / release_chunks
+
+        num_chunks     = int(np.ceil(total_samples / chunk_samples))
+        gain_per_chunk = np.zeros(num_chunks, dtype=np.float32)
 
         current_gain = 0.0
-        attack_step = abs(ducking_db) / (attack_ms / chunk_ms)
-        release_step = abs(ducking_db) / (release_ms / chunk_ms)
+        for idx in range(num_chunks):
+            s = idx * chunk_samples
+            e = min(s + chunk_samples, total_samples)
 
-        for i in range(0, max_len, chunk_ms):
-            voice_chunk = narration[i:i+chunk_ms]
-            bg_chunk = background[i:i+chunk_ms]
+            chunk_nar = nar_samples[s:e]
 
-            voice_db = voice_chunk.dBFS
+            # Para stereo: usa média dos canais para detectar voz
+            if channels == 2:
+                chunk_nar = chunk_nar.mean(axis=1)
 
-            # Se tem voz → abaixa música
-            if voice_db > threshold_db:
+            rms = np.sqrt(np.mean(chunk_nar ** 2))
+            db  = 20.0 * np.log10(rms / 32768.0) if rms > 0 else -120.0
+
+            if db > threshold_db:
                 current_gain = max(ducking_db, current_gain - attack_step)
             else:
                 current_gain = min(0.0, current_gain + release_step)
 
-            bg_chunk = bg_chunk.apply_gain(current_gain)
-            mixed = bg_chunk.overlay(voice_chunk)
+            gain_per_chunk[idx] = current_gain
 
-            output += mixed
+        # --- 5. Interpola gain para nível de amostra (elimina degraus/clicks) ---
+        chunk_centers  = (np.arange(num_chunks) + 0.5) * chunk_samples
+        xp = np.concatenate([[0], chunk_centers, [total_samples - 1]])
+        fp = np.concatenate([[gain_per_chunk[0]], gain_per_chunk, [gain_per_chunk[-1]]])
 
-        return output
+        sample_indices = np.arange(total_samples, dtype=np.float32)
+        gain_db_smooth = np.interp(sample_indices, xp, fp)
 
-    
+        # dB → fator linear
+        gain_linear = 10.0 ** (gain_db_smooth / 20.0)   # shape: (total_samples,)
+
+        # --- 6. Aplica gain e mixa ---
+        if channels == 2:
+            gain_linear = gain_linear[:, np.newaxis]   # (N, 1) → broadcast para (N, 2)
+
+        mixed = bg_samples * gain_linear + nar_samples
+
+        # --- 7. Reconstrói AudioSegment ---
+        return AudioEffects._from_numpy(mixed, sample_rate, channels)
+
     def apply_reverb(
         self,
-        dry:  int = 70,
+        dry: int = 70,
         wet: int = 30,
         decay: float = 0.5,
         room_size: float = 0.5,
@@ -91,109 +193,86 @@ class AudioEffects:
     ) -> "AudioEffects":
         """
         Aplica reverb ao áudio.
-        
+
         Args:
             dry: 0-100, volume do áudio original
             wet: 0-100, volume do reverb
             decay: 0.0-1.0, tempo de decaimento
             room_size: 0.0-1.0, tamanho do ambiente (afeta delay e densidade)
             low_cut: frequência em Hz para corte de graves no reverb
-        
+
         Returns:
             self para encadeamento
         """
         if self._audio is None:
             raise ValueError("Nenhum áudio carregado")
-        
-        # Normaliza parâmetros
-        dry = max(0, min(100, dry)) / 100.0
-        wet = max(0, min(100, wet)) / 100.0
-        decay = max(0.1, min(1.0, decay))
+
+        dry       = max(0, min(100, dry))  / 100.0
+        wet       = max(0, min(100, wet))  / 100.0
+        decay     = max(0.1, min(1.0, decay))
         room_size = max(0.1, min(1.0, room_size))
-        
-        # Converte para array numpy
-        samples = np.array(self._audio.get_array_of_samples(), dtype=np.float32)
-        sample_rate = self._audio.frame_rate
-        channels = self._audio.channels
-        
-        if channels == 2:
-            samples = samples.reshape((-1, 2))
-        
-        # Aplica high-pass filter no sinal wet (low_cut)
+
+        samples, sample_rate, channels = AudioEffects._to_numpy(self._audio)
+
         if low_cut > 0:
-            nyquist = sample_rate / 2
+            nyquist           = sample_rate / 2
             normalized_cutoff = min(low_cut / nyquist, 0.99)
-            b, a = signal.butter(2, normalized_cutoff, btype='high')
+            b, a              = signal.butter(2, normalized_cutoff, btype='high')
             if channels == 2:
                 samples_filtered = np.column_stack([
-                    signal.filtfilt(b, a, samples[: , 0]),
+                    signal.filtfilt(b, a, samples[:, 0]),
                     signal.filtfilt(b, a, samples[:, 1])
                 ])
             else:
                 samples_filtered = signal.filtfilt(b, a, samples)
         else:
             samples_filtered = samples.copy()
-        
-        # Gera impulse response simples baseado em room_size e decay
-        ir_duration = int(sample_rate * room_size * 2)  # até 2s para room_size=1.0
-        ir = self._generate_impulse_response(ir_duration, decay, sample_rate)
-        
-        # Convolução para reverb
+
+        ir_duration = int(sample_rate * room_size * 2)
+        ir          = self._generate_impulse_response(ir_duration, decay, sample_rate)
+
         if channels == 2:
-            reverb_left = signal.fftconvolve(samples_filtered[: , 0], ir, mode='full')[:len(samples)]
-            reverb_right = signal.fftconvolve(samples_filtered[:, 1], ir, mode='full')[:len(samples)]
+            reverb_left   = signal.fftconvolve(samples_filtered[:, 0], ir, mode='full')[:len(samples)]
+            reverb_right  = signal.fftconvolve(samples_filtered[:, 1], ir, mode='full')[:len(samples)]
             reverb_signal = np.column_stack([reverb_left, reverb_right])
         else:
             reverb_signal = signal.fftconvolve(samples_filtered, ir, mode='full')[:len(samples)]
-        
-        # Normaliza reverb
+
         max_val = np.max(np.abs(reverb_signal))
         if max_val > 0:
             reverb_signal = reverb_signal / max_val * np.max(np.abs(samples))
-        
-        # Mix dry/wet
-        mixed = (samples * dry + reverb_signal * wet).astype(np.int16)
-        
-        # Reconstrói AudioSegment
-        if channels == 2:
-            mixed = mixed.flatten()
-        
-        self._audio = AudioSegment(
-            data=mixed.tobytes(),
-            sample_width=2,
-            frame_rate=sample_rate,
-            channels=channels
-        )
-        
+
+        mixed = samples * dry + reverb_signal * wet
+
+        self._audio = AudioEffects._from_numpy(mixed, sample_rate, channels)
         return self
-    
+
     def _generate_impulse_response(self, length: int, decay: float, sample_rate: int) -> np.ndarray:
         """Gera impulse response exponencial simples."""
-        t = np.linspace(0, length / sample_rate, length)
+        t  = np.linspace(0, length / sample_rate, length)
         ir = np.random.randn(length) * np.exp(-t / (decay * 0.5))
-        # Normaliza
         ir = ir / np.max(np.abs(ir))
         return ir.astype(np.float32)
-    
+
     def export(self, output_path: str, format: str = "mp3") -> str:
         """Exporta o áudio processado."""
         if self._audio is None:
             raise ValueError("Nenhum áudio carregado")
-        
+
         os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
         self._audio.export(output_path, format=format)
         return output_path
-    
+
     def get_audio_segment(self) -> AudioSegment:
         """Retorna o AudioSegment atual."""
         return self._audio
-    
+
     def get_duration(self) -> float:
         """Retorna duração em segundos."""
         if self._audio is None:
             return 0.0
         return len(self._audio) / 1000.0
-    
+
     @classmethod
     def get_cached_or_process(
         cls,
@@ -203,42 +282,38 @@ class AudioEffects:
     ) -> str:
         """
         Retorna caminho do áudio processado, usando cache se disponível.
-        
+
         Args:
             audio_path: caminho do áudio original
             output_dir: diretório de saída
             reverb_params: parâmetros do reverb (se None, não aplica reverb)
-        
+
         Returns:
             Caminho do arquivo processado
         """
-        # Gera cache key
         cache_data = {
-            "path": audio_path,
-            "mtime": os.path.getmtime(audio_path) if os.path.exists(audio_path) else 0,
-            "reverb":  reverb_params
+            "path":   audio_path,
+            "mtime":  os.path.getmtime(audio_path) if os.path.exists(audio_path) else 0,
+            "reverb": reverb_params
         }
         cache_key = hashlib.md5(str(cache_data).encode()).hexdigest()[:12]
-        
-        # Verifica cache em memória
+
         if cache_key in cls._cache and os.path.exists(cls._cache[cache_key]):
             return cls._cache[cache_key]
-        
-        # Verifica cache em disco
-        basename = os.path.splitext(os.path.basename(audio_path))[0]
+
+        basename    = os.path.splitext(os.path.basename(audio_path))[0]
         cached_path = os.path.join(output_dir, f"{basename}_fx_{cache_key}.mp3")
-        
+
         if os.path.exists(cached_path):
             cls._cache[cache_key] = cached_path
             return cached_path
-        
-        # Processa
+
         processor = cls({"audio_path": audio_path, "output_dir": output_dir})
-        
+
         if reverb_params:
             processor.apply_reverb(**reverb_params)
-        
+
         processor.export(cached_path)
         cls._cache[cache_key] = cached_path
-        
+
         return cached_path

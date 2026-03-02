@@ -3,12 +3,6 @@
     "slug": "elias-o-profeta-do-fogo",
     "channel_name": "vida_de_oracao",
     "output_ratio": "16:9",
-    "global_settings": {
-      "tts": {
-        "provider": "local_file",
-        "audio_file": "./temp/final.mp3"
-      }
-    },
     "scenes": [
       {
         "id": "0001",
@@ -4976,14 +4970,7 @@
         "Fé",
         "Coragem",
         "Confronto",
-        "Ahab",
-        "Jezabel",
-        "Cinematográfico",
-        "Épico Bíblico",
-        "Reis",
-        "Profetas",
-        "Seca",
-        "Chuva"
+        "Ahab"
       ],
       "description": "🔥 A HISTÓRIA ÉPICA DE ELIAS COMO NUNCA VIU!\n\n⚔️ Do deserto solitário ao confronto no Monte Carmelo\n🔥 O fogo que desceu do céu e mudou uma nação\n⚡ Coragem, fé e milagres em 8 capítulos cinematográficos\n\n📖 Baseado em 1 Reis 17-19 e 2 Reis 2\n🎬 Produção cinematográfica com visual impressionante\n💥 Cenas épicas que vão prender sua atenção do início ao fim\n\n👉 Capítulos do Filme:\n1️⃣ O Profeta Solitário\n2️⃣ A Palavra Contra o Trono\n3️⃣ O Silêncio do Deserto\n4️⃣ Fome, Provisão e Milagres\n5️⃣ O Desafio do Monte Carmelo\n6️⃣ Caça e Escape\n7️⃣ Encontro com Deus no Horebe\n8️⃣ Legado Eterno\n\n🔔 ATIVE O SINO para não perder nossos filmes bíblicos!\n👍 DEIXE SEU LIKE se gostou da produção!\n💬 COMENTE qual cena mais te impactou!\n\n#Elias #Bíblia #Cinematográfico #HistóriaBíblica",
       "publish_at": "2026-01-30 18:00:00"

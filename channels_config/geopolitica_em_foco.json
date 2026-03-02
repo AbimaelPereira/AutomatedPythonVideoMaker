@@ -6,27 +6,36 @@
         },
         "tts": {
             "provider": "edge",
-            "voice": "pt-BR-AntonioNeural"
+            "voice": "pt-BR-AntonioNeural",
+            "pitch": "-45Hz",
+            "rate": "+0%"
         },
         "subtitle": {
-            "font_path": "./assets/fonts/Montserrat/Montserrat-Bold.ttf",
-            "font_size": 110,
-            "color": "#FFFFFF",
+            "font_path": "./assets/fonts/Source Code Pro/SourceCodePro-SemiBold.ttf",
+            "font_size": 116,
+            "color": "#000000",
             "uppercase": true,
             "stroke_enabled": false,
+            "stroke_color": "#59ff00",
+            "stroke_width": 3,
+
             "shadow_enabled": true,
-            "shadow_color": "#000000",
-            "shadow_opacity": 0.95,
-            "blur_radius": 6.0,
+            "shadow_color": "#56f500",
+            "shadow_opacity": 1,
+            "blur_radius": 8,
             "shadow_offset": [
-                4,
-                4
+                0,
+                0
             ]
         },
         "background": {
             "audio": {
                 "type": "directory",
-                "source": "./assets/audio/background/inspiration"
+                "source": "./assets/audio/background/inspiration",
+                "ducking": {
+                    "enabled": true,
+                    "ducking_db": -10.0
+                }
             },
             "visual": {
                 "fit_mode": "contain-blur",

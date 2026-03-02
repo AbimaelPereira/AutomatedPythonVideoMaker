@@ -1,8 +1,13 @@
 {
     "global_settings": {
-        "tts": {
+        "tts/": {
             "provider": "local_file",
             "audio_file": "./temp/download.wav"
+        },
+        "tts": {
+            "provider": "edge",
+            "voice": "pt-BR-AntonioNeural",
+            "pitch": "-15Hz"
         },
         "subtitle": {
             "font_path": "./assets/fonts/Montserrat/Montserrat-Black.ttf",
@@ -33,7 +38,11 @@
             "audio": {
                 "type": "directory",
                 "source": "./assets/audio/background/vidadeoracao",
-                "//source": "./assets/audio/background/inspiration"
+                "//source": "./assets/audio/background/inspiration",
+                "ducking": {
+                    "enabled": true,
+                    "ducking_db": -5.0
+                }
             }
         },
         "transitions": {

@@ -529,95 +529,306 @@ class UnifiedVideoEngine:
     def _apply_background_audio_to_video(self, video_path: str, output_path: str) -> str:
         """
         Aplica áudio de fundo ao vídeo final concatenado.
-        🔧 VERSÃO CORRIGIDA: Garante FPS constante no output final
+        Se ducking estiver habilitado no JSON, usa AudioEffects.apply_ducking.
+
+        JSON:
+        {
+            "background": {
+                "audio": {
+                    "source": "./assets/audio/background/musica.mp3",
+                    "volume": 0.8,
+                    "ducking": {
+                        "enabled": true,
+                        "ducking_db": -18.0,
+                        "threshold_db": -40.0,
+                        "attack_ms": 50,
+                        "release_ms": 300
+                    }
+                }
+            }
+        }
         """
         bg_audio_config = self.global_settings.get("background", {}).get("audio", {})
-        
+
         if not bg_audio_config:
             print("[UVE] Sem configuração de áudio de fundo")
             return video_path
-        
+
         audio_type = bg_audio_config.get("type", "file")
-        source = bg_audio_config.get("source")
-        volume = bg_audio_config.get("volume", 0.2)
-        
+        source     = bg_audio_config.get("source")
+        volume     = bg_audio_config.get("volume", 0.2)
+
         if not source:
             print("[UVE] Áudio de fundo sem source configurado")
             return video_path
-        
+
         try:
+            # Resolve o arquivo de áudio de fundo
             if audio_type == "directory":
                 if not os.path.isdir(source):
                     print(f"[UVE] ⚠️ Diretório de áudio não encontrado: {source}")
-                    return None
-                
+                    return video_path
+
                 valid_extensions = ('.mp3', '.wav', '.ogg', '.m4a')
-                audio_files = [f for f in os.listdir(source) if f.lower().endswith(valid_extensions)]
-                
+                audio_files = [
+                    f for f in os.listdir(source)
+                    if f.lower().endswith(valid_extensions)
+                ]
                 if not audio_files:
-                    print(f"[UVE] ⚠️ Nenhum arquivo de áudio válido encontrado em: {source}")
-                    return None
-                     
+                    print(f"[UVE] ⚠️ Nenhum arquivo de áudio válido em: {source}")
+                    return video_path
+
                 audio_path = os.path.join(source, random.choice(audio_files))
             else:
                 audio_path = source
-            
+
             if not audio_path or not os.path.exists(audio_path):
-                print(f"[UVE] ⚠️ Áudio de fundo não encontrado:  {audio_path}")
+                print(f"[UVE] ⚠️ Áudio de fundo não encontrado: {audio_path}")
                 return video_path
-            
-            print(f"[UVE] 🎵 Aplicando áudio de fundo: {os.path.basename(audio_path)}")
-            
-            video_clip = VideoFileClip(video_path)
-            video_duration = video_clip.duration
-            
-            bg_audio = AudioFileClip(audio_path)
-            
-            if bg_audio.duration < video_duration:
-                loops_needed = int(video_duration / bg_audio.duration) + 1
-                bg_clips = [bg_audio] * loops_needed
-                bg_audio = concatenate_audioclips(bg_clips)
-            
-            bg_audio = bg_audio.subclip(0, video_duration)
-            bg_audio = bg_audio.volumex(volume)
-            
-            if video_clip.audio:
-                final_audio = CompositeAudioClip([video_clip.audio, bg_audio])
+
+            ducking_config  = bg_audio_config.get("ducking", {})
+            ducking_enabled = ducking_config.get("enabled", False)
+
+            if ducking_enabled:
+                print("[UVE] 🎚️ Ducking habilitado — processando via AudioEffects...")
+                return self._apply_background_audio_with_ducking(
+                    video_path=video_path,
+                    output_path=output_path,
+                    audio_path=audio_path,
+                    volume=volume,
+                    ducking_config=ducking_config,
+                )
             else:
-                final_audio = bg_audio
-            
-            final_video = video_clip.set_audio(final_audio)
-            
-            print(f"[UVE] 🎬 Renderizando vídeo com áudio de fundo...")
-            
-            final_video.write_videofile(
-                output_path,
-                codec='libx264',
-                audio_codec='aac',
-                fps=30,
-                preset='medium',
-                threads=4,
-                verbose=False,
-                logger=None,
-                ffmpeg_params=['-vsync', 'cfr']
-            )
-            
-            video_clip.close()
-            bg_audio.close()
-            final_video.close()
-            
-            print(f"[UVE] ✅ Áudio de fundo aplicado:  {os.path.basename(output_path)}")
-            return output_path
-            
+                print(f"[UVE] 🎵 Aplicando áudio de fundo sem ducking: {os.path.basename(audio_path)}")
+                return self._apply_background_audio_simple(
+                    video_path=video_path,
+                    output_path=output_path,
+                    audio_path=audio_path,
+                    volume=volume,
+                )
+
         except Exception as e:
             print(f"[UVE] ❌ Erro ao aplicar áudio de fundo: {e}")
             import traceback
             traceback.print_exc()
             return video_path
 
+
+    def _apply_background_audio_with_ducking(
+        self,
+        video_path: str,
+        output_path: str,
+        audio_path: str,
+        volume: float,
+        ducking_config: dict,
+    ) -> str:
+        """
+        Aplica áudio de fundo com ducking automático baseado na narração do vídeo.
+
+        Fluxo corrigido:
+          1. Lê a duração exata do vídeo via ffprobe
+          2. Extrai narração do vídeo (ffmpeg → mp3 temp)
+          3. Carrega background e CORTA para a duração exata do vídeo
+          4. Aplica volume no background
+          5. Chama AudioEffects.apply_ducking
+          6. Re-encoda vídeo + áudio mixado juntos (evita drift de sync)
+        """
+        from pydub import AudioSegment
+        from libs.AudioEffects import AudioEffects
+
+        temp_narration = os.path.join(self.output_dir, "_temp_narration_for_ducking.mp3")
+        temp_mixed     = os.path.join(self.output_dir, "_temp_ducked_mix.mp3")
+
+        try:
+            # ------------------------------------------------------------------
+            # 1. Duração exata do vídeo (via ffprobe)
+            # ------------------------------------------------------------------
+            probe_cmd = [
+                "ffprobe", "-v", "error",
+                "-show_entries", "format=duration",
+                "-of", "default=noprint_wrappers=1:nokey=1",
+                video_path
+            ]
+            probe_result = subprocess.run(
+                probe_cmd, check=True, capture_output=True, text=True
+            )
+            video_duration_s = float(probe_result.stdout.strip())
+            video_duration_ms = int(video_duration_s * 1000)
+            print(f"[UVE] ⏱️ Duração do vídeo: {video_duration_s:.2f}s")
+
+            # ------------------------------------------------------------------
+            # 2. Extrai narração do vídeo
+            # ------------------------------------------------------------------
+            print("[UVE] 🎤 Extraindo narração do vídeo para ducking...")
+            cmd_extract = [
+                "ffmpeg", "-y",
+                "-i", video_path,
+                "-vn",
+                "-acodec", "libmp3lame",
+                "-b:a", "192k",
+                "-ar", "44100",
+                "-ac", "2",
+                temp_narration
+            ]
+            subprocess.run(cmd_extract, check=True, capture_output=True)
+            print("[UVE] ✅ Narração extraída")
+
+            # ------------------------------------------------------------------
+            # 3. Carrega áudios
+            # ------------------------------------------------------------------
+            print("[UVE] 📂 Carregando áudios para ducking...")
+            narration_seg  = AudioSegment.from_file(temp_narration)
+            background_seg = AudioSegment.from_file(audio_path)
+
+            # FIX #1: Corta/loopa background para a duração EXATA do vídeo
+            if len(background_seg) < video_duration_ms:
+                # Loopa até cobrir
+                loops_needed   = (video_duration_ms // len(background_seg)) + 1
+                background_seg = background_seg * loops_needed
+
+            # Corta para duração exata — ESSENCIAL para não gerar arquivo gigante
+            background_seg = background_seg[:video_duration_ms]
+            print(f"[UVE] ✂️ Background cortado para {video_duration_s:.2f}s")
+
+            # ------------------------------------------------------------------
+            # 4. Aplica volume no background (dB)
+            # ------------------------------------------------------------------
+            if volume != 1.0:
+                import math
+                volume_db      = 20 * math.log10(max(volume, 1e-6))
+                background_seg = background_seg.apply_gain(volume_db)
+                print(f"[UVE] 🔊 Volume do background: {volume} ({volume_db:.1f} dB)")
+
+            # ------------------------------------------------------------------
+            # 5. Ducking
+            # ------------------------------------------------------------------
+            duck_params = {
+                "ducking_db":   ducking_config.get("ducking_db",   -18.0),
+                "threshold_db": ducking_config.get("threshold_db", -40.0),
+                "attack_ms":    ducking_config.get("attack_ms",      50),
+                "release_ms":   ducking_config.get("release_ms",    300),
+                "chunk_ms":     ducking_config.get("chunk_ms",       10),
+            }
+            print(f"[UVE] 🎚️ Parâmetros de ducking: {duck_params}")
+
+            mixed_seg = AudioEffects.apply_ducking(
+                narration=narration_seg,
+                background=background_seg,
+                **duck_params
+            )
+
+            # Garante que o áudio mixado não seja maior que o vídeo
+            mixed_seg = mixed_seg[:video_duration_ms]
+
+            # Exporta mix
+            mixed_seg.export(temp_mixed, format="mp3", bitrate="192k")
+            print(f"[UVE] ✅ Mix com ducking gerado ({len(mixed_seg)/1000:.2f}s)")
+
+            # ------------------------------------------------------------------
+            # 6. FIX #2: Re-encoda vídeo + áudio juntos para garantir sync
+            #    Usa -shortest para nunca deixar o áudio ultrapassar o vídeo
+            # ------------------------------------------------------------------
+            print("[UVE] 🎬 Combinando vídeo + áudio mixado (re-encode completo)...")
+            cmd_merge = [
+                "ffmpeg", "-y",
+                "-i", video_path,   # stream de vídeo
+                "-i", temp_mixed,   # áudio mixado (narração + bg com ducking)
+                "-map", "0:v:0",
+                "-map", "1:a:0",
+                # Re-encoda vídeo para garantir sincronismo (sem -c:v copy)
+                "-c:v", "libx264",
+                "-preset", "medium",
+                "-crf", "20",
+                "-r", "30",
+                "-vsync", "cfr",
+                "-g", "60",
+                "-bf", "2",
+                "-pix_fmt", "yuv420p",
+                "-c:a", "aac",
+                "-b:a", "192k",
+                "-ar", "44100",
+                "-ac", "2",
+                # ESSENCIAL: corta na duração do vídeo, nunca na do áudio
+                "-shortest",
+                "-movflags", "+faststart",
+                output_path
+            ]
+            subprocess.run(cmd_merge, check=True, capture_output=True)
+            print(f"[UVE] ✅ Vídeo final com ducking: {os.path.basename(output_path)}")
+
+            return output_path
+
+        except subprocess.CalledProcessError as e:
+            stderr = e.stderr.decode(errors="replace") if e.stderr else "N/A"
+            print(f"[UVE] ❌ Erro FFmpeg no ducking:\n{stderr}")
+            return video_path
+        except Exception as e:
+            print(f"[UVE] ❌ Erro inesperado no ducking: {e}")
+            import traceback
+            traceback.print_exc()
+            return video_path
+        finally:
+            for tmp in [temp_narration, temp_mixed]:
+                if os.path.exists(tmp):
+                    try:
+                        os.remove(tmp)
+                    except Exception:
+                        pass
+
+    def _apply_background_audio_simple(
+        self,
+        video_path: str,
+        output_path: str,
+        audio_path: str,
+        volume: float,
+    ) -> str:
+        """
+        Aplica áudio de fundo simples (sem ducking) — comportamento original.
+        """
+        video_clip = VideoFileClip(video_path)
+        video_duration = video_clip.duration
+        
+        bg_audio = AudioFileClip(audio_path)
+        
+        if bg_audio.duration < video_duration:
+            loops_needed = int(video_duration / bg_audio.duration) + 1
+            bg_clips = [bg_audio] * loops_needed
+            bg_audio = concatenate_audioclips(bg_clips)
+        
+        bg_audio = bg_audio.subclip(0, video_duration)
+        bg_audio = bg_audio.volumex(volume)
+        
+        if video_clip.audio:
+            final_audio = CompositeAudioClip([video_clip.audio, bg_audio])
+        else:
+            final_audio = bg_audio
+        
+        final_video = video_clip.set_audio(final_audio)
+        
+        print(f"[UVE] 🎬 Renderizando vídeo com áudio de fundo...")
+        
+        final_video.write_videofile(
+            output_path,
+            codec='libx264',
+            audio_codec='aac',
+            fps=30,
+            preset='medium',
+            threads=4,
+            verbose=False,
+            logger=None,
+            ffmpeg_params=['-vsync', 'cfr']
+        )
+        
+        video_clip.close()
+        bg_audio.close()
+        final_video.close()
+        
+        print(f"[UVE] ✅ Áudio de fundo aplicado: {os.path.basename(output_path)}")
+        return output_path
+
     def _render_scene(self, scene_index, scene_id, total_scenes, composed_clip, narration_clip, scene_dir):
         """
-        🔧 VERSÃO CORRIGIDA: Renderiza cena com FPS fixo e CFR garantido
+        Renderiza cena com FPS fixo e CFR garantido.
         """
         scene_clip_path = os.path.join(scene_dir, f"{scene_id}.mp4")
         temp_audiofile = os.path.join(scene_dir, f"{scene_id}.m4a")
@@ -631,7 +842,8 @@ class UnifiedVideoEngine:
             temp_audiofile=temp_audiofile,
             remove_temp=True,
             fps=30,
-            preset='medium',
+            bitrate="2000k",
+            preset='faster', # as opççoes são ultrafast, superfast, veryfast, faster, fast, medium (default), slow, slower, veryslow
             threads=4,
             verbose=False,
             logger=None,
@@ -642,7 +854,7 @@ class UnifiedVideoEngine:
             ]
         )
 
-        print(f"[UVE] ✅ Cena {scene_index + 1} renderizada:  {os.path.basename(scene_clip_path)}")
+        print(f"[UVE] ✅ Cena {scene_index + 1} renderizada: {os.path.basename(scene_clip_path)}")
 
         try:
             composed_clip.close()
@@ -678,11 +890,10 @@ class UnifiedVideoEngine:
         except Exception as e:
             print(f"[UVE] ⚠️ Pré-processamento de narração falhou: {e}")
 
-        # 🔧 PARALELIZAÇÃO: Determinar número de workers
+        # Determinar número de workers
         max_parallel = self.config_instance.max_parallel_scenes
         max_workers = min(max_parallel, multiprocessing.cpu_count(), len(scenes))
         
-        # Validar disponibilidade de RAM (opcional mas recomendado)
         try:
             import psutil
             available_ram_gb = psutil.virtual_memory().available / (1024**3)
@@ -695,12 +906,11 @@ class UnifiedVideoEngine:
         scene_files = []
         
         if max_workers == 1:
-            # 🔧 MODO SEQUENCIAL (original)
             print("[UVE] 🔄 Modo sequencial ativado (MAX_PARALLEL_SCENES=1)")
             
             for scene_index, scene in enumerate(scenes):
                 scene_id = scene.get("id", f"cena_{scene_index}")
-                print(f"\n[UVE] 📝 Processando cena {scene_index + 1}/{total_scenes}:  {scene_id}")
+                print(f"\n[UVE] 📝 Processando cena {scene_index + 1}/{total_scenes}: {scene_id}")
 
                 scene_dir = os.path.join(self.output_dir, scene_id)
                 os.makedirs(scene_dir, exist_ok=True)
@@ -754,7 +964,7 @@ class UnifiedVideoEngine:
                             c = c.fl_image(force_rgb)
                             safe_clips.append(c)
                         except Exception as e:
-                            print(f"[UVE] ⚠️ Falha ao aplicar force_rgb:  {e}")
+                            print(f"[UVE] ⚠️ Falha ao aplicar force_rgb: {e}")
                             safe_clips.append(c)
 
                     # 6. Compor cena final
@@ -770,17 +980,14 @@ class UnifiedVideoEngine:
         
                     if transitions_config and transitions_config.get("enabled", False):
                         print(f"[UVE] 🎬 Aplicando transição Zoom na cena {scene_index + 1}...")
-                        
                         try:
                             transition_engine = TransitionEngine({
                                 "clip": composed_clip,
                                 "transitions_settings": transitions_config,
                                 "resolution": self.resolution_output
                             })
-                            
                             composed_clip = transition_engine.apply_transition()
                             print(f"[UVE] ✅ Transição aplicada com sucesso")
-                            
                         except Exception as e:
                             print(f"[UVE] ⚠️ Falha ao aplicar transição: {e}")
                     else:
@@ -803,10 +1010,8 @@ class UnifiedVideoEngine:
                     continue
         
         else:
-            # 🔧 MODO PARALELO (novo)
             print(f"[UVE] ⚡ Modo paralelo ativado: {max_workers} workers")
             
-            # Preparar dados serializáveis para workers
             config_instance_data = {
                 'padding_bottom': getattr(self.config_instance, 'padding_bottom', 200),
                 'padding_top': getattr(self.config_instance, 'padding_top', 100),
@@ -831,7 +1036,6 @@ class UnifiedVideoEngine:
                 }
                 scene_bundles.append(bundle)
             
-            # Processar em paralelo
             results = []
             with ProcessPoolExecutor(max_workers=max_workers) as executor:
                 futures = {
@@ -841,7 +1045,7 @@ class UnifiedVideoEngine:
                 
                 for future in as_completed(futures):
                     try:
-                        scene_index, scene_path = future.result(timeout=600)  # 10min por cena
+                        scene_index, scene_path = future.result(timeout=600)
                         if scene_path:
                             results.append((scene_index, scene_path))
                             print(f"[UVE] ✅ Cena {scene_index + 1} concluída com sucesso")
@@ -852,7 +1056,6 @@ class UnifiedVideoEngine:
                         import traceback
                         traceback.print_exc()
             
-            # Ordenar resultados por índice original
             results.sort(key=lambda x: x[0])
             scene_files = [path for _, path in results]
 
@@ -861,7 +1064,7 @@ class UnifiedVideoEngine:
         output_filename = f"{slug}.mp4"
 
         intermediate_path = os.path.join(self.output_dir, f"{slug}_no_bg_audio.mp4")
-        output_path = os.path.join(self.output_dir, output_filename)
+        output_path       = os.path.join(self.output_dir, output_filename)
 
         if not scene_files:
             print("[UVE] ❌ Nenhuma cena foi renderizada com sucesso")
@@ -881,7 +1084,6 @@ class UnifiedVideoEngine:
                 "-f", "concat", 
                 "-safe", "0",
                 "-i", concat_list_path,
-                
                 "-c:v", "libx264",
                 "-preset", "medium",
                 "-crf", "20",
@@ -893,25 +1095,20 @@ class UnifiedVideoEngine:
                 "-keyint_min", "60",
                 "-sc_threshold", "0",
                 "-force_key_frames", "expr:gte(t,n_forced*2)",
-                
                 "-c:a", "aac",
                 "-b:a", "192k",
                 "-ar", "44100",
                 "-ac", "2",
-                
                 "-movflags", "+faststart",
-                
                 intermediate_path
             ]
 
             result = subprocess.run(ffmpeg_cmd, check=True, capture_output=True, text=True)
-            print(f"[UVE] ✅ Vídeo concatenado com sucesso:  {intermediate_path}")
+            print(f"[UVE] ✅ Vídeo concatenado: {intermediate_path}")
 
         except subprocess.CalledProcessError as e:
             print(f"[UVE] ❌ Falha na concatenação FFmpeg")
-            print(f"[UVE] Comando: {' '.join(ffmpeg_cmd)}")
             print(f"[UVE] stderr: {e.stderr if e.stderr else 'N/A'}")
-            print(f"[UVE] stdout: {e.stdout if e.stdout else 'N/A'}")
             return None
         except Exception as e:
             print(f"[UVE] ❌ Erro inesperado na concatenação: {e}")
@@ -919,7 +1116,7 @@ class UnifiedVideoEngine:
             traceback.print_exc()
             return None
 
-        # 10. Áudio de fundo
+        # 10. Áudio de fundo (com ou sem ducking)
         bg_audio_config = self.global_settings.get("background", {}).get("audio", {})
         if bg_audio_config and bg_audio_config.get("source"):
             final_path = self._apply_background_audio_to_video(intermediate_path, output_path)
@@ -928,7 +1125,7 @@ class UnifiedVideoEngine:
             final_path = output_path
             print("[UVE] Sem áudio de fundo configurado")
 
-        # Estatísticas
+        # Estatísticas Remote Assets
         print("\n[UVE] 📊 Estatísticas de Remote Assets:")
         final_stats = self.remote_asset_manager.get_stats()
         print(f"[UVE]    Total de slugs: {final_stats['total_slugs']}")
@@ -956,9 +1153,9 @@ class UnifiedVideoEngine:
                     subprocess.run(
                         ["open" if "darwin" in os.uname().sysname.lower() else "xdg-open", final_path])
             except Exception as e:
-                print(f"[UVE] ⚠️ Falha ao abrir vídeo:  {e}")
+                print(f"[UVE] ⚠️ Falha ao abrir vídeo: {e}")
 
         print(f"\n[UVE] 🎉 Processamento concluído com sucesso!")
-        print(f"[UVE] 📁 Arquivo final:  {final_path}")
+        print(f"[UVE] 📁 Arquivo final: {final_path}")
 
         return final_path

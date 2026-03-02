@@ -25,8 +25,11 @@ class EdgeTTS:
             "output_basename": "narration",
             "text": None,
             "silence_thresh": -50,
-            "min_silence_len": 800,
-            "keep_silence": 100,
+            "min_silence_len": 1200, # tempo mínimo de silêncio para considerar como corte (em ms)
+            "keep_silence": 100, # tempo de silêncio a manter no final de cada segmento (em ms)
+            # Novos parâmetros de controle de voz
+            "rate": "+15%",   # Ex: "+15%", "-10%", "+0%"
+            "pitch": "+0Hz",  # Ex: "+0Hz", "+50Hz", "-20Hz"
         }
         if params:
             defaults.update(params)
@@ -44,7 +47,8 @@ class EdgeTTS:
         communicate = edge_tts.Communicate(
             self.text,
             self.voice_id,
-            rate="+15%",
+            rate=self.rate,
+            pitch=self.pitch,
             boundary="WordBoundary"
         )
 
