@@ -4,6 +4,11 @@
             "provider": "local_file",
             "audio_file": "./temp/download.wav"
         },
+        "tts//": {
+            "provider": "google",
+            "credentials_file": "./tokens/tts-automate-videos-20509ec7c438.json",
+            "voice": "pt-BR-Chirp3-HD-Charon"
+        },
         "tts": {
             "provider": "edge",
             "voice": "pt-BR-AntonioNeural",

@@ -17,8 +17,8 @@ from libs.MediaDownloader import MediaDownloader
 from libs.LayoutEngine import LayoutEngine
 from libs.YouTube import YouTube
 from libs.Background.BackgroundEngine import BackgroundEngine
-from libs.NarrationEngine import NarrationEngine
-from libs.TransitionEngine import TransitionEngine
+from libs.Audio.NarrationEngine import NarrationEngine
+from Transitions.TransitionEngine import TransitionEngine
 from libs.RemoteAssetManager import RemoteAssetManager
 
 try:
@@ -634,7 +634,7 @@ class UnifiedVideoEngine:
           6. Re-encoda vídeo + áudio mixado juntos (evita drift de sync)
         """
         from pydub import AudioSegment
-        from libs.AudioEffects import AudioEffects
+        from libs.Audio.AudioEffects import AudioEffects
 
         temp_narration = os.path.join(self.output_dir, "_temp_narration_for_ducking.mp3")
         temp_mixed     = os.path.join(self.output_dir, "_temp_ducked_mix.mp3")
