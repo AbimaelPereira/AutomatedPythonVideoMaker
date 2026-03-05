@@ -90,7 +90,7 @@ class GoogleCloudTTS:
 
     def __init__(self, params=None):
         defaults = {
-            "credentials_file":        os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "credentials.json"),
+            "credentials_file":        os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "./tokens/tts-automate-videos-20509ec7c438.json"),
             "model":                   "Chirp3-HD",          # modelo padrão
             "voice_id":                "pt-BR-Chirp3-HD-Charon",
             "language_code":           "pt-BR",

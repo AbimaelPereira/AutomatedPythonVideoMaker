@@ -18,7 +18,7 @@ from libs.LayoutEngine import LayoutEngine
 from libs.YouTube import YouTube
 from libs.Background.BackgroundEngine import BackgroundEngine
 from libs.Audio.NarrationEngine import NarrationEngine
-from Transitions.TransitionEngine import TransitionEngine
+from libs.Transitions.TransitionEngine import TransitionEngine
 from libs.RemoteAssetManager import RemoteAssetManager
 
 try:

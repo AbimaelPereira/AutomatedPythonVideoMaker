@@ -1,11 +1,8 @@
 import os
 import asyncio
-import time
 from pathlib import Path
 from mutagen.mp3 import MP3
-from pydub import AudioSegment, silence
 import edge_tts
-import tempfile
 
 
 def ms_to_srt_time(ms: float) -> str:
@@ -18,20 +15,23 @@ def ms_to_srt_time(ms: float) -> str:
 
 
 class EdgeTTS:
+    """
+    Gera áudio e SRT usando Microsoft Edge TTS.
+    Responsabilidade: síntese apenas.
+    Remoção de silêncios é responsabilidade do NarrationEngine.
+    """
+
     GENDER_MAP = {"Male": "masculino", "Female": "feminino"}
 
     def __init__(self, params=None):
         defaults = {
             "text_narration_filename": os.getenv("TEXT_NARRATION_FILE", "texto.txt"),
-            "voice_id":    os.getenv("EDGE_TTS_VOICE", "pt-BR-AntonioNeural"),
-            "audio_format": "mp3",
+            "voice_id":        os.getenv("EDGE_TTS_VOICE", "pt-BR-AntonioNeural"),
+            "audio_format":    "mp3",
             "output_basename": "narration",
-            "text": None,
-            "silence_thresh": -50,
-            "min_silence_len": 1200,
-            "keep_silence": 100,
-            "rate":  "+15%",
-            "pitch": "+0Hz",
+            "text":            None,
+            "rate":            "+15%",
+            "pitch":           "+0Hz",
         }
         if params:
             defaults.update(params)
@@ -43,7 +43,7 @@ class EdgeTTS:
             self.text = self.text_file_path.read_text(encoding="utf-8").strip()
 
     # ------------------------------------------------------------------
-    # LISTAR / AUDITAR VOZES
+    # LISTAR VOZES
     # ------------------------------------------------------------------
 
     @staticmethod
@@ -73,26 +73,10 @@ class EdgeTTS:
         rate: str = "+15%",
         pitch: str = "+0Hz",
     ) -> list:
-        """
-        Lista vozes disponíveis no Edge TTS.
-
-        Args:
-            language:       Filtro de idioma (default "pt-BR"). Use "" para todas.
-            gender:         "masculino", "feminino" ou None para ambos.
-            generate_audio: Se True, gera um MP3 de demonstração para cada voz.
-            text:           Texto narrado quando generate_audio=True.
-            output_dir:     Diretório de saída dos áudios gerados.
-            rate:           Velocidade para os demos (ex: "+15%").
-            pitch:          Tom para os demos (ex: "+0Hz").
-
-        Returns:
-            Lista de dicts com informações das vozes filtradas.
-        """
         all_voices = EdgeTTS._get_all_voices()
 
         if language:
             all_voices = [v for v in all_voices if language.lower() in v["Locale"].lower()]
-
         if gender:
             gender_en = "Male" if gender.lower() in ("masculino", "male", "m") else "Female"
             all_voices = [v for v in all_voices if v.get("Gender") == gender_en]
@@ -104,11 +88,9 @@ class EdgeTTS:
         print(f"\n[EdgeTTS] 🎙️  Vozes disponíveis "
               f"({language or 'todas'}"
               f"{', ' + gender if gender else ''}):\n")
-
         for v in sorted(all_voices, key=lambda x: x["ShortName"]):
             g = EdgeTTS.GENDER_MAP.get(v.get("Gender", ""), "?")
             print(f"  {v['ShortName']:<42} {g}")
-
         print(f"\n  Total: {len(all_voices)} voz(es)\n")
 
         if not generate_audio:
@@ -123,7 +105,6 @@ class EdgeTTS:
             safe_name  = voice_name.replace("-", "_")
             out_base   = os.path.join(output_dir, safe_name)
             g = EdgeTTS.GENDER_MAP.get(v.get("Gender", ""), "?")
-
             try:
                 tts = EdgeTTS(params={
                     "voice_id": voice_name,
@@ -168,61 +149,13 @@ class EdgeTTS:
                     continue
                 D = 10000
                 start_ms = chunk["offset"] / D
-                end_ms = start_ms + (chunk["duration"] / D)
+                end_ms   = start_ms + (chunk["duration"] / D)
                 word_boundaries.append({"word": chunk["text"], "start": start_ms, "end": end_ms})
 
         word_boundaries.sort(key=lambda x: x["start"])
         return audio_data, word_boundaries
 
-    def _remove_silences(self, audio_data, word_boundaries):
-        target_dir = os.path.dirname(self.output_basename) or "."
-        os.makedirs(target_dir, exist_ok=True)
-
-        with tempfile.NamedTemporaryFile(suffix=".wav", delete=False, dir=target_dir) as tmp:
-            tmp.write(audio_data)
-            tmp_path = tmp.name
-
-        audio = AudioSegment.from_file(tmp_path)
-        os.remove(tmp_path)
-
-        non_silence_ranges = silence.detect_nonsilent(
-            audio,
-            min_silence_len=self.min_silence_len,
-            silence_thresh=self.silence_thresh
-        )
-
-        new_audio = AudioSegment.empty()
-        adjusted_boundaries = []
-        current_time = 0
-        processed = set()
-        TOLERANCE = 150
-
-        for start, end in non_silence_ranges:
-            seg_end = end + self.keep_silence
-            segment = audio[start:seg_end]
-            new_audio += segment
-
-            for i, w in enumerate(word_boundaries):
-                if i in processed:
-                    continue
-                if w["start"] >= (start - TOLERANCE) and w["end"] <= (seg_end + TOLERANCE):
-                    offset = max(0, w["start"] - start)
-                    dur = w["end"] - w["start"]
-                    adjusted_boundaries.append({
-                        "word": w["word"],
-                        "start": current_time + offset,
-                        "end": current_time + offset + dur
-                    })
-                    processed.add(i)
-
-            current_time += len(segment)
-
-        adjusted_boundaries.sort(key=lambda x: x["start"])
-        final_path = f"{self.output_basename}.{self.audio_format}"
-        new_audio.export(final_path, format=self.audio_format, bitrate="192k")
-        return final_path, adjusted_boundaries
-
-    def _generate_srt_word_by_word(self, word_boundaries):
+    def _generate_srt_word_by_word(self, word_boundaries: list) -> str:
         srt_path = f"{self.output_basename}.srt"
         with open(srt_path, "w", encoding="utf-8") as f:
             for i, w in enumerate(word_boundaries, 1):
@@ -233,7 +166,19 @@ class EdgeTTS:
                 f.write(f"{w['word']}\n\n")
         return srt_path
 
-    def generate_audio_and_subtitles(self):
+    def generate_audio_and_subtitles(self) -> dict:
+        """
+        Sintetiza texto e gera SRT com word boundaries reais do Edge TTS.
+        NÃO remove silêncios — responsabilidade do NarrationEngine.
+
+        Returns:
+            {
+                "audio_file":           str,
+                "subtitle_file":        str,
+                "audio_total_duration": float,
+                "word_boundaries":      list,  # [{"word", "start", "end"}] em ms
+            }
+        """
         try:
             loop = asyncio.get_running_loop()
             try:
@@ -248,13 +193,20 @@ class EdgeTTS:
         if not word_boundaries:
             raise ValueError("Nenhum word boundary retornado pelo Edge TTS")
 
-        final_audio, new_boundaries = self._remove_silences(audio_data, word_boundaries)
-        srt_file = self._generate_srt_word_by_word(new_boundaries)
-        duration = MP3(str(final_audio)).info.length
+        # Salva áudio bruto
+        target_dir = os.path.dirname(self.output_basename) or "."
+        os.makedirs(target_dir, exist_ok=True)
+        audio_path = f"{self.output_basename}.{self.audio_format}"
+        with open(audio_path, "wb") as f:
+            f.write(audio_data)
+
+        # SRT com boundaries originais (sem ajuste de silêncio)
+        srt_file = self._generate_srt_word_by_word(word_boundaries)
+        duration = MP3(str(audio_path)).info.length
 
         return {
-            "audio_file": str(final_audio),
-            "subtitle_file": str(srt_file),
+            "audio_file":           audio_path,
+            "subtitle_file":        srt_file,
             "audio_total_duration": duration,
-            "word_boundaries": new_boundaries
+            "word_boundaries":      word_boundaries,
         }
