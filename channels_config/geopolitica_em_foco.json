@@ -8,7 +8,7 @@
             "provider": "edge",
             "voice": "pt-BR-AntonioNeural",
             "pitch": "-40Hz",
-            "rate": "+0%"
+            "rate": "+15%"
         },
         "subtitle": {
             "font_path": "./assets/fonts/Source Code Pro/SourceCodePro-SemiBold.ttf",

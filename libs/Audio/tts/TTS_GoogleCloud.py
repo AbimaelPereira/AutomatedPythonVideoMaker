@@ -86,12 +86,23 @@ class GoogleCloudTTS:
     Vozes Standard pt-BR:
       pt-BR-Standard-A (F), pt-BR-Standard-B (M), pt-BR-Standard-C (F),
       pt-BR-Standard-D (F), pt-BR-Standard-E (M)
+
+    Timestamps de palavras:
+      O Google Cloud TTS não retorna word boundaries nativamente.
+      Esta classe usa Whisper (OpenAI) localmente para extrair timestamps
+      reais após a síntese. Se o Whisper falhar, cai automaticamente para
+      estimativa por duração (comportamento legado).
+
+      Controle via parâmetro:
+        "whisper_model": "tiny" | "base" | "small" | "medium" | "large"
+        "whisper_enabled": True | False  (default: True)
+        "whisper_language": "pt"         (default: "pt")
     """
 
     def __init__(self, params=None):
         defaults = {
-            "credentials_file":        os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "./tokens/tts-automate-videos-20509ec7c438.json"),
-            "model":                   "Chirp3-HD",          # modelo padrão
+            "credentials_file":        os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "credentials.json"),
+            "model":                   "Chirp3-HD",
             "voice_id":                "pt-BR-Chirp3-HD-Charon",
             "language_code":           "pt-BR",
             "audio_format":            "mp3",
@@ -106,6 +117,10 @@ class GoogleCloudTTS:
             "min_word_duration":       160,
             "last_word_duration":      400,
             "show_usage_report":       True,
+            # Whisper — timestamps reais pós-síntese
+            "whisper_enabled":         True,
+            "whisper_model":           "base",   # tiny/base/small/medium/large
+            "whisper_language":        "pt",
         }
         if params:
             defaults.update(params)
@@ -165,15 +180,10 @@ class GoogleCloudTTS:
             now            = datetime.now(timezone.utc)
             start_of_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
 
-            # Busca série temporal de caracteres sintetizados
-            # A API Monitoring exige RFC3339 com Z no final (não +00:00)
             fmt       = "%Y-%m-%dT%H:%M:%SZ"
             start_str = start_of_month.strftime(fmt)
             end_str   = now.strftime(fmt)
 
-            # view=FULL é obrigatório (doc oficial)
-            # aggregation sem groupByFields para evitar 400
-            # sem crossSeriesReducer: retorna série por voz, somamos manualmente
             monitoring_params = {
                 "filter":                       'metric.type="cloudtts.googleapis.com/character/count"',
                 "interval.startTime":           start_str,
@@ -189,7 +199,6 @@ class GoogleCloudTTS:
                 headers={"Authorization": f"Bearer {token}"},
             )
 
-            # Agrupa chars por modelo
             chars_by_model = {k: 0 for k in MODEL_INFO}
 
             if resp.status_code == 200:
@@ -205,9 +214,7 @@ class GoogleCloudTTS:
                             break
             else:
                 print(f"  ⚠️  Monitoramento indisponível (HTTP {resp.status_code}).")
-                print(f"  Resposta da API: {resp.json()}")
                 print(f"  Exibindo apenas limites de free tier.\n")
-                # exibir reposta da api completa
 
             print(f"  Período: {start_of_month.strftime('%d/%m/%Y')} → {now.strftime('%d/%m/%Y')}\n")
 
@@ -296,7 +303,6 @@ class GoogleCloudTTS:
                 raise ValueError(f"Modelo '{model}' inválido. Use: {list(MODEL_INFO.keys())}")
             voices = [v for v in voices if MODEL_INFO[model]["filter"](v.get("name", ""))]
         else:
-            # Exclui vozes que não são de nenhum modelo conhecido (ex: Studio sem pt-BR)
             known = [v for v in voices if any(
                 info["filter"](v.get("name", "")) for info in MODEL_INFO.values()
             )]
@@ -311,13 +317,11 @@ class GoogleCloudTTS:
             print("[GoogleCloudTTS] Nenhuma voz encontrada com os filtros aplicados.")
             return []
 
-        # Exibe agrupado por modelo
         model_label = MODEL_INFO[model]["label"] if model else "todos os modelos"
         print(f"\n[GoogleCloudTTS] 🎙️  Vozes disponíveis "
               f"({language or 'todas'}, {model_label}"
               f"{', ' + gender if gender else ''}):\n")
 
-        # Agrupa por modelo para exibição
         grouped = {}
         for v in sorted(voices, key=lambda x: x["name"]):
             for mk, info in MODEL_INFO.items():
@@ -350,7 +354,6 @@ class GoogleCloudTTS:
             g          = "masculino" if v.get("ssmlGender", "").upper() == "MALE" else "feminino"
             out_base   = os.path.join(output_dir, voice_name.replace("-", "_"))
 
-            # Detecta modelo da voz para instanciar corretamente
             detected_model = "Chirp3-HD"
             for mk, info in MODEL_INFO.items():
                 if info["filter"](voice_name):
@@ -418,7 +421,83 @@ class GoogleCloudTTS:
 
         return base64.b64decode(audio_content)
 
+    # ------------------------------------------------------------------
+    # TIMESTAMPS VIA WHISPER
+    # ------------------------------------------------------------------
+
+    def _generate_word_boundaries_whisper(self, audio_path: str) -> list:
+        """
+        Usa Whisper localmente para extrair timestamps reais de cada palavra
+        a partir do MP3 já sintetizado pelo Google TTS.
+
+        O Google Cloud TTS não retorna word boundaries na resposta da API —
+        este método resolve isso transcrevendo o próprio áudio gerado.
+
+        Returns:
+            Lista de {"word": str, "start": int(ms), "end": int(ms)}
+            ou [] se Whisper estiver desabilitado ou falhar.
+        """
+        if not self.whisper_enabled:
+            return []
+
+        try:
+            from libs.Whisper.WhisperWorker import WhisperWorker
+
+            print(f"[GoogleCloudTTS] 🎙️ Extraindo timestamps via Whisper "
+                  f"(modelo={self.whisper_model}, lang={self.whisper_language})...")
+
+            worker = WhisperWorker(model_size=self.whisper_model)
+            result = worker.model.transcribe(
+                audio_path,
+                word_timestamps=True,
+                language=self.whisper_language,
+            )
+
+            word_boundaries = []
+            for segment in result.get("segments", []):
+                for w in segment.get("words", []):
+                    word = w.get("word", "").strip()
+                    if not word:
+                        continue
+                    word_boundaries.append({
+                        "word":  word,
+                        "start": int(w["start"] * 1000),
+                        "end":   int(w["end"]   * 1000),
+                    })
+
+            if word_boundaries:
+                print(f"[GoogleCloudTTS] ✅ Whisper: {len(word_boundaries)} palavras com timestamps reais")
+            else:
+                print("[GoogleCloudTTS] ⚠️ Whisper não retornou palavras — usando estimativa")
+
+            return word_boundaries
+
+        except ImportError:
+            print("[GoogleCloudTTS] ⚠️ WhisperWorker não encontrado — usando estimativa de timestamps")
+            return []
+        except Exception as e:
+            print(f"[GoogleCloudTTS] ⚠️ Whisper falhou ({e}) — usando estimativa de timestamps")
+            return []
+
+    # ------------------------------------------------------------------
+    # GERAÇÃO DE SRT
+    # ------------------------------------------------------------------
+
+    def _generate_srt_from_boundaries(self, word_boundaries: list) -> str:
+        """Gera SRT a partir de word_boundaries reais (Whisper)."""
+        srt_path = f"{self.output_basename}.srt"
+        with open(srt_path, "w", encoding="utf-8") as f:
+            for i, w in enumerate(word_boundaries, 1):
+                start = max(0, w["start"])
+                end   = max(start + self.min_word_duration, w["end"])
+                f.write(f"{i}\n{ms_to_srt_time(start)} --> {ms_to_srt_time(end)}\n{w['word']}\n\n")
+        return srt_path
+
     def _generate_srt_from_duration(self, audio_path: str) -> str:
+        """
+        Fallback: estima timestamps dividindo a duração total pelo nº de palavras.
+        Usado quando o Whisper está desabilitado ou falha.
+        """
         duration_ms = int(MP3(audio_path).info.length * 1000)
         words       = self.text.split()
         if not words:
@@ -439,7 +518,30 @@ class GoogleCloudTTS:
 
         return srt_path
 
+    # ------------------------------------------------------------------
+    # ENTRADA PRINCIPAL
+    # ------------------------------------------------------------------
+
     def generate_audio_and_subtitles(self) -> dict:
+        """
+        Sintetiza texto via Google Cloud TTS e gera SRT com timestamps.
+
+        Fluxo:
+          1. Chama a API Google TTS → salva MP3
+          2. Tenta extrair word boundaries reais via Whisper (pós-síntese)
+          3. Se Whisper falhar ou estiver desabilitado, usa estimativa por duração
+          4. Gera SRT e retorna dict completo incluindo word_boundaries
+
+        Returns:
+            {
+                "audio_file":           str,
+                "subtitle_file":        str,
+                "audio_total_duration": float,
+                "word_boundaries":      list,  # [{"word", "start"(ms), "end"(ms)}]
+                                               # lista vazia se Whisper falhou e
+                                               # estimativa foi usada no SRT
+            }
+        """
         if not self.text:
             raise ValueError("Nenhum texto disponível para síntese.")
 
@@ -447,14 +549,23 @@ class GoogleCloudTTS:
         if out_dir:
             os.makedirs(out_dir, exist_ok=True)
 
+        # 1. Síntese
         audio_bytes = self._synthesize()
         audio_path  = f"{self.output_basename}.mp3"
-
         with open(audio_path, "wb") as f:
             f.write(audio_bytes)
 
-        srt_path = self._generate_srt_from_duration(audio_path)
         duration = MP3(audio_path).info.length
+
+        # 2. Timestamps reais via Whisper
+        word_boundaries = self._generate_word_boundaries_whisper(audio_path)
+
+        # 3. SRT — usa boundaries reais se disponíveis, senão estimativa
+        if word_boundaries:
+            srt_path = self._generate_srt_from_boundaries(word_boundaries)
+        else:
+            srt_path = self._generate_srt_from_duration(audio_path)
+            print("[GoogleCloudTTS] ⚠️ SRT gerado por estimativa (timestamps aproximados)")
 
         print(f"[GoogleCloudTTS] ✅ {audio_path}  ({duration:.2f}s)")
 
@@ -462,11 +573,14 @@ class GoogleCloudTTS:
             "audio_file":           audio_path,
             "subtitle_file":        srt_path,
             "audio_total_duration": duration,
+            "word_boundaries":      word_boundaries,  # [] se estimativa foi usada
         }
+
 
 if __name__ == "__main__":
     tts = GoogleCloudTTS(params={
         "credentials_file": "./tokens/tts-automate-videos-20509ec7c438.json",
+        "show_usage_report": True,
     })
     tts.usage_report()
     # tts.list_voices(
