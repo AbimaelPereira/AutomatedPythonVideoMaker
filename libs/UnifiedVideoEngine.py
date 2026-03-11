@@ -135,7 +135,7 @@ def _process_scene_worker(scene_data_bundle):
         if scene.get("narration", {}).get("subtitles", False):
             subtitle_clip = _create_subtitle_clip_worker(
                 scene_duration, subtitle_file, config_instance_data,
-                resolution_output, global_settings
+                resolution_output, global_settings, scene_data=scene  # ✅ CORRIGIDO
             )
         
         # 4. Composição
@@ -311,8 +311,9 @@ def _create_visual_elements_clip_worker(scene_data, scene_duration, scene_dir,
         return None
 
 
+# ✅ CORRIGIDO: adicionado parâmetro scene_data=None
 def _create_subtitle_clip_worker(scene_duration, subtitle_file, config_instance_data,
-                                 resolution_output, global_settings):
+                                 resolution_output, global_settings, scene_data=None):
     """Versão worker de _create_subtitle_clip"""
     try:
         if not subtitle_file or not os.path.exists(subtitle_file):
@@ -327,8 +328,13 @@ def _create_subtitle_clip_worker(scene_duration, subtitle_file, config_instance_
             "has_visual_elements": True,
         }
         
+        # global_settings.subtitle sobrescreve defaults
         global_subtitle_config = global_settings.get("subtitle", {})
         subtitle_config.update(global_subtitle_config)
+
+        # ✅ CORRIGIDO: scene.subtitle sobrescreve global
+        scene_subtitle_config = (scene_data or {}).get("subtitle", {})
+        subtitle_config.update(scene_subtitle_config)
         
         subtitle_generator = Subtitle(params=subtitle_config)
         subtitle_clip = subtitle_generator.generate()
@@ -488,7 +494,8 @@ class UnifiedVideoEngine:
 
             return None
 
-    def _create_subtitle_clip(self, scene_duration, subtitle_file, has_visual_elements=False):
+    # ✅ CORRIGIDO: adicionado parâmetro scene_data=None
+    def _create_subtitle_clip(self, scene_duration, subtitle_file, has_visual_elements=False, scene_data=None):
         """Cria clip de legendas."""
         try:
             if not subtitle_file or not os.path.exists(subtitle_file):
@@ -506,8 +513,13 @@ class UnifiedVideoEngine:
                 "has_visual_elements": True,
             }
 
+            # global_settings.subtitle sobrescreve defaults
             global_subtitle_config = self.global_settings.get("subtitle", {})
             subtitle_config.update(global_subtitle_config)
+
+            # ✅ CORRIGIDO: scene.subtitle sobrescreve global
+            scene_subtitle_config = (scene_data or {}).get("subtitle", {})
+            subtitle_config.update(scene_subtitle_config)
 
             subtitle_generator = Subtitle(params=subtitle_config)
             subtitle_clip = subtitle_generator.generate()
@@ -624,14 +636,6 @@ class UnifiedVideoEngine:
     ) -> str:
         """
         Aplica áudio de fundo com ducking automático baseado na narração do vídeo.
-
-        Fluxo corrigido:
-          1. Lê a duração exata do vídeo via ffprobe
-          2. Extrai narração do vídeo (ffmpeg → mp3 temp)
-          3. Carrega background e CORTA para a duração exata do vídeo
-          4. Aplica volume no background
-          5. Chama AudioEffects.apply_ducking
-          6. Re-encoda vídeo + áudio mixado juntos (evita drift de sync)
         """
         from pydub import AudioSegment
         from libs.Audio.AudioEffects import AudioEffects
@@ -640,9 +644,7 @@ class UnifiedVideoEngine:
         temp_mixed     = os.path.join(self.output_dir, "_temp_ducked_mix.mp3")
 
         try:
-            # ------------------------------------------------------------------
             # 1. Duração exata do vídeo (via ffprobe)
-            # ------------------------------------------------------------------
             probe_cmd = [
                 "ffprobe", "-v", "error",
                 "-show_entries", "format=duration",
@@ -656,9 +658,7 @@ class UnifiedVideoEngine:
             video_duration_ms = int(video_duration_s * 1000)
             print(f"[UVE] ⏱️ Duração do vídeo: {video_duration_s:.2f}s")
 
-            # ------------------------------------------------------------------
             # 2. Extrai narração do vídeo
-            # ------------------------------------------------------------------
             print("[UVE] 🎤 Extraindo narração do vídeo para ducking...")
             cmd_extract = [
                 "ffmpeg", "-y",
@@ -673,35 +673,26 @@ class UnifiedVideoEngine:
             subprocess.run(cmd_extract, check=True, capture_output=True)
             print("[UVE] ✅ Narração extraída")
 
-            # ------------------------------------------------------------------
             # 3. Carrega áudios
-            # ------------------------------------------------------------------
             print("[UVE] 📂 Carregando áudios para ducking...")
             narration_seg  = AudioSegment.from_file(temp_narration)
             background_seg = AudioSegment.from_file(audio_path)
 
-            # FIX #1: Corta/loopa background para a duração EXATA do vídeo
             if len(background_seg) < video_duration_ms:
-                # Loopa até cobrir
                 loops_needed   = (video_duration_ms // len(background_seg)) + 1
                 background_seg = background_seg * loops_needed
 
-            # Corta para duração exata — ESSENCIAL para não gerar arquivo gigante
             background_seg = background_seg[:video_duration_ms]
             print(f"[UVE] ✂️ Background cortado para {video_duration_s:.2f}s")
 
-            # ------------------------------------------------------------------
             # 4. Aplica volume no background (dB)
-            # ------------------------------------------------------------------
             if volume != 1.0:
                 import math
                 volume_db      = 20 * math.log10(max(volume, 1e-6))
                 background_seg = background_seg.apply_gain(volume_db)
                 print(f"[UVE] 🔊 Volume do background: {volume} ({volume_db:.1f} dB)")
 
-            # ------------------------------------------------------------------
             # 5. Ducking
-            # ------------------------------------------------------------------
             duck_params = {
                 "ducking_db":   ducking_config.get("ducking_db",   -18.0),
                 "threshold_db": ducking_config.get("threshold_db", -40.0),
@@ -717,25 +708,18 @@ class UnifiedVideoEngine:
                 **duck_params
             )
 
-            # Garante que o áudio mixado não seja maior que o vídeo
             mixed_seg = mixed_seg[:video_duration_ms]
-
-            # Exporta mix
             mixed_seg.export(temp_mixed, format="mp3", bitrate="192k")
             print(f"[UVE] ✅ Mix com ducking gerado ({len(mixed_seg)/1000:.2f}s)")
 
-            # ------------------------------------------------------------------
-            # 6. FIX #2: Re-encoda vídeo + áudio juntos para garantir sync
-            #    Usa -shortest para nunca deixar o áudio ultrapassar o vídeo
-            # ------------------------------------------------------------------
+            # 6. Re-encoda vídeo + áudio juntos
             print("[UVE] 🎬 Combinando vídeo + áudio mixado (re-encode completo)...")
             cmd_merge = [
                 "ffmpeg", "-y",
-                "-i", video_path,   # stream de vídeo
-                "-i", temp_mixed,   # áudio mixado (narração + bg com ducking)
+                "-i", video_path,
+                "-i", temp_mixed,
                 "-map", "0:v:0",
                 "-map", "1:a:0",
-                # Re-encoda vídeo para garantir sincronismo (sem -c:v copy)
                 "-c:v", "libx264",
                 "-preset", "medium",
                 "-crf", "20",
@@ -748,7 +732,6 @@ class UnifiedVideoEngine:
                 "-b:a", "192k",
                 "-ar", "44100",
                 "-ac", "2",
-                # ESSENCIAL: corta na duração do vídeo, nunca na do áudio
                 "-shortest",
                 "-movflags", "+faststart",
                 output_path
@@ -843,7 +826,7 @@ class UnifiedVideoEngine:
             remove_temp=True,
             fps=30,
             bitrate="2000k",
-            preset='faster', # as opççoes são ultrafast, superfast, veryfast, faster, fast, medium (default), slow, slower, veryslow
+            preset='faster',
             threads=4,
             verbose=False,
             logger=None,
@@ -948,7 +931,10 @@ class UnifiedVideoEngine:
                     subtitle_clip = None
                     if scene.get("narration", {}).get("subtitles", False):
                         has_visuals = bool(scene.get("visual_elements"))
-                        subtitle_clip = self._create_subtitle_clip(scene_duration, subtitle_file, has_visuals)
+                        # ✅ CORRIGIDO: passa scene=scene para aplicar override por cena
+                        subtitle_clip = self._create_subtitle_clip(
+                            scene_duration, subtitle_file, has_visuals, scene_data=scene
+                        )
 
                     # 4. Composição
                     final_scene_clip = [background_clip]

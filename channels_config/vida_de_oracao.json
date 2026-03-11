@@ -7,7 +7,7 @@
         "tts//": {
             "provider": "google",
             "credentials_file": "./tokens/tts-automate-videos-20509ec7c438.json",
-            "voice": "pt-BR-Chirp3-HD-Charon"
+            "voice": "pt-BR-Chirp3-HD-Iapetus"
         },
         "tts": {
             "provider": "edge",

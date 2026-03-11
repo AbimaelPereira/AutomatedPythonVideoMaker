@@ -14,11 +14,13 @@ class PollinationsProvider:
     
     BASE_URL = "https://gen.pollinations.ai"
     
-    # Modelos de fallback para imagens (em ordem de preferência)
+    # Modelos de fallback para imagens (em ordem de preferência) // flux, flux-2-dev, zimage, grok-imagine, imagen-4
     IMAGE_FALLBACK_MODELS = [
-        "zimage",      # Modelo padrão, rápido e de boa qualidade
-        "flux",        # Alta qualidade, mais lento
-        "turbo"       # Muito rápido, qualidade média
+        "flux",        # Modelo mais recente e avançado
+        "flux-2-dev",  # Versão de desenvolvimento do flux
+        "zimage",      # Modelo estável e rápido
+        "grok-imagine", # Alternativa criativa
+        "imagen-4"     # Modelo clássico, pode ser mais lento mas às vezes funciona melhor
     ]
     
     # Modelos de fallback para vídeos (em ordem de preferência)
@@ -47,7 +49,7 @@ class PollinationsProvider:
     
     def generate_image(self, 
                       prompt:  str,
-                      model:  str = "zimage",
+                      model:  str = "flux",
                       width: int = 576,
                       height: int = 1024,
                       seed: Optional[int] = None,

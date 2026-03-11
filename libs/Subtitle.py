@@ -170,13 +170,15 @@ class Subtitle:
         if cache_key in self._render_cache:
             return self._render_cache[cache_key]
 
+        # Medição do texto para determinar o tamanho da imagem necessária
         sw = self._stroke_width_effective
         w, h, off_x, off_y = self._measure_text(text, self._font, sw)
 
         # Margem extra para acomodar sombra e stroke sem cortar
         shadow_dx, shadow_dy = self.shadow_offset if self.shadow_enabled else (0, 0)
-        extra_x = abs(shadow_dx) + sw + 4
-        extra_y = abs(shadow_dy) + sw + 4
+        # A margem extra é a soma do deslocamento da sombra, a largura do stroke e um pequeno buffer
+        extra_x = abs(shadow_dx) + sw + 10
+        extra_y = abs(shadow_dy) + sw + 10
 
         img_w = w + extra_x * 2
         img_h = h + extra_y * 2
