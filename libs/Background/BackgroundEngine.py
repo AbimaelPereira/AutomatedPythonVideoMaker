@@ -3,7 +3,7 @@ import json
 import hashlib
 from typing import Dict, List, Tuple, Optional
 from moviepy.editor import ColorClip, ImageClip, VideoFileClip, CompositeVideoClip, concatenate_videoclips
-from libs.Config import Config
+from libs.utils import deep_merge
 from libs.VisualClip import force_rgb
 from libs.MediaDownloader import MediaDownloader
 from libs.Background.DirectoryType import DirectoryType
@@ -39,7 +39,7 @@ class BackgroundEngine:
         self.resolution_output = tuple(map(int, resolution_output))
         self.dir_clips_cache = dir_clips_cache
         self.ai_cache = ai_cache if AI_AVAILABLE else None
-        self.remote_asset_manager = remote_asset_manager  # NOVO
+        self.remote_asset_manager = remote_asset_manager
         self.last_used_videos: List[str] = []
         self.max_history = 3
 
@@ -53,217 +53,179 @@ class BackgroundEngine:
         pil_img = Image.open(image_path).convert("RGB")
         pil_img = pil_img.resize(self.resolution_output, Image.LANCZOS)
         pil_img = pil_img.filter(ImageFilter.GaussianBlur(radius=50))
-        
+
         temp_blur_path = image_path.replace(".png", "_blur.png").replace(".jpg", "_blur.jpg")
         pil_img.save(temp_blur_path)
-        
+
         clip = ImageClip(temp_blur_path).resize(newsize=self.resolution_output).set_duration(scene_duration)
-        # CORREÇÃO: Força RGB
         return clip.fl_image(force_rgb)
 
     def _build_image(self, cfg: Dict, scene_duration: float, storage_dir: str):
-        """
-        MODIFICADO: Tenta todas as URLs disponíveis antes de usar fallback
-        """
         src_type = cfg.get("type", "image")
         src = cfg.get("source")
-        
+
         if src_type == "remote_asset":
             if not self.remote_asset_manager:
-                print("[BackgroundEngine] ⚠️ RemoteAssetManager não disponível, usando cor sólida")
+                print("[BackgroundEngine] RemoteAssetManager não disponível, usando cor sólida")
                 return ColorClip(size=self.resolution_output, color=(0, 0, 0)).set_duration(scene_duration)
-            
+
             slug = src
             if not slug:
-                print("[BackgroundEngine] ❌ Slug não especificado, usando cor sólida")
+                print("[BackgroundEngine] Slug não especificado, usando cor sólida")
                 return ColorClip(size=self.resolution_output, color=(0, 0, 0)).set_duration(scene_duration)
-            
-            # NOVO: Loop tentando todas as URLs disponíveis
+
             attempt = 0
             while True:
                 attempt += 1
                 selected_url = self.remote_asset_manager.select_url(slug)
-                
+
                 if not selected_url:
-                    print(f"[BackgroundEngine] ⚠️ Nenhuma URL válida restante no slug '{slug}', usando cor sólida")
+                    print(f"[BackgroundEngine] Nenhuma URL válida restante no slug '{slug}', usando cor sólida")
                     return ColorClip(size=self.resolution_output, color=(0, 0, 0)).set_duration(scene_duration)
-                
+
                 src = selected_url
-                print(f"[BackgroundEngine] 🎯 Tentativa {attempt}: {src[:50]}...")
-                
-                # Callbacks
+                print(f"[BackgroundEngine] Tentativa {attempt}: {src[:50]}...")
+
                 def on_success(url):
                     self.remote_asset_manager.mark_download_success(url)
-                
+
                 def on_fail(url):
                     self.remote_asset_manager.mark_download_failed(url)
-                
+
                 path = MediaDownloader.resolve_source_path(
-                    src,
-                    storage_dir,
+                    src, storage_dir,
                     on_success_callback=on_success,
                     on_fail_callback=on_fail
                 )
-                
+
                 if path:
-                    # Download bem-sucedido, processa imagem
                     register_slug = cfg.get("register_remote_asset_as")
                     if register_slug and src.startswith("http"):
                         self.remote_asset_manager.register_url(register_slug, src)
-                    
+
                     fit_mode = cfg.get("fit_mode", "cover")
-                    
                     if fit_mode == "contain-blur":
                         blur_clip = self._create_blurred_background(path, scene_duration)
                         main_clip = ImageClip(path).set_duration(scene_duration)
-                        
                         w, h = main_clip.size
                         target_w, target_h = self.resolution_output
-                        
-                        scale_w = target_w / w
-                        scale_h = target_h / h
-                        scale = min(scale_w, scale_h)
-                        
-                        new_w = int(w * scale)
-                        new_h = int(h * scale)
-                        
-                        main_clip = main_clip.resize(newsize=(new_w, new_h))
+                        scale = min(target_w / w, target_h / h)
+                        main_clip = main_clip.resize(newsize=(int(w * scale), int(h * scale)))
                         main_clip = main_clip.set_position("center")
-                        
                         final_clip = CompositeVideoClip([blur_clip, main_clip], size=self.resolution_output).set_duration(scene_duration)
                         return final_clip.fl_image(force_rgb)
                     else:
                         clip = ImageClip(path).resize(newsize=self.resolution_output).set_duration(scene_duration)
                         return clip.fl_image(force_rgb)
-                
-                # Download falhou, URL já foi marcada como inválida pelo callback
-                print(f"[BackgroundEngine] ⚠️ Falha no download, tentando próxima URL...")
-                # Loop continua automaticamente para tentar próxima URL
-        
-        # Lógica original para tipos não remote_asset
+
+                print(f"[BackgroundEngine] Falha no download, tentando próxima URL...")
+
         if not src:
             raise ValueError("Source da imagem não especificada")
-        
+
         path = MediaDownloader.resolve_source_path(src, storage_dir)
-        
+
         if not path:
-            print("[BackgroundEngine] ❌ Falha ao obter imagem, usando cor sólida")
+            print("[BackgroundEngine] Falha ao obter imagem, usando cor sólida")
             return ColorClip(size=self.resolution_output, color=(0, 0, 0)).set_duration(scene_duration)
-        
+
         register_slug = cfg.get("register_remote_asset_as")
         if register_slug and self.remote_asset_manager and src.startswith("http"):
             self.remote_asset_manager.register_url(register_slug, src)
-        
+
         fit_mode = cfg.get("fit_mode", "cover")
-        
+
         if fit_mode == "contain-blur":
             blur_clip = self._create_blurred_background(path, scene_duration)
             main_clip = ImageClip(path).set_duration(scene_duration)
-            
             w, h = main_clip.size
             target_w, target_h = self.resolution_output
-            
-            scale_w = target_w / w
-            scale_h = target_h / h
-            scale = min(scale_w, scale_h)
-            
-            new_w = int(w * scale)
-            new_h = int(h * scale)
-            
-            main_clip = main_clip.resize(newsize=(new_w, new_h))
+            scale = min(target_w / w, target_h / h)
+            main_clip = main_clip.resize(newsize=(int(w * scale), int(h * scale)))
             main_clip = main_clip.set_position("center")
-            
             final_clip = CompositeVideoClip([blur_clip, main_clip], size=self.resolution_output).set_duration(scene_duration)
             return final_clip.fl_image(force_rgb)
         else:
             clip = ImageClip(path).resize(newsize=self.resolution_output).set_duration(scene_duration)
             return clip.fl_image(force_rgb)
 
-
     def _build_video(self, cfg: Dict, scene_duration: float, storage_dir: str):
-        """
-        MODIFICADO: Tenta todas as URLs disponíveis antes de usar fallback
-        """
         src_type = cfg.get("type", "video")
         src = cfg.get("source")
-        
+
         if src_type == "remote_asset":
             if not self.remote_asset_manager:
-                print("[BackgroundEngine] ⚠️ RemoteAssetManager não disponível, usando cor sólida")
+                print("[BackgroundEngine] RemoteAssetManager não disponível, usando cor sólida")
                 return ColorClip(size=self.resolution_output, color=(0, 0, 0)).set_duration(scene_duration)
-            
+
             slug = src
             if not slug:
-                print("[BackgroundEngine] ❌ Slug não especificado, usando cor sólida")
+                print("[BackgroundEngine] Slug não especificado, usando cor sólida")
                 return ColorClip(size=self.resolution_output, color=(0, 0, 0)).set_duration(scene_duration)
-            
-            # NOVO: Loop tentando todas as URLs disponíveis
+
             attempt = 0
             while True:
                 attempt += 1
                 selected_url = self.remote_asset_manager.select_url(slug)
-                
+
                 if not selected_url:
-                    print(f"[BackgroundEngine] ⚠️ Nenhuma URL válida restante no slug '{slug}', usando cor sólida")
+                    print(f"[BackgroundEngine] Nenhuma URL válida restante no slug '{slug}', usando cor sólida")
                     return ColorClip(size=self.resolution_output, color=(0, 0, 0)).set_duration(scene_duration)
-                
+
                 src = selected_url
-                print(f"[BackgroundEngine] 🎯 Tentativa {attempt}: {src[:50]}...")
-                
+                print(f"[BackgroundEngine] Tentativa {attempt}: {src[:50]}...")
+
                 def on_success(url):
                     self.remote_asset_manager.mark_download_success(url)
-                
+
                 def on_fail(url):
                     self.remote_asset_manager.mark_download_failed(url)
-                
+
                 path = MediaDownloader.resolve_source_path(
-                    src,
-                    storage_dir,
+                    src, storage_dir,
                     on_success_callback=on_success,
                     on_fail_callback=on_fail
                 )
-                
+
                 if path:
                     register_slug = cfg.get("register_remote_asset_as")
                     if register_slug and src.startswith("http"):
                         self.remote_asset_manager.register_url(register_slug, src)
-                    
+
                     clip = VideoFileClip(path, audio=False).resize(newsize=self.resolution_output)
                     if clip.duration < scene_duration:
                         clip = clip.loop(duration=scene_duration)
                     else:
                         clip = clip.subclip(0, scene_duration)
                     return clip.without_audio()
-                
-                print(f"[BackgroundEngine] ⚠️ Falha no download, tentando próxima URL...")
-        
-        # Lógica original para tipos não remote_asset
+
+                print(f"[BackgroundEngine] Falha no download, tentando próxima URL...")
+
         if not src:
             raise ValueError("Source do vídeo não especificada")
-        
+
         def on_success(url):
             if self.remote_asset_manager and src_type == "remote_asset":
                 self.remote_asset_manager.mark_download_success(url)
-        
+
         def on_fail(url):
             if self.remote_asset_manager and src_type == "remote_asset":
                 self.remote_asset_manager.mark_download_failed(url)
-        
+
         path = MediaDownloader.resolve_source_path(
-            src,
-            storage_dir,
+            src, storage_dir,
             on_success_callback=on_success,
             on_fail_callback=on_fail
         )
-        
+
         if not path:
-            print("[BackgroundEngine] ❌ Falha ao obter vídeo, usando cor sólida")
+            print("[BackgroundEngine] Falha ao obter vídeo, usando cor sólida")
             return ColorClip(size=self.resolution_output, color=(0, 0, 0)).set_duration(scene_duration)
-        
+
         register_slug = cfg.get("register_remote_asset_as")
         if register_slug and self.remote_asset_manager and src.startswith("http"):
             self.remote_asset_manager.register_url(register_slug, src)
-        
+
         clip = VideoFileClip(path, audio=False).resize(newsize=self.resolution_output)
         if clip.duration < scene_duration:
             clip = clip.loop(duration=scene_duration)
@@ -415,59 +377,46 @@ class BackgroundEngine:
 
     def _apply_animation(self, clip, animation_config: Dict):
         anim_type = animation_config.get("type", "none")
-        
+
         if anim_type == "zoom":
             duration = animation_config.get("duration", 20.0)
             intensity = animation_config.get("intensity", 0.1)
-            
+
             def zoom_effect(get_frame, t):
-                frame = get_frame(t)
-                
-                # CORREÇÃO: Força RGB (3 canais)
-                frame = force_rgb(frame)
-                
+                frame = force_rgb(get_frame(t))
                 progress = (t % duration) / duration
                 scale = 1.0 + (intensity * np.sin(progress * 2 * np.pi))
-                
                 h, w = frame.shape[:2]
                 new_h, new_w = int(h * scale), int(w * scale)
-                
                 if scale > 1.0:
                     from PIL import Image
                     pil_img = Image.fromarray(frame.astype('uint8'))
                     pil_img = pil_img.resize((new_w, new_h), Image.LANCZOS)
                     resized = np.array(pil_img)
-                    
                     y_start = (new_h - h) // 2
                     x_start = (new_w - w) // 2
-                    cropped = resized[y_start:y_start+h, x_start:x_start+w]
-                    return cropped
-                else:
-                    return frame
-            
+                    return resized[y_start:y_start+h, x_start:x_start+w]
+                return frame
+
             return clip.fl(zoom_effect)
-        
+
         elif anim_type == "fade":
             duration = animation_config.get("duration", 20.0)
             min_opacity = animation_config.get("min_opacity", 0.7)
-            
+
             def fade_effect(get_frame, t):
-                frame = get_frame(t)
-                
-                # CORREÇÃO: Força RGB (3 canais)
-                frame = force_rgb(frame)
-                
+                frame = force_rgb(get_frame(t))
                 progress = (t % duration) / duration
                 opacity = min_opacity + (1.0 - min_opacity) * (0.5 + 0.5 * np.sin(progress * 2 * np.pi))
                 return (frame * opacity).astype('uint8')
-            
+
             return clip.fl(fade_effect)
-        
+
         return clip
 
     def _apply_filters(self, bg_clip, global_filters_cfg: Dict, scene_filters_cfg: Optional[Dict], scene_duration: float):
         if scene_filters_cfg is not None and isinstance(scene_filters_cfg, dict):
-            filters_cfg = Config.deep_merge(global_filters_cfg or {}, scene_filters_cfg)
+            filters_cfg = deep_merge(global_filters_cfg or {}, scene_filters_cfg)
         else:
             filters_cfg = dict(global_filters_cfg or {})
 
@@ -489,7 +438,7 @@ class BackgroundEngine:
         scene_background = scene_data.get("background", None)
 
         if scene_background is not None:
-            background_config = Config.deep_merge(global_background, scene_background)
+            background_config = deep_merge(global_background, scene_background)
             storage_dir = scene_dir
             print("[BackgroundEngine] Config de fundo: merge (global + cena)")
         else:
@@ -512,13 +461,12 @@ class BackgroundEngine:
             elif bg_type == "directory":
                 bg_clip = self._build_directory(visual_config, scene_duration)
             elif bg_type == "remote_asset":
-                # Detecta se é imagem ou vídeo pela extensão da URL selecionada
                 bg_clip = self._build_image(visual_config, scene_duration, storage_dir)
             else:
-                print(f"[BackgroundEngine] ⚠️ Tipo de fundo desconhecido: {bg_type}")
+                print(f"[BackgroundEngine] Tipo de fundo desconhecido: {bg_type}")
                 bg_clip = ColorClip(size=self.resolution_output, color=(0, 0, 0)).set_duration(scene_duration)
         except Exception as e:
-            print(f"[BackgroundEngine] ❌ Falha ao criar fundo: {e}")
+            print(f"[BackgroundEngine] Falha ao criar fundo: {e}")
             import traceback
             traceback.print_exc()
             print("[BackgroundEngine] Fallback: preto")
