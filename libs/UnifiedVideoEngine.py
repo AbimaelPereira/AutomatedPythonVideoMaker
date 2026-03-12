@@ -310,6 +310,9 @@ class UnifiedVideoEngine:
     def __init__(self, video_data: dict):
         self.video_data = video_data
 
+        # get DEBUG of environment variable, boolean
+        self.video_data.debug = os.getenv("DEBUG", "0").lower() in ("true", "1", "t")
+
         # 1. Carrega channel_config e faz merge de global_settings
         channel_name = video_data.get("channel_name")
         channel_config = load_channel_config(channel_name) if channel_name else {}
@@ -963,11 +966,11 @@ class UnifiedVideoEngine:
 
                 # 2. Duração
                 scene_duration = scene.get("duration", duration_from_tts)
-                if not scene_duration or scene_duration < 0.1:
-                    scene_duration = 4.0
-                    print(f"[UVE] Usando duração padrão: {scene_duration}s")
-                else:
-                    print(f"[UVE] Duração da cena: {scene_duration}s")
+                # if not scene_duration or scene_duration < 0.1:
+                #     scene_duration = 4.0
+                #     print(f"[UVE] Usando duração padrão: {scene_duration}s")
+                # else:
+                print(f"[UVE] Duração da cena: {scene_duration}s")
 
                 # 3. Componentes
                 try:
@@ -1156,6 +1159,9 @@ class UnifiedVideoEngine:
         print(f"[UVE]    URLs válidas: {final_stats['valid_media']}")
         print(f"[UVE]    URLs inválidas: {final_stats['invalid_media']}")
 
+        # print debug
+        print("[UVE] Debug config: " + str(self.video_data.get("debug", "N/A")))
+
         # 11. Upload YouTube
         if self.youtube_config and self.video_data.get("debug") is not True:
             try:
@@ -1163,7 +1169,12 @@ class UnifiedVideoEngine:
                 youtube_params = self.youtube_config.copy()
                 youtube_params["video_path"] = final_path
                 youtube_uploader = YouTube(params=youtube_params)
-                youtube_uploader.upload()
+                video_id = youtube_uploader.upload()
+
+                thumbnail_path = youtube_uploader._resolve_thumbnail_path()
+                if thumbnail_path:
+                    print(f"[UVE] Enviando thumbnail: {os.path.basename(thumbnail_path)}")
+                    youtube_uploader.upload_thumbnail(video_id, thumbnail_path)
             except Exception as e:
                 print(f"[UVE] Upload YouTube falhou: {e}")
 
