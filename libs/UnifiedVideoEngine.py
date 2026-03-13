@@ -47,6 +47,34 @@ def hex_to_rgb(hex_value):
         return (0, 0, 0)
 
 
+def _probe_has_audio(video_path: str) -> bool:
+    """Verifica via ffprobe se o arquivo de vídeo contém stream de áudio."""
+    try:
+        cmd = [
+            "ffprobe", "-v", "error",
+            "-select_streams", "a",
+            "-show_entries", "stream=codec_type",
+            "-of", "default=noprint_wrappers=1:nokey=1",
+            video_path
+        ]
+        result = subprocess.run(cmd, check=True, capture_output=True, text=True)
+        return bool(result.stdout.strip())
+    except Exception:
+        return False
+
+
+def _probe_duration(video_path: str) -> float:
+    """Retorna duração do vídeo em segundos via ffprobe."""
+    cmd = [
+        "ffprobe", "-v", "error",
+        "-show_entries", "format=duration",
+        "-of", "default=noprint_wrappers=1:nokey=1",
+        video_path
+    ]
+    result = subprocess.run(cmd, check=True, capture_output=True, text=True)
+    return float(result.stdout.strip())
+
+
 def _process_scene_worker(scene_data_bundle):
     """Worker isolado para processar uma cena em paralelo."""
     scene_index = scene_data_bundle["scene_index"]
@@ -77,6 +105,11 @@ def _process_scene_worker(scene_data_bundle):
         # 1. Narração
         narration_engine = NarrationEngine(tts_config, output_dir)
         narration_clip, duration_from_tts, subtitle_file = narration_engine.process_scene_narration(scene, scene_dir)
+
+        if narration_clip is None:
+            print(f"[Worker-{scene_index}] ⚠️ Narração não gerada para cena '{scene_id}'")
+        else:
+            print(f"[Worker-{scene_index}] ✅ Narração gerada: {duration_from_tts:.2f}s")
 
         # 2. Duração
         scene_duration = scene.get("duration", duration_from_tts)
@@ -133,6 +166,8 @@ def _process_scene_worker(scene_data_bundle):
         # 7. Narração
         if narration_clip:
             composed_clip = composed_clip.set_audio(narration_clip)
+        else:
+            print(f"[Worker-{scene_index}] ⚠️ Cena '{scene_id}' será renderizada SEM ÁUDIO")
 
         # 8. Transições
         transitions_config = effective_gs.get("transitions")
@@ -170,6 +205,10 @@ def _process_scene_worker(scene_data_bundle):
         )
 
         print(f"[Worker-{scene_index}] Cena renderizada: {os.path.basename(scene_clip_path)}")
+
+        # Verifica se a cena renderizada tem áudio
+        if not _probe_has_audio(scene_clip_path):
+            print(f"[Worker-{scene_index}] ⚠️ ATENÇÃO: cena renderizada não tem stream de áudio!")
 
         try:
             composed_clip.close()
@@ -283,7 +322,6 @@ def _create_subtitle_clip_worker(scene_duration, subtitle_file, layout_params,
             "has_visual_elements": True,
         }
 
-        # deep_merge preserva campos não sobrescritos (corrige o bug do update() raso)
         global_subtitle_config = effective_gs.get("subtitle", {})
         subtitle_config = deep_merge(subtitle_config, global_subtitle_config)
 
@@ -310,7 +348,6 @@ class UnifiedVideoEngine:
     def __init__(self, video_data: dict):
         self.video_data = video_data
 
-        # get DEBUG of environment variable, boolean
         self.video_data.debug = os.getenv("DEBUG", "0").lower() in ("true", "1", "t")
 
         # 1. Carrega channel_config e faz merge de global_settings
@@ -334,7 +371,7 @@ class UnifiedVideoEngine:
         # 4. tts_config
         self.tts_config = self.global_settings.get("tts", {})
 
-        # 5. Layout params (SimpleNamespace para LayoutEngine)
+        # 5. Layout params
         self.layout_params = {
             "width":             self.resolution_output[0],
             "height":            self.resolution_output[1],
@@ -380,14 +417,8 @@ class UnifiedVideoEngine:
     # ------------------------------------------------------------------
 
     def _normalize_scenes(self) -> list:
-        """
-        Normaliza a estrutura do JSON para lista plana de cenas.
-        Suporta formato antigo (scenes no topo) e novo (chapters).
-        Retrocompatível: JSONs com 'scenes' direto continuam funcionando.
-        Popula self.scene_chapter_map e self.chapter_audio_map para bg audio por chapter.
-        """
-        self.scene_chapter_map = {}   # scene_id → chapter_id
-        self.chapter_audio_map = {}   # chapter_id �� audio_config
+        self.scene_chapter_map = {}
+        self.chapter_audio_map = {}
 
         video_data = self.video_data
 
@@ -414,7 +445,7 @@ class UnifiedVideoEngine:
                 self.chapter_audio_map[chapter_id] = chapter_audio
 
                 for scene in chapter.get("scenes", []):
-                    scene = dict(scene)  # cópia para não mutar o original
+                    scene = dict(scene)
                     scene["_chapter_gs"] = chapter_gs
                     scene_id = scene.get("id", "")
                     self.scene_chapter_map[scene_id] = chapter_id
@@ -424,11 +455,6 @@ class UnifiedVideoEngine:
         return []
 
     def _resolve_scene_gs(self, scene: dict) -> dict:
-        """
-        Retorna effective_global_settings para a cena:
-        video.global_settings → chapter.global_settings
-        Remove a chave temporária _chapter_gs da cena.
-        """
         chapter_gs = scene.pop("_chapter_gs", {})
         return deep_merge(self.global_settings, chapter_gs)
 
@@ -535,7 +561,6 @@ class UnifiedVideoEngine:
                 "has_visual_elements": True,
             }
 
-            # deep_merge preserva campos não sobrescritos (corrige o bug do update() raso)
             global_subtitle_config = effective_gs.get("subtitle", {})
             subtitle_config = deep_merge(subtitle_config, global_subtitle_config)
 
@@ -564,7 +589,6 @@ class UnifiedVideoEngine:
     # ------------------------------------------------------------------
 
     def _has_per_chapter_audio(self) -> bool:
-        """Verifica se há chapters com audio diferente do root."""
         if not hasattr(self, 'chapter_audio_map'):
             return False
         root_audio = self.chapter_audio_map.get("__root__", {})
@@ -654,17 +678,26 @@ class UnifiedVideoEngine:
         temp_mixed     = os.path.join(self.output_dir, "_temp_ducked_mix.mp3")
 
         try:
-            probe_cmd = [
-                "ffprobe", "-v", "error",
-                "-show_entries", "format=duration",
-                "-of", "default=noprint_wrappers=1:nokey=1",
-                video_path
-            ]
-            probe_result = subprocess.run(probe_cmd, check=True, capture_output=True, text=True)
-            video_duration_s = float(probe_result.stdout.strip())
+            # 1. Duração do vídeo
+            video_duration_s  = _probe_duration(video_path)
             video_duration_ms = int(video_duration_s * 1000)
             print(f"[UVE] Duração do vídeo: {video_duration_s:.2f}s")
 
+            # 2. Verifica se há stream de áudio no vídeo
+            has_audio = _probe_has_audio(video_path)
+
+            if not has_audio:
+                # Sem narração: aplica música de fundo simples (sem ducking)
+                print("[UVE] ⚠️ Vídeo sem stream de áudio (narração ausente).")
+                print("[UVE]    Aplicando música de fundo em volume cheio (ducking ignorado)...")
+                return self._apply_background_audio_simple(
+                    video_path=video_path,
+                    output_path=output_path,
+                    audio_path=audio_path,
+                    volume=volume,
+                )
+
+            # 3. Extrai narração do vídeo para calcular ducking
             cmd_extract = [
                 "ffmpeg", "-y", "-i", video_path, "-vn",
                 "-acodec", "libmp3lame", "-b:a", "192k",
@@ -673,6 +706,7 @@ class UnifiedVideoEngine:
             subprocess.run(cmd_extract, check=True, capture_output=True)
             print("[UVE] Narração extraída")
 
+            # 4. Carrega e prepara os segmentos de áudio
             narration_seg  = AudioSegment.from_file(temp_narration)
             background_seg = AudioSegment.from_file(audio_path)
 
@@ -687,6 +721,7 @@ class UnifiedVideoEngine:
                 volume_db      = 20 * math.log10(max(volume, 1e-6))
                 background_seg = background_seg.apply_gain(volume_db)
 
+            # 5. Aplica ducking
             duck_params = {
                 "ducking_db":   ducking_config.get("ducking_db",   -18.0),
                 "threshold_db": ducking_config.get("threshold_db", -40.0),
@@ -702,6 +737,7 @@ class UnifiedVideoEngine:
             mixed_seg = mixed_seg[:video_duration_ms]
             mixed_seg.export(temp_mixed, format="mp3", bitrate="192k")
 
+            # 6. Mescla áudio processado de volta ao vídeo
             cmd_merge = [
                 "ffmpeg", "-y",
                 "-i", video_path, "-i", temp_mixed,
@@ -721,7 +757,17 @@ class UnifiedVideoEngine:
         except subprocess.CalledProcessError as e:
             stderr = e.stderr.decode(errors="replace") if e.stderr else "N/A"
             print(f"[UVE] Erro FFmpeg no ducking:\n{stderr}")
-            return video_path
+            print("[UVE] Tentando fallback: aplicar música de fundo sem ducking...")
+            try:
+                return self._apply_background_audio_simple(
+                    video_path=video_path,
+                    output_path=output_path,
+                    audio_path=audio_path,
+                    volume=volume,
+                )
+            except Exception as fallback_e:
+                print(f"[UVE] Fallback também falhou: {fallback_e}")
+                return video_path
         except Exception as e:
             print(f"[UVE] Erro inesperado no ducking: {e}")
             import traceback
@@ -803,6 +849,10 @@ class UnifiedVideoEngine:
 
         print(f"[UVE] Cena {scene_index + 1} renderizada: {os.path.basename(scene_clip_path)}")
 
+        # Verifica se a cena renderizada tem áudio
+        if not _probe_has_audio(scene_clip_path):
+            print(f"[UVE] ⚠️ ATENÇÃO: cena {scene_index + 1} renderizada sem stream de áudio!")
+
         try:
             composed_clip.close()
             if narration_clip:
@@ -816,20 +866,14 @@ class UnifiedVideoEngine:
         return scene_clip_path
 
     # ------------------------------------------------------------------
-    # CONCATENAÇÃO POR CHAPTER (bg audio por segmento)
+    # CONCATENAÇÃO POR CHAPTER
     # ------------------------------------------------------------------
 
     def _concat_and_apply_chapter_audio(self, scene_files: list, slug: str) -> str:
-        """
-        Agrupa scene_files por chapter, concatena cada grupo,
-        aplica o bg audio do chapter, depois concatena tudo em final.
-        """
-        # Agrupa scene_files por chapter na ordem
-        chapter_groups = {}   # chapter_id → [paths]
-        chapter_order  = []   # ordem de inserção
+        chapter_groups = {}
+        chapter_order  = []
 
         for path in scene_files:
-            # Determina scene_id a partir do path
             scene_id = os.path.basename(os.path.dirname(path))
             chapter_id = self.scene_chapter_map.get(scene_id, "__root__")
             if chapter_id not in chapter_groups:
@@ -846,7 +890,6 @@ class UnifiedVideoEngine:
             segment_concat = os.path.join(self.output_dir, f"_segment_{chapter_id}_concat.mp4")
             segment_final  = os.path.join(self.output_dir, f"_segment_{chapter_id}_final.mp4")
 
-            # Concatena as cenas do chapter
             concat_list = os.path.join(self.output_dir, f"_concat_{chapter_id}.txt")
             with open(concat_list, "w", encoding="utf-8") as f:
                 for p in paths:
@@ -864,7 +907,6 @@ class UnifiedVideoEngine:
             ]
             subprocess.run(ffmpeg_cmd, check=True, capture_output=True, text=True)
 
-            # Aplica bg audio do chapter (se tiver source)
             if audio_cfg and audio_cfg.get("source"):
                 result = self._apply_background_audio_to_video(segment_concat, segment_final, audio_cfg)
                 segment_paths.append(result)
@@ -874,7 +916,6 @@ class UnifiedVideoEngine:
                 os.rename(segment_concat, segment_final)
                 segment_paths.append(segment_final)
 
-        # Concatenação final de todos os segments
         final_path = os.path.join(self.output_dir, f"{slug}.mp4")
         if len(segment_paths) == 1:
             os.rename(segment_paths[0], final_path)
@@ -897,7 +938,6 @@ class UnifiedVideoEngine:
         ]
         subprocess.run(ffmpeg_final, check=True, capture_output=True, text=True)
 
-        # Cleanup segments intermediários
         for p in segment_paths:
             if os.path.exists(p):
                 try:
@@ -953,7 +993,6 @@ class UnifiedVideoEngine:
                 scene_id = scene.get("id", f"cena_{scene_index}")
                 print(f"\n[UVE] Processando cena {scene_index + 1}/{total_scenes}: {scene_id}")
 
-                # Resolve effective_gs por cena (remove _chapter_gs da cena)
                 effective_gs = self._resolve_scene_gs(scene)
                 tts_config   = deep_merge(self.tts_config, effective_gs.get("tts", {}))
 
@@ -964,12 +1003,13 @@ class UnifiedVideoEngine:
                 narration_engine = NarrationEngine(tts_config, self.output_dir)
                 narration_clip, duration_from_tts, subtitle_file = narration_engine.process_scene_narration(scene, scene_dir)
 
+                if narration_clip is None:
+                    print(f"[UVE] ⚠️ Narração não gerada para cena '{scene_id}'")
+                else:
+                    print(f"[UVE] ✅ Narração gerada: {duration_from_tts:.2f}s")
+
                 # 2. Duração
                 scene_duration = scene.get("duration", duration_from_tts)
-                # if not scene_duration or scene_duration < 0.1:
-                #     scene_duration = 4.0
-                #     print(f"[UVE] Usando duração padrão: {scene_duration}s")
-                # else:
                 print(f"[UVE] Duração da cena: {scene_duration}s")
 
                 # 3. Componentes
@@ -1018,10 +1058,11 @@ class UnifiedVideoEngine:
                     # 7. Narração
                     if narration_clip:
                         composed_clip = composed_clip.set_audio(narration_clip)
+                    else:
+                        print(f"[UVE] ⚠️ Cena '{scene_id}' será renderizada SEM ÁUDIO")
 
-                    # 8. Transições (usa effective_gs)
+                    # 8. Transições
                     transitions_config = effective_gs.get("transitions")
-
                     if transitions_config and transitions_config.get("enabled", False):
                         print(f"[UVE] Aplicando transição na cena {scene_index + 1}...")
                         try:
@@ -1054,7 +1095,6 @@ class UnifiedVideoEngine:
 
             scene_bundles = []
             for scene_index, scene in enumerate(scenes):
-                # Resolve effective_gs ANTES de enviar ao worker (remove _chapter_gs)
                 effective_gs = self._resolve_scene_gs(scene)
                 tts_config   = deep_merge(self.tts_config, effective_gs.get("tts", {}))
 
@@ -1095,7 +1135,19 @@ class UnifiedVideoEngine:
             results.sort(key=lambda x: x[0])
             scene_files = [path for _, path in results]
 
-        # 9. Concatenar e aplicar bg audio
+        # 9. Diagnóstico de áudio antes de concatenar
+        scenes_without_audio = []
+        for path in scene_files:
+            if not _probe_has_audio(path):
+                scenes_without_audio.append(os.path.basename(os.path.dirname(path)))
+
+        if scenes_without_audio:
+            print(f"\n[UVE] ⚠️ AVISO: {len(scenes_without_audio)} cena(s) sem áudio detectada(s):")
+            for s in scenes_without_audio:
+                print(f"[UVE]    - {s}")
+            print("[UVE]    O vídeo final pode ficar sem áudio ou com áudio parcial.")
+
+        # 10. Concatenar e aplicar bg audio
         slug = self.video_data.get("slug", "video_final")
         output_path = os.path.join(self.output_dir, f"{slug}.mp4")
 
@@ -1110,7 +1162,6 @@ class UnifiedVideoEngine:
                 print("[UVE] Modo de áudio por chapter ativado")
                 final_path = self._concat_and_apply_chapter_audio(scene_files, slug)
             else:
-                # Caminho original: concat simples → bg audio único
                 intermediate_path = os.path.join(self.output_dir, f"{slug}_no_bg_audio.mp4")
 
                 concat_list_path = os.path.join(self.output_dir, "concat_list.txt")
@@ -1134,6 +1185,11 @@ class UnifiedVideoEngine:
                 subprocess.run(ffmpeg_cmd, check=True, capture_output=True, text=True)
                 print(f"[UVE] Vídeo concatenado: {intermediate_path}")
 
+                # Verifica se o vídeo concatenado tem áudio
+                if not _probe_has_audio(intermediate_path):
+                    print("[UVE] ⚠️ Vídeo concatenado não tem stream de áudio!")
+                    print("[UVE]    Verifique se o TTS gerou áudio para as cenas acima.")
+
                 bg_audio_config = self.global_settings.get("background", {}).get("audio", {})
                 if bg_audio_config and bg_audio_config.get("source"):
                     final_path = self._apply_background_audio_to_video(intermediate_path, output_path)
@@ -1152,17 +1208,16 @@ class UnifiedVideoEngine:
             traceback.print_exc()
             return None
 
-        # 10. Estatísticas Remote Assets
+        # 11. Estatísticas Remote Assets
         print("\n[UVE] Estatísticas de Remote Assets:")
         final_stats = self.remote_asset_manager.get_stats()
         print(f"[UVE]    Total de slugs: {final_stats['total_slugs']}")
         print(f"[UVE]    URLs válidas: {final_stats['valid_media']}")
         print(f"[UVE]    URLs inválidas: {final_stats['invalid_media']}")
 
-        # print debug
         print("[UVE] Debug config: " + str(self.video_data.get("debug", "N/A")))
 
-        # 11. Upload YouTube
+        # 12. Upload YouTube
         if self.youtube_config and self.video_data.get("debug") is not True:
             try:
                 print("[UVE] Iniciando upload para o YouTube...")
@@ -1178,7 +1233,7 @@ class UnifiedVideoEngine:
             except Exception as e:
                 print(f"[UVE] Upload YouTube falhou: {e}")
 
-        # 12. Abrir vídeo (debug)
+        # 13. Abrir vídeo (debug)
         if self.video_data.get("debug") is True:
             try:
                 print("[UVE] Abrindo vídeo final...")

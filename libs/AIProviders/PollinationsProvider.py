@@ -16,11 +16,11 @@ class PollinationsProvider:
     
     # Modelos de fallback para imagens (em ordem de preferência) // flux, flux-2-dev, zimage, grok-imagine, imagen-4
     IMAGE_FALLBACK_MODELS = [
-        "flux",        # Modelo mais recente e avançado
-        "flux-2-dev",  # Versão de desenvolvimento do flux
-        "zimage",      # Modelo estável e rápido
-        "grok-imagine", # Alternativa criativa
-        "imagen-4"     # Modelo clássico, pode ser mais lento mas às vezes funciona melhor
+        "flux",
+        "flux-2-dev", 
+        "zimage",
+        "grok-imagine",
+        "imagen-4"
     ]
     
     # Modelos de fallback para vídeos (em ordem de preferência)
