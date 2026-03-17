@@ -348,7 +348,7 @@ class UnifiedVideoEngine:
     def __init__(self, video_data: dict):
         self.video_data = video_data
 
-        self.video_data.debug = os.getenv("DEBUG", "0").lower() in ("true", "1", "t")
+        self.video_data["debug"] = os.getenv("DEBUG", "0").lower() in ("true", "1", "t")
 
         # 1. Carrega channel_config e faz merge de global_settings
         channel_name = video_data.get("channel_name")

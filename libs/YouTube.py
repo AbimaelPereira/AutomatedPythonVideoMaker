@@ -31,7 +31,7 @@ class YouTube:
             "privacy_status": os.getenv("VIDEO_PRIVACY", "private"),
             "publish_at": os.getenv("VIDEO_PUBLISH_AT"),
             "timezone": os.getenv("TIMEZONE", "America/Sao_Paulo"),
-            "thumbnail": None,  # {"type": "file"|"directory", "source": "..."}
+            "thumbnail": None,  # {"type": "file"|"directory"|"ai", ...}
         }
         if params:
             defaults.update(params)
@@ -101,8 +101,25 @@ class YouTube:
     # ---------------------------------------------------------
     # THUMBNAIL
     # ---------------------------------------------------------
+    def _resolve_thumbnail_output_path(self) -> str:
+        """
+        Deriva o caminho de saída da thumbnail a partir do video_path.
+        Salva sempre na mesma pasta do vídeo: output/{slug}/thumbnail.png
+        """
+        video_dir = os.path.dirname(os.path.abspath(self.video_path))
+        return os.path.join(video_dir, "thumbnail.png")
+
     def _resolve_thumbnail_path(self) -> str | None:
-        """Resolve o caminho da thumbnail a partir da config."""
+        """
+        Resolve o caminho da thumbnail a partir da config.
+
+        Modos suportados:
+          - type: "file"      → caminho direto para um arquivo local
+          - type: "directory" → escolhe aleatoriamente uma imagem da pasta
+          - type: "ai"        → gera via Pollinations e salva em output/{slug}/thumbnail.png
+                                Parâmetros: prompt (obrigatório), provider, model,
+                                width, height, quality, seed, negative_prompt, enhance
+        """
         thumb_config = self.thumbnail
         if not thumb_config:
             return None
@@ -110,11 +127,10 @@ class YouTube:
         thumb_type = thumb_config.get("type", "file")
         source = thumb_config.get("source")
 
-        if not source:
-            print("[YouTube] thumbnail.source não configurado")
-            return None
-
         if thumb_type == "directory":
+            if not source:
+                print("[YouTube] thumbnail.source não configurado")
+                return None
             if not os.path.isdir(source):
                 print(f"[YouTube] Diretório de thumbnail não encontrado: {source}")
                 return None
@@ -125,11 +141,89 @@ class YouTube:
                 return None
             return os.path.join(source, random.choice(files))
 
+        if thumb_type == "ai":
+            return self._generate_thumbnail_ai(thumb_config)
+
         # type == "file"
+        if not source:
+            print("[YouTube] thumbnail.source não configurado")
+            return None
         if not os.path.exists(source):
             print(f"[YouTube] Arquivo de thumbnail não encontrado: {source}")
             return None
         return source
+
+    def _generate_thumbnail_ai(self, thumb_config: dict) -> str | None:
+        """
+        Gera thumbnail via Pollinations API e salva na pasta do vídeo.
+
+        A thumbnail é salva em output/{slug}/thumbnail.png automaticamente,
+        derivado de video_path — sem precisar configurar nenhum caminho no JSON.
+
+        Configuração esperada em thumb_config:
+            prompt          (str)  obrigatório — descrição da imagem
+            provider        (str)  opcional    — default "pollinations"
+            model           (str)  opcional    — default "flux"
+            width           (int)  opcional    — default 1280
+            height          (int)  opcional    — default 720
+            quality         (str)  opcional    — "low"|"medium"|"high"|"hd", default "hd"
+            seed            (int)  opcional    — para reproduzibilidade
+            negative_prompt (str)  opcional    — o que evitar na imagem
+            enhance         (bool) opcional    — deixar IA melhorar o prompt
+        """
+        try:
+            from libs.AIProviders import ai_manager
+        except ImportError:
+            print("[YouTube] ❌ AIProviders não disponível para geração de thumbnail")
+            return None
+
+        prompt = thumb_config.get("prompt", "")
+        if not prompt:
+            print("[YouTube] ❌ thumbnail.prompt é obrigatório para type: 'ai'")
+            return None
+
+        # Deriva o caminho de saída a partir do video_path — sempre na pasta do vídeo
+        output_path = self._resolve_thumbnail_output_path()
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+
+        generate_params = {
+            "model":           thumb_config.get("model", "flux"),
+            "width":           thumb_config.get("width", 1280),
+            "height":          thumb_config.get("height", 720),
+            "quality":         thumb_config.get("quality", "hd"),
+            "enhance":         thumb_config.get("enhance", False),
+            "negative_prompt": thumb_config.get(
+                "negative_prompt",
+                "worst quality, blurry, text, watermark, low resolution"
+            ),
+        }
+
+        if "seed" in thumb_config:
+            generate_params["seed"] = thumb_config["seed"]
+
+        provider = thumb_config.get("provider", "pollinations")
+
+        print(f"[YouTube] 🎨 Gerando thumbnail via IA (provider={provider}, model={generate_params['model']})...")
+        print(f"[YouTube] Prompt: {prompt[:80]}{'...' if len(prompt) > 80 else ''}")
+        print(f"[YouTube] Salvando em: {output_path}")
+
+        result = ai_manager.generate_image(prompt=prompt, provider=provider, **generate_params)
+
+        if not result.get("success"):
+            print(f"[YouTube] ❌ Falha ao gerar thumbnail: {result.get('error')}")
+            return None
+
+        with open(output_path, "wb") as f:
+            f.write(result["content"])
+
+        model_used = result.get("model_used", generate_params["model"])
+        attempts   = result.get("attempts", 1)
+        size_kb    = len(result["content"]) // 1024
+
+        print(f"[YouTube] ✅ Thumbnail gerada: {output_path}")
+        print(f"[YouTube]    Modelo: {model_used} | Tentativas: {attempts} | Tamanho: {size_kb}KB")
+
+        return output_path
 
     def upload_thumbnail(self, video_id: str, thumbnail_path: str):
         """Faz upload da thumbnail para o vídeo especificado."""
