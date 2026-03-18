@@ -75,6 +75,57 @@ def _probe_duration(video_path: str) -> float:
     return float(result.stdout.strip())
 
 
+def _resolve_scene_transitions(effective_gs: dict, scene: dict) -> dict | None:
+    """
+    Resolve a config de transição efetiva para uma cena.
+
+    Prioridade: scene.transitions > effective_gs.transitions
+
+    A cena pode:
+      - Não ter "transitions" → usa o global (comportamento anterior)
+      - Ter "transitions": {"enabled": false} → desativa mesmo que o global ative
+      - Ter "transitions": {"enabled": true, ...} → ativa/sobrescreve parâmetros
+    """
+    gs_transitions = effective_gs.get("transitions")
+    scene_transitions = scene.get("transitions")
+
+    if scene_transitions is None:
+        # Cena não define nada → respeita o global
+        return gs_transitions
+
+    if gs_transitions is None:
+        # Global não define nada, mas cena define → usa cena
+        return scene_transitions
+
+    # Ambos definem → deep merge (cena vence em conflitos)
+    return deep_merge(gs_transitions, scene_transitions)
+
+
+def _resolve_scene_tts(effective_gs_tts: dict, scene: dict) -> dict:
+    """
+    Resolve a config de TTS efetiva para uma cena.
+
+    Prioridade: scene.tts > effective_gs.tts
+    """
+    scene_tts = scene.get("tts", {})
+    if not scene_tts:
+        return effective_gs_tts
+    return deep_merge(effective_gs_tts, scene_tts)
+
+
+def _resolve_scene_subtitle(base_subtitle_config: dict, effective_gs: dict, scene: dict) -> dict:
+    """
+    Resolve a config de legenda efetiva para uma cena.
+
+    Prioridade: scene.subtitle > effective_gs.subtitle > base defaults
+    """
+    merged = deep_merge(base_subtitle_config, effective_gs.get("subtitle", {}))
+    scene_subtitle = scene.get("subtitle", {})
+    if scene_subtitle:
+        merged = deep_merge(merged, scene_subtitle)
+    return merged
+
+
 def _process_scene_worker(scene_data_bundle):
     """Worker isolado para processar uma cena em paralelo."""
     scene_index = scene_data_bundle["scene_index"]
@@ -102,8 +153,11 @@ def _process_scene_worker(scene_data_bundle):
         else:
             ai_cache = None
 
-        # 1. Narração
-        narration_engine = NarrationEngine(tts_config, output_dir)
+        # 1. TTS — merge cena > global
+        scene_tts_config = _resolve_scene_tts(tts_config, scene)
+
+        # 2. Narração
+        narration_engine = NarrationEngine(scene_tts_config, output_dir)
         narration_clip, duration_from_tts, subtitle_file = narration_engine.process_scene_narration(scene, scene_dir)
 
         if narration_clip is None:
@@ -111,7 +165,7 @@ def _process_scene_worker(scene_data_bundle):
         else:
             print(f"[Worker-{scene_index}] ✅ Narração gerada: {duration_from_tts:.2f}s")
 
-        # 2. Duração
+        # 3. Duração
         scene_duration = scene.get("duration", duration_from_tts)
         if not scene_duration or scene_duration < 0.1:
             scene_duration = 4.0
@@ -119,7 +173,7 @@ def _process_scene_worker(scene_data_bundle):
         else:
             print(f"[Worker-{scene_index}] Duração da cena: {scene_duration}s")
 
-        # 3. Componentes
+        # 4. Componentes
         bg_engine = BackgroundEngine(
             resolution_output=resolution_output,
             dir_clips_cache={},
@@ -142,14 +196,14 @@ def _process_scene_worker(scene_data_bundle):
                 resolution_output, effective_gs, scene_data=scene
             )
 
-        # 4. Composição
+        # 5. Composição
         final_scene_clip = [background_clip]
         if visual_clip:
             final_scene_clip.append(visual_clip)
         if subtitle_clip:
             final_scene_clip.append(subtitle_clip)
 
-        # 5. force_rgb
+        # 6. force_rgb
         safe_clips = []
         for c in final_scene_clip:
             try:
@@ -159,18 +213,18 @@ def _process_scene_worker(scene_data_bundle):
                 print(f"[Worker-{scene_index}] Falha ao aplicar force_rgb: {e}")
                 safe_clips.append(c)
 
-        # 6. Compor cena final
+        # 7. Compor cena final
         composed_clip = CompositeVideoClip(safe_clips, size=resolution_output).set_duration(scene_duration)
         composed_clip = composed_clip.fl_image(force_rgb)
 
-        # 7. Narração
+        # 8. Narração
         if narration_clip:
             composed_clip = composed_clip.set_audio(narration_clip)
         else:
             print(f"[Worker-{scene_index}] ⚠️ Cena '{scene_id}' será renderizada SEM ÁUDIO")
 
-        # 8. Transições
-        transitions_config = effective_gs.get("transitions")
+        # 9. Transições — merge cena > global (FIX: respeita scene.transitions.enabled: false)
+        transitions_config = _resolve_scene_transitions(effective_gs, scene)
         if transitions_config and transitions_config.get("enabled", False):
             print(f"[Worker-{scene_index}] Aplicando transição...")
             try:
@@ -183,8 +237,10 @@ def _process_scene_worker(scene_data_bundle):
                 print(f"[Worker-{scene_index}] Transição aplicada")
             except Exception as e:
                 print(f"[Worker-{scene_index}] Falha ao aplicar transição: {e}")
+        else:
+            print(f"[Worker-{scene_index}] Transições desabilitadas para esta cena")
 
-        # 9. Renderizar cena
+        # 10. Renderizar cena
         scene_clip_path = os.path.join(scene_dir, f"{scene_id}.mp4")
         temp_audiofile = os.path.join(scene_dir, f"{scene_id}.m4a")
 
@@ -313,7 +369,7 @@ def _create_subtitle_clip_worker(scene_duration, subtitle_file, layout_params,
         if not subtitle_file or not os.path.exists(subtitle_file):
             return None
 
-        subtitle_config = {
+        base_subtitle_config = {
             "subtitle_narration_file": subtitle_file,
             "resolution_output": resolution_output,
             "padding_bottom": layout_params.get('padding_bottom', 200),
@@ -322,11 +378,8 @@ def _create_subtitle_clip_worker(scene_duration, subtitle_file, layout_params,
             "has_visual_elements": True,
         }
 
-        global_subtitle_config = effective_gs.get("subtitle", {})
-        subtitle_config = deep_merge(subtitle_config, global_subtitle_config)
-
-        scene_subtitle_config = (scene_data or {}).get("subtitle", {})
-        subtitle_config = deep_merge(subtitle_config, scene_subtitle_config)
+        # FIX: merge correto — base < global < cena
+        subtitle_config = _resolve_scene_subtitle(base_subtitle_config, effective_gs, scene_data or {})
 
         subtitle_generator = Subtitle(params=subtitle_config)
         subtitle_clip = subtitle_generator.generate()
@@ -544,7 +597,8 @@ class UnifiedVideoEngine:
 
             return None
 
-    def _create_subtitle_clip(self, scene_duration, subtitle_file, effective_gs, has_visual_elements=False, scene_data=None):
+    def _create_subtitle_clip(self, scene_duration, subtitle_file, effective_gs,
+                               has_visual_elements=False, scene_data=None):
         try:
             if not subtitle_file or not os.path.exists(subtitle_file):
                 print("[UVE] Arquivo de legenda não encontrado")
@@ -552,7 +606,7 @@ class UnifiedVideoEngine:
 
             print(f"[UVE] Gerando legendas do arquivo: {subtitle_file}")
 
-            subtitle_config = {
+            base_subtitle_config = {
                 "subtitle_narration_file": subtitle_file,
                 "resolution_output": self.resolution_output,
                 "padding_bottom": self.layout_params.get('padding_bottom', 200),
@@ -561,11 +615,8 @@ class UnifiedVideoEngine:
                 "has_visual_elements": True,
             }
 
-            global_subtitle_config = effective_gs.get("subtitle", {})
-            subtitle_config = deep_merge(subtitle_config, global_subtitle_config)
-
-            scene_subtitle_config = (scene_data or {}).get("subtitle", {})
-            subtitle_config = deep_merge(subtitle_config, scene_subtitle_config)
+            # FIX: merge correto — base < global < cena
+            subtitle_config = _resolve_scene_subtitle(base_subtitle_config, effective_gs, scene_data or {})
 
             subtitle_generator = Subtitle(params=subtitle_config)
             subtitle_clip = subtitle_generator.generate()
@@ -687,7 +738,6 @@ class UnifiedVideoEngine:
             has_audio = _probe_has_audio(video_path)
 
             if not has_audio:
-                # Sem narração: aplica música de fundo simples (sem ducking)
                 print("[UVE] ⚠️ Vídeo sem stream de áudio (narração ausente).")
                 print("[UVE]    Aplicando música de fundo em volume cheio (ducking ignorado)...")
                 return self._apply_background_audio_simple(
@@ -849,7 +899,6 @@ class UnifiedVideoEngine:
 
         print(f"[UVE] Cena {scene_index + 1} renderizada: {os.path.basename(scene_clip_path)}")
 
-        # Verifica se a cena renderizada tem áudio
         if not _probe_has_audio(scene_clip_path):
             print(f"[UVE] ⚠️ ATENÇÃO: cena {scene_index + 1} renderizada sem stream de áudio!")
 
@@ -994,7 +1043,12 @@ class UnifiedVideoEngine:
                 print(f"\n[UVE] Processando cena {scene_index + 1}/{total_scenes}: {scene_id}")
 
                 effective_gs = self._resolve_scene_gs(scene)
-                tts_config   = deep_merge(self.tts_config, effective_gs.get("tts", {}))
+
+                # FIX: tts merge — global < chapter < cena
+                tts_config = _resolve_scene_tts(
+                    deep_merge(self.tts_config, effective_gs.get("tts", {})),
+                    scene
+                )
 
                 scene_dir = os.path.join(self.output_dir, scene_id)
                 os.makedirs(scene_dir, exist_ok=True)
@@ -1061,8 +1115,8 @@ class UnifiedVideoEngine:
                     else:
                         print(f"[UVE] ⚠️ Cena '{scene_id}' será renderizada SEM ÁUDIO")
 
-                    # 8. Transições
-                    transitions_config = effective_gs.get("transitions")
+                    # 8. Transições — FIX: merge cena > global, respeita enabled: false
+                    transitions_config = _resolve_scene_transitions(effective_gs, scene)
                     if transitions_config and transitions_config.get("enabled", False):
                         print(f"[UVE] Aplicando transição na cena {scene_index + 1}...")
                         try:
@@ -1076,7 +1130,7 @@ class UnifiedVideoEngine:
                         except Exception as e:
                             print(f"[UVE] Falha ao aplicar transição: {e}")
                     else:
-                        print(f"[UVE] Transições desabilitadas")
+                        print(f"[UVE] Transições desabilitadas para esta cena")
 
                     scene_clip_path = self._render_scene(
                         scene_index, scene_id, total_scenes,
@@ -1096,7 +1150,12 @@ class UnifiedVideoEngine:
             scene_bundles = []
             for scene_index, scene in enumerate(scenes):
                 effective_gs = self._resolve_scene_gs(scene)
-                tts_config   = deep_merge(self.tts_config, effective_gs.get("tts", {}))
+
+                # FIX: tts merge — global < chapter < cena (bundle já leva config resolvida)
+                tts_config = _resolve_scene_tts(
+                    deep_merge(self.tts_config, effective_gs.get("tts", {})),
+                    scene
+                )
 
                 bundle = {
                     "scene_index": scene_index,
@@ -1185,7 +1244,6 @@ class UnifiedVideoEngine:
                 subprocess.run(ffmpeg_cmd, check=True, capture_output=True, text=True)
                 print(f"[UVE] Vídeo concatenado: {intermediate_path}")
 
-                # Verifica se o vídeo concatenado tem áudio
                 if not _probe_has_audio(intermediate_path):
                     print("[UVE] ⚠️ Vídeo concatenado não tem stream de áudio!")
                     print("[UVE]    Verifique se o TTS gerou áudio para as cenas acima.")
