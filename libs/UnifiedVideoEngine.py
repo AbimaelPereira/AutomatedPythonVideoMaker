@@ -75,6 +75,67 @@ def _probe_duration(video_path: str) -> float:
     return float(result.stdout.strip())
 
 
+def _add_silent_audio_track(video_path: str, output_path: str) -> str:
+    """
+    Adiciona uma faixa de áudio silenciosa a um vídeo que não tem stream de áudio.
+    Isso garante que todos os clipes tenham streams consistentes para o FFmpeg concat.
+
+    Args:
+        video_path:  Caminho do vídeo sem áudio
+        output_path: Caminho de saída com faixa silenciosa
+
+    Returns:
+        output_path se bem-sucedido, video_path como fallback
+    """
+    try:
+        cmd = [
+            "ffmpeg", "-y",
+            "-i", video_path,
+            "-f", "lavfi", "-i", "anullsrc=channel_layout=stereo:sample_rate=44100",
+            "-map", "0:v:0", "-map", "1:a:0",
+            "-c:v", "copy",
+            "-c:a", "aac", "-b:a", "192k", "-ar", "44100", "-ac", "2",
+            "-shortest",
+            output_path
+        ]
+        subprocess.run(cmd, check=True, capture_output=True, text=True)
+        print(f"[UVE] ✅ Faixa de silêncio adicionada: {os.path.basename(output_path)}")
+        return output_path
+    except subprocess.CalledProcessError as e:
+        stderr = e.stderr if isinstance(e.stderr, str) else e.stderr.decode(errors="replace")
+        print(f"[UVE] ❌ Falha ao adicionar faixa silenciosa: {stderr}")
+        return video_path
+
+
+def _ensure_audio_stream(video_path: str, scene_dir: str, scene_id: str) -> str:
+    """
+    Garante que o vídeo tenha stream de áudio.
+    Se não tiver, cria uma versão com faixa de silêncio e retorna o novo caminho.
+    O arquivo original não é removido pois pode ser necessário para debug.
+
+    Args:
+        video_path: Caminho do vídeo renderizado
+        scene_dir:  Diretório da cena (para salvar o arquivo com silêncio)
+        scene_id:   ID da cena (para nomear o arquivo)
+
+    Returns:
+        Caminho do vídeo garantidamente com stream de áudio
+    """
+    if _probe_has_audio(video_path):
+        return video_path
+
+    print(f"[UVE] ⚠️  Cena '{scene_id}' sem áudio — adicionando faixa de silêncio...")
+    silent_path = os.path.join(scene_dir, f"{scene_id}_silent_audio.mp4")
+    result = _add_silent_audio_track(video_path, silent_path)
+
+    if result != video_path and os.path.exists(result):
+        return result
+
+    # Fallback: retorna o original mesmo sem áudio (concat pode falhar, mas já logamos)
+    print(f"[UVE] ⚠️  Não foi possível adicionar silêncio — usando vídeo original sem áudio")
+    return video_path
+
+
 def _resolve_scene_transitions(effective_gs: dict, scene: dict) -> dict | None:
     """
     Resolve a config de transição efetiva para uma cena.
@@ -221,7 +282,7 @@ def _process_scene_worker(scene_data_bundle):
         if narration_clip:
             composed_clip = composed_clip.set_audio(narration_clip)
         else:
-            print(f"[Worker-{scene_index}] ⚠️ Cena '{scene_id}' será renderizada SEM ÁUDIO")
+            print(f"[Worker-{scene_index}] ⚠️ Cena '{scene_id}' sem narração — será renderizada com silêncio")
 
         # 9. Transições — merge cena > global (FIX: respeita scene.transitions.enabled: false)
         transitions_config = _resolve_scene_transitions(effective_gs, scene)
@@ -262,9 +323,8 @@ def _process_scene_worker(scene_data_bundle):
 
         print(f"[Worker-{scene_index}] Cena renderizada: {os.path.basename(scene_clip_path)}")
 
-        # Verifica se a cena renderizada tem áudio
-        if not _probe_has_audio(scene_clip_path):
-            print(f"[Worker-{scene_index}] ⚠️ ATENÇÃO: cena renderizada não tem stream de áudio!")
+        # 11. FIX: Garante stream de áudio para concatenação consistente
+        scene_clip_path = _ensure_audio_stream(scene_clip_path, scene_dir, scene_id)
 
         try:
             composed_clip.close()
@@ -899,8 +959,8 @@ class UnifiedVideoEngine:
 
         print(f"[UVE] Cena {scene_index + 1} renderizada: {os.path.basename(scene_clip_path)}")
 
-        if not _probe_has_audio(scene_clip_path):
-            print(f"[UVE] ⚠️ ATENÇÃO: cena {scene_index + 1} renderizada sem stream de áudio!")
+        # FIX: Garante stream de áudio para concatenação consistente
+        scene_clip_path = _ensure_audio_stream(scene_clip_path, scene_dir, scene_id)
 
         try:
             composed_clip.close()
@@ -1113,7 +1173,7 @@ class UnifiedVideoEngine:
                     if narration_clip:
                         composed_clip = composed_clip.set_audio(narration_clip)
                     else:
-                        print(f"[UVE] ⚠️ Cena '{scene_id}' será renderizada SEM ÁUDIO")
+                        print(f"[UVE] ⚠️ Cena '{scene_id}' sem narração — será renderizada com silêncio")
 
                     # 8. Transições — FIX: merge cena > global, respeita enabled: false
                     transitions_config = _resolve_scene_transitions(effective_gs, scene)
@@ -1201,10 +1261,9 @@ class UnifiedVideoEngine:
                 scenes_without_audio.append(os.path.basename(os.path.dirname(path)))
 
         if scenes_without_audio:
-            print(f"\n[UVE] ⚠️ AVISO: {len(scenes_without_audio)} cena(s) sem áudio detectada(s):")
+            print(f"\n[UVE] ⚠️ AVISO: {len(scenes_without_audio)} cena(s) ainda sem áudio após correção:")
             for s in scenes_without_audio:
                 print(f"[UVE]    - {s}")
-            print("[UVE]    O vídeo final pode ficar sem áudio ou com áudio parcial.")
 
         # 10. Concatenar e aplicar bg audio
         slug = self.video_data.get("slug", "video_final")
@@ -1305,5 +1364,30 @@ class UnifiedVideoEngine:
 
         print(f"\n[UVE] Processamento concluído com sucesso!")
         print(f"[UVE] Arquivo final: {final_path}")
+
+        # 14 se debug for false e tiver uploadado, pode remover a pasta de saída para economizar espaço
+        if self.video_data.get("debug") is not True:
+            # try:
+            #     shutil.rmtree(self.output_dir)
+            #     print(f"[UVE] Pasta de saída removida: {self.output_dir}")
+            # except Exception as e:
+            #     print(f"[UVE] Falha ao remover pasta de saída: {e}")
+            
+            # se tiver uploadado para o youtube, pode remover a pasta inteira do video, se não deixa somente o arquivo final
+            if self.youtube_config:
+                try:
+                    shutil.rmtree(self.output_dir)
+                    print(f"[UVE] Pasta de saída removida: {self.output_dir}")
+                except Exception as e:
+                    print(f"[UVE] Falha ao remover pasta de saída: {e}")
+            else:
+                try:
+                    for root, dirs, files in os.walk(self.output_dir):
+                        for file in files:
+                            if file != os.path.basename(final_path):
+                                os.remove(os.path.join(root, file))
+                    print(f"[UVE] Arquivos temporários removidos, mantendo apenas o final: {final_path}")
+                except Exception as e:
+                    print(f"[UVE] Falha ao limpar arquivos temporários: {e}")
 
         return final_path

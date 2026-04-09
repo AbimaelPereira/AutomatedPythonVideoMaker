@@ -75,11 +75,13 @@ class EdgeTTS:
     ) -> list:
         all_voices = EdgeTTS._get_all_voices()
 
+
         if language:
             all_voices = [v for v in all_voices if language.lower() in v["Locale"].lower()]
         if gender:
             gender_en = "Male" if gender.lower() in ("masculino", "male", "m") else "Female"
             all_voices = [v for v in all_voices if v.get("Gender") == gender_en]
+        print(all_voices)  # Exibe a estrutura de uma voz para referência
 
         if not all_voices:
             print("[EdgeTTS] Nenhuma voz encontrada com os filtros aplicados.")
@@ -210,3 +212,16 @@ class EdgeTTS:
             "audio_total_duration": duration,
             "word_boundaries":      word_boundaries,
         }
+
+if __name__ == "__main__":
+    # gerar demos de voz masculina com "pitch": "-40Hz" "rate": "+20%"
+    EdgeTTS.list_voices(
+        language="pt-BR",
+        gender="Male",
+        generate_audio=True,
+        text="Olá! Esta é uma demonstração de voz masculina com pitch mais grave e ritmo mais lento.",
+        output_dir="test_voices/edge",
+        rate="+20%",
+        pitch="-40Hz",
+    )
+
