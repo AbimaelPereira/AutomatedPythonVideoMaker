@@ -81,12 +81,18 @@ class LayoutEngine:
         """
         Calcula posições para empilhar itens visualmente na área verde (entre Topo e Legenda).
         Regra da Imagem: 'VISUAIS: SEMPRE CENTRALIZADOS HORIZONTALMENTE'
+
+        Suporte a posicionamento absoluto por item:
+          - layout.position: "center"          → centraliza na tela cheia (ignora padding_top/bottom)
+          - layout.position: "top" / "bottom"  → âncora com margin
+          - layout.position: ["center","50%"]  → posição explícita [x, y]
+        Itens com position explícita são posicionados individualmente e removidos do stack normal.
         """
         
         # 1. Definir a "Arena" (Espaços disponíveis)
         W, H = config.width, config.height
         pad_top = config.padding_top
-        pad_bot = config.padding_bottom # Altura da caixa de legenda azul
+        pad_bot = config.padding_bottom
         pad_side = config.padding_side
         gap_percent = config.stack_gap_percent
 
@@ -99,90 +105,115 @@ class LayoutEngine:
         if not visual_items:
             return []
 
-        # 2. Cálculo "Dry Run"
-        processed_items = []
-        
-        gap_px = int(H * gap_percent)
-        total_stack_height = 0
+        # --- Separa itens com posição explícita dos itens do stack normal ---
+        EXPLICIT_POSITIONS = {"center", "top", "bottom"}
 
-        for item in visual_items:
-            # Tenta pegar tamanho original, senão assume 16:9 landscape padrão
-            orig_w, orig_h = item.get('original_size', (1920, 1080)) 
+        stack_items   = []  # índice original → entra no stack
+        explicit_items = [] # (índice original, item, position_value)
+
+        for idx, item in enumerate(visual_items):
+            layout_data = item.get('layout', {})
+            pos = layout_data.get('position')
+            if pos is not None and (
+                (isinstance(pos, str) and pos in EXPLICIT_POSITIONS)
+                or isinstance(pos, (list, tuple))
+            ):
+                explicit_items.append((idx, item, pos))
+            else:
+                stack_items.append((idx, item))
+
+        # Pré-aloca resultado com None para manter índice original
+        final_results = [None] * len(visual_items)
+
+        # --- Posiciona itens explícitos ---
+        for idx, item, pos in explicit_items:
+            orig_w, orig_h = item.get('original_size', (1920, 1080))
             if orig_h == 0: orig_h = 1080
             aspect_ratio = orig_w / orig_h
-            
-            # Layout data do JSON
+
             layout_data = item.get('layout', {})
-            
-            # Largura desejada: padrão 100% da caixa interna (inner_width)
-            req_width = layout_data.get('width', 1.0) 
-            
-            target_w = LayoutEngine.calculate_dimension(req_width, inner_width)
-            
-            # Altura proporcional
-            target_h = int(target_w / aspect_ratio)
-            
-            processed_items.append({
-                'target_w': target_w,
-                'target_h': target_h,
-                'layout': layout_data 
-            })
-            
-            total_stack_height += target_h
+            req_width   = layout_data.get('width', 0.8)
+            target_w    = LayoutEngine.calculate_dimension(req_width, inner_width)
+            target_h    = int(target_w / aspect_ratio)
 
-        # Adicionar o espaço dos gaps na altura total
-        if len(processed_items) > 1:
-            total_stack_height += (len(processed_items) - 1) * gap_px
+            if target_w < 2: target_w = 2
+            if target_h < 2: target_h = 2
 
-        # 3. Tratamento de Overflow (Escalonamento)
-        # Se a pilha for maior que o espaço verde disponível, reduz tudo proporcionalmente
-        scale_factor = 1.0
-        if total_stack_height > available_visual_height and total_stack_height > 0:
-            scale_factor = available_visual_height / total_stack_height
-            # Reduz um pouco mais para garantir margem de respiro
-            scale_factor *= 0.95 
-        
-        # 4. Calcular posições finais
-        final_results = []
-        
-        # Recalcula altura total escalonada
-        final_total_height_scaled = 0
-        for p in processed_items:
-            final_total_height_scaled += int(p['target_h'] * scale_factor)
-        
-        if len(processed_items) > 1:
-            final_total_height_scaled += (len(processed_items) - 1) * (gap_px * scale_factor)
+            margin = layout_data.get('margin', 0)
 
-        # Definir ponto de partida Y para CENTRALIZAR O BLOCO VISUAL VERTICALMENTE
-        # na área disponível (pad_top até H-pad_bot)
-        free_space = available_visual_height - final_total_height_scaled
-        current_y = pad_top + (free_space // 2)
+            fx, fy = LayoutEngine.get_position(pos, (target_w, target_h), (W, H), margin)
 
-        for p_item in processed_items:
-            # Aplicar escala nas dimensões
-            final_w = int(p_item['target_w'] * scale_factor)
-            final_h = int(p_item['target_h'] * scale_factor)
-            
-            # Segurança
-            if final_w < 2: final_w = 2
-            if final_h < 2: final_h = 2
+            final_results[idx] = {
+                'final_size': (target_w, target_h),
+                'final_position': (fx, fy),
+            }
 
-            # Calcular X (Sempre centralizado horizontalmente segundo a imagem)
-            pos_x_req = p_item['layout'].get('position_x')
-            
-            if pos_x_req is not None:
-                offset_x = LayoutEngine.calculate_dimension(pos_x_req, inner_width)
-                final_x = pad_side + offset_x
-            else:
-                # Centro exato da tela
-                final_x = (W - final_w) // 2
+        # --- Stack normal (comportamento anterior) ---
+        if stack_items:
+            gap_px = int(H * gap_percent)
+            total_stack_height = 0
+            processed_items = []
 
-            final_results.append({
-                'final_size': (final_w, final_h),
-                'final_position': (final_x, int(current_y))
-            })
-            
-            # Avança Y
-            current_y += final_h + (gap_px * scale_factor)
+            for _, item in stack_items:
+                orig_w, orig_h = item.get('original_size', (1920, 1080))
+                if orig_h == 0: orig_h = 1080
+                aspect_ratio = orig_w / orig_h
+
+                layout_data = item.get('layout', {})
+                req_width   = layout_data.get('width', 1.0)
+                target_w    = LayoutEngine.calculate_dimension(req_width, inner_width)
+                target_h    = int(target_w / aspect_ratio)
+
+                processed_items.append({
+                    'target_w': target_w,
+                    'target_h': target_h,
+                    'layout': layout_data,
+                })
+                total_stack_height += target_h
+
+            if len(processed_items) > 1:
+                total_stack_height += (len(processed_items) - 1) * gap_px
+
+            scale_factor = 1.0
+            if total_stack_height > available_visual_height and total_stack_height > 0:
+                scale_factor = available_visual_height / total_stack_height
+                scale_factor *= 0.95
+
+            final_total_height_scaled = 0
+            for p in processed_items:
+                final_total_height_scaled += int(p['target_h'] * scale_factor)
+            if len(processed_items) > 1:
+                final_total_height_scaled += (len(processed_items) - 1) * int(gap_px * scale_factor)
+
+            free_space = available_visual_height - final_total_height_scaled
+            current_y  = pad_top + (free_space // 2)
+
+            for (orig_idx, _), p_item in zip(stack_items, processed_items):
+                final_w = int(p_item['target_w'] * scale_factor)
+                final_h = int(p_item['target_h'] * scale_factor)
+                if final_w < 2: final_w = 2
+                if final_h < 2: final_h = 2
+
+                pos_x_req = p_item['layout'].get('position_x')
+                if pos_x_req is not None:
+                    offset_x = LayoutEngine.calculate_dimension(pos_x_req, inner_width)
+                    final_x  = pad_side + offset_x
+                else:
+                    final_x = (W - final_w) // 2
+
+                final_results[orig_idx] = {
+                    'final_size': (final_w, final_h),
+                    'final_position': (final_x, int(current_y)),
+                }
+
+                current_y += final_h + (gap_px * scale_factor)
+
+        # Garante que nenhum slot ficou None (fallback centro)
+        for i in range(len(final_results)):
+            if final_results[i] is None:
+                final_results[i] = {
+                    'final_size': (100, 100),
+                    'final_position': (W // 2 - 50, H // 2 - 50),
+                }
 
         return final_results
