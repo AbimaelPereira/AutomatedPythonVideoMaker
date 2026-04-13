@@ -3,6 +3,7 @@ import json
 import hashlib
 from typing import Dict, List, Tuple, Optional
 from moviepy.editor import ColorClip, ImageClip, VideoFileClip, CompositeVideoClip, concatenate_videoclips
+from moviepy.video.fx.all import crop, resize as mpy_resize
 from libs.utils import deep_merge
 from libs.VisualClip import force_rgb
 from libs.MediaDownloader import MediaDownloader
@@ -20,7 +21,6 @@ except ImportError:
     ai_manager = None
     AICache = None
 
-
 def _hex_to_rgb(hex_value):
     if not isinstance(hex_value, str):
         return tuple(hex_value)
@@ -32,6 +32,21 @@ def _hex_to_rgb(hex_value):
         pass
     return (0, 0, 0)
 
+def _apply_cover(clip, target_w: int, target_h: int):
+    """Scale + crop to fill target resolution (CSS cover behavior), preserving aspect ratio."""
+    w, h = clip.size
+    scale = max(target_w / w, target_h / h)
+    new_w, new_h = int(w * scale), int(h * scale)
+    clip = mpy_resize(clip, newsize=(new_w, new_h))
+    x_center, y_center = new_w / 2, new_h / 2
+    clip = crop(
+        clip,
+        x1=int(x_center - target_w / 2),
+        y1=int(y_center - target_h / 2),
+        x2=int(x_center + target_w / 2),
+        y2=int(y_center + target_h / 2),
+    )
+    return clip
 
 class BackgroundEngine:
     def __init__(self, resolution_output: Tuple[int, int], dir_clips_cache: Dict[str, List],
@@ -59,6 +74,24 @@ class BackgroundEngine:
 
         clip = ImageClip(temp_blur_path).resize(newsize=self.resolution_output).set_duration(scene_duration)
         return clip.fl_image(force_rgb)
+
+    def _fit_image(self, path: str, fit_mode: str, scene_duration: float):
+        """Load an image and apply the requested fit mode."""
+        target_w, target_h = self.resolution_output
+        if fit_mode == "contain-blur":
+            blur_clip = self._create_blurred_background(path, scene_duration)
+            main_clip = ImageClip(path).set_duration(scene_duration)
+            w, h = main_clip.size
+            scale = min(target_w / w, target_h / h)
+            main_clip = main_clip.resize(newsize=(int(w * scale), int(h * scale)))
+            main_clip = main_clip.set_position("center")
+            final_clip = CompositeVideoClip([blur_clip, main_clip], size=self.resolution_output).set_duration(scene_duration)
+            return final_clip.fl_image(force_rgb)
+        else:
+            # Default: cover — scale to fill, then crop (no distortion)
+            clip = ImageClip(path).set_duration(scene_duration)
+            clip = _apply_cover(clip, target_w, target_h)
+            return clip.fl_image(force_rgb)
 
     def _build_image(self, cfg: Dict, scene_duration: float, storage_dir: str):
         src_type = cfg.get("type", "image")
@@ -104,19 +137,7 @@ class BackgroundEngine:
                         self.remote_asset_manager.register_url(register_slug, src)
 
                     fit_mode = cfg.get("fit_mode", "cover")
-                    if fit_mode == "contain-blur":
-                        blur_clip = self._create_blurred_background(path, scene_duration)
-                        main_clip = ImageClip(path).set_duration(scene_duration)
-                        w, h = main_clip.size
-                        target_w, target_h = self.resolution_output
-                        scale = min(target_w / w, target_h / h)
-                        main_clip = main_clip.resize(newsize=(int(w * scale), int(h * scale)))
-                        main_clip = main_clip.set_position("center")
-                        final_clip = CompositeVideoClip([blur_clip, main_clip], size=self.resolution_output).set_duration(scene_duration)
-                        return final_clip.fl_image(force_rgb)
-                    else:
-                        clip = ImageClip(path).resize(newsize=self.resolution_output).set_duration(scene_duration)
-                        return clip.fl_image(force_rgb)
+                    return self._fit_image(path, fit_mode, scene_duration)
 
                 print(f"[BackgroundEngine] Falha no download, tentando próxima URL...")
 
@@ -134,24 +155,20 @@ class BackgroundEngine:
             self.remote_asset_manager.register_url(register_slug, src)
 
         fit_mode = cfg.get("fit_mode", "cover")
+        return self._fit_image(path, fit_mode, scene_duration)
 
-        if fit_mode == "contain-blur":
-            blur_clip = self._create_blurred_background(path, scene_duration)
-            main_clip = ImageClip(path).set_duration(scene_duration)
-            w, h = main_clip.size
-            target_w, target_h = self.resolution_output
-            scale = min(target_w / w, target_h / h)
-            main_clip = main_clip.resize(newsize=(int(w * scale), int(h * scale)))
-            main_clip = main_clip.set_position("center")
-            final_clip = CompositeVideoClip([blur_clip, main_clip], size=self.resolution_output).set_duration(scene_duration)
-            return final_clip.fl_image(force_rgb)
-        else:
-            clip = ImageClip(path).resize(newsize=self.resolution_output).set_duration(scene_duration)
-            return clip.fl_image(force_rgb)
+    def _fit_video(self, clip, fit_mode: str):
+        """Apply fit mode to a video clip."""
+        target_w, target_h = self.resolution_output
+        if fit_mode == "cover":
+            return _apply_cover(clip, target_w, target_h)
+        # contain / stretch fallback
+        return clip.resize(newsize=self.resolution_output)
 
     def _build_video(self, cfg: Dict, scene_duration: float, storage_dir: str):
         src_type = cfg.get("type", "video")
         src = cfg.get("source")
+        fit_mode = cfg.get("fit_mode", "cover")
 
         if src_type == "remote_asset":
             if not self.remote_asset_manager:
@@ -192,7 +209,8 @@ class BackgroundEngine:
                     if register_slug and src.startswith("http"):
                         self.remote_asset_manager.register_url(register_slug, src)
 
-                    clip = VideoFileClip(path, audio=False).resize(newsize=self.resolution_output)
+                    clip = VideoFileClip(path, audio=False)
+                    clip = self._fit_video(clip, fit_mode)
                     if clip.duration < scene_duration:
                         clip = clip.loop(duration=scene_duration)
                     else:
@@ -226,7 +244,8 @@ class BackgroundEngine:
         if register_slug and self.remote_asset_manager and src.startswith("http"):
             self.remote_asset_manager.register_url(register_slug, src)
 
-        clip = VideoFileClip(path, audio=False).resize(newsize=self.resolution_output)
+        clip = VideoFileClip(path, audio=False)
+        clip = self._fit_video(clip, fit_mode)
         if clip.duration < scene_duration:
             clip = clip.loop(duration=scene_duration)
         else:
