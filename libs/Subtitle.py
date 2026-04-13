@@ -321,6 +321,8 @@ class Subtitle:
             if not txt:
                 continue
 
+            txt = txt.translate(str.maketrans("", "", ",.?!;:\"()[]{}<>-—_"))
+
             start    = sub.start.total_seconds()
             end      = sub.end.total_seconds()
             duration = max(0.01, end - start)
