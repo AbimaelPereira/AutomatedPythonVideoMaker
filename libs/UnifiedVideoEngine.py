@@ -1386,6 +1386,12 @@ class UnifiedVideoEngine:
                         for file in files:
                             if file != os.path.basename(final_path):
                                 os.remove(os.path.join(root, file))
+
+                    # mover o final para a pasta pai e remover a pasta de saída
+                    parent_dir = os.path.dirname(self.output_dir)
+                    shutil.move(final_path, os.path.join(parent_dir, os.path.basename(final_path))) # move o arquivo final para a pasta pai
+                    shutil.rmtree(self.output_dir) # remove a pasta de saída após mover o final para a pasta pai
+
                     print(f"[UVE] Arquivos temporários removidos, mantendo apenas o final: {final_path}")
                 except Exception as e:
                     print(f"[UVE] Falha ao limpar arquivos temporários: {e}")

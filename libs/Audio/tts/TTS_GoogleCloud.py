@@ -30,7 +30,7 @@ MODEL_INFO = {
         "free_tier_chars":  1_000_000,
         "price_per_million": 30.0,
         "filter":           lambda name: "Chirp3-HD" in name,
-        "api_version":      "v1beta1",       # endpoint beta
+        "api_version":      "v1beta1",
     },
     "Neural2": {
         "label":            "Neural2",
@@ -119,7 +119,7 @@ class GoogleCloudTTS:
             "show_usage_report":       True,
             # Whisper — timestamps reais pós-síntese
             "whisper_enabled":         True,
-            "whisper_model":           "base",   # tiny/base/small/medium/large
+            "whisper_model":           "base",
             "whisper_language":        "pt",
         }
         if params:
@@ -285,7 +285,6 @@ class GoogleCloudTTS:
         """
         token = self._get_access_token()
 
-        # Chirp3-HD usa v1beta1, demais usam v1
         api_ver = "v1beta1" if (model == "Chirp3-HD" or (not model)) else "v1"
         url = self._api_url(api_ver, "voices")
         if language:
@@ -297,7 +296,6 @@ class GoogleCloudTTS:
 
         voices = resp.json().get("voices", [])
 
-        # Filtro de modelo
         if model:
             if model not in MODEL_INFO:
                 raise ValueError(f"Modelo '{model}' inválido. Use: {list(MODEL_INFO.keys())}")
@@ -308,7 +306,6 @@ class GoogleCloudTTS:
             )]
             voices = known
 
-        # Filtro de gênero
         if gender:
             g_en = "MALE" if gender.lower() in ("masculino", "male", "m") else "FEMALE"
             voices = [v for v in voices if v.get("ssmlGender", "").upper() == g_en]
@@ -393,7 +390,6 @@ class GoogleCloudTTS:
 
         audio_config = {"audioEncoding": "MP3", "volumeGainDb": self.volume_gain_db}
 
-        # speaking_rate e pitch não são suportados pelo Chirp3-HD
         if self.model != "Chirp3-HD":
             audio_config["speakingRate"] = self.speaking_rate
             audio_config["pitch"]        = self.pitch
@@ -425,13 +421,60 @@ class GoogleCloudTTS:
     # TIMESTAMPS VIA WHISPER
     # ------------------------------------------------------------------
 
-    def _generate_word_boundaries_whisper(self, audio_path: str) -> list:
+    @staticmethod
+    def _sanitize_word_boundaries(word_boundaries: list, expected_word_count: int,
+                                  audio_duration_ms: int) -> list:
+        """
+        Remove artefatos de alucinação do Whisper:
+
+        1. Timestamps com start < 0 ou end <= start (inválidos)
+        2. Sobreposição com entrada anterior (start < prev_end)
+        3. Timestamps além da duração real do áudio — causa raiz das
+           repetições alucinadas no final (ex: "Apartamento" extra)
+        4. Palavras excedentes além do esperado pelo texto (margem +2)
+
+        audio_duration_ms: duração do MP3 em ms — âncora hard para truncar
+                           alucinações no final.
+        """
+        if not word_boundaries:
+            return []
+
+        sorted_wb = sorted(word_boundaries, key=lambda w: w["start"])
+
+        # Margem de tolerância no fim do áudio (100ms) para não cortar a última palavra real
+        audio_limit = audio_duration_ms + 100
+
+        filtered = []
+        prev_end  = -1
+
+        for w in sorted_wb:
+            if w["start"] < 0 or w["end"] <= w["start"]:
+                continue
+            if w["start"] < prev_end:
+                continue
+            # Descarta qualquer palavra que começa além do fim do áudio
+            if w["start"] >= audio_limit:
+                break
+            filtered.append(w)
+            prev_end = w["end"]
+
+        # Trunca ao nº esperado de palavras + margem para pontuação/contrações
+        if expected_word_count > 0 and len(filtered) > expected_word_count + 2:
+            filtered = filtered[:expected_word_count + 2]
+
+        return filtered
+
+    def _generate_word_boundaries_whisper(self, audio_path: str, audio_duration_ms: int) -> list:
         """
         Usa Whisper localmente para extrair timestamps reais de cada palavra
         a partir do MP3 já sintetizado pelo Google TTS.
 
         O Google Cloud TTS não retorna word boundaries na resposta da API —
         este método resolve isso transcrevendo o próprio áudio gerado.
+
+        Args:
+            audio_path: caminho do MP3 sintetizado
+            audio_duration_ms: duração real do áudio em ms (âncora anti-alucinação)
 
         Returns:
             Lista de {"word": str, "start": int(ms), "end": int(ms)}
@@ -451,7 +494,7 @@ class GoogleCloudTTS:
                 audio_path,
                 word_timestamps=True,
                 language=self.whisper_language,
-                initial_prompt=self.text or None
+                initial_prompt=self.text or None,
             )
 
             word_boundaries = []
@@ -465,6 +508,11 @@ class GoogleCloudTTS:
                         "start": int(w["start"] * 1000),
                         "end":   int(w["end"]   * 1000),
                     })
+
+            expected = len(self.text.split()) if self.text else 0
+            word_boundaries = self._sanitize_word_boundaries(
+                word_boundaries, expected, audio_duration_ms
+            )
 
             if word_boundaries:
                 print(f"[GoogleCloudTTS] ✅ Whisper: {len(word_boundaries)} palavras com timestamps reais")
@@ -529,9 +577,10 @@ class GoogleCloudTTS:
 
         Fluxo:
           1. Chama a API Google TTS → salva MP3
-          2. Tenta extrair word boundaries reais via Whisper (pós-síntese)
-          3. Se Whisper falhar ou estiver desabilitado, usa estimativa por duração
-          4. Gera SRT e retorna dict completo incluindo word_boundaries
+          2. Mede duração real do áudio (âncora anti-alucinação para o Whisper)
+          3. Tenta extrair word boundaries reais via Whisper (pós-síntese)
+          4. Se Whisper falhar ou estiver desabilitado, usa estimativa por duração
+          5. Gera SRT e retorna dict completo incluindo word_boundaries
 
         Returns:
             {
@@ -556,10 +605,11 @@ class GoogleCloudTTS:
         with open(audio_path, "wb") as f:
             f.write(audio_bytes)
 
-        duration = MP3(audio_path).info.length
+        duration        = MP3(audio_path).info.length
+        duration_ms     = int(duration * 1000)
 
-        # 2. Timestamps reais via Whisper
-        word_boundaries = self._generate_word_boundaries_whisper(audio_path)
+        # 2. Timestamps reais via Whisper — passa duração como âncora
+        word_boundaries = self._generate_word_boundaries_whisper(audio_path, duration_ms)
 
         # 3. SRT — usa boundaries reais se disponíveis, senão estimativa
         if word_boundaries:

@@ -65,6 +65,13 @@ class BackgroundEngine:
         return ColorClip(size=self.resolution_output, color=color).set_duration(scene_duration)
 
     def _create_blurred_background(self, image_path: str, scene_duration: float):
+        ext = os.path.splitext(image_path)[-1].lower()
+        if ext == '.webp':
+            pil_img = Image.open(image_path).convert('RGB')
+            temp_path = image_path.replace('.webp', '_blur_temp.png')
+            pil_img.save(temp_path, 'PNG')
+            image_path = temp_path
+
         pil_img = Image.open(image_path).convert("RGB")
         pil_img = pil_img.resize(self.resolution_output, Image.LANCZOS)
         pil_img = pil_img.filter(ImageFilter.GaussianBlur(radius=50))
@@ -75,9 +82,23 @@ class BackgroundEngine:
         clip = ImageClip(temp_blur_path).resize(newsize=self.resolution_output).set_duration(scene_duration)
         return clip.fl_image(force_rgb)
 
-    def _fit_image(self, path: str, fit_mode: str, scene_duration: float):
+    def _fit_image(self, path: str, fit_mode: str, scene_duration: float, cfg: Dict = None):
         """Load an image and apply the requested fit mode."""
         target_w, target_h = self.resolution_output
+        
+        # Normalizar WebP para PNG para compatibilidade com moviepy
+        ext = os.path.splitext(path)[-1].lower()
+        if ext == '.webp':
+            pil_img = Image.open(path).convert('RGB')
+            temp_path = path.replace('.webp', '_temp.png')
+            pil_img.save(temp_path, 'PNG')
+            path = temp_path
+
+        cfg = cfg or {}
+        fill_color = cfg.get("fill_color", "#000000")
+        if isinstance(fill_color, str):
+            fill_color = _hex_to_rgb(fill_color)
+
         if fit_mode == "contain-blur":
             blur_clip = self._create_blurred_background(path, scene_duration)
             main_clip = ImageClip(path).set_duration(scene_duration)
@@ -87,6 +108,60 @@ class BackgroundEngine:
             main_clip = main_clip.set_position("center")
             final_clip = CompositeVideoClip([blur_clip, main_clip], size=self.resolution_output).set_duration(scene_duration)
             return final_clip.fl_image(force_rgb)
+        
+        elif fit_mode == "contain":
+            # Encaixa imagem inteira com cor sólida nas margens
+            main_clip = ImageClip(path).set_duration(scene_duration)
+            w, h = main_clip.size
+            scale = min(target_w / w, target_h / h)
+            main_clip = main_clip.resize(newsize=(int(w * scale), int(h * scale)))
+            main_clip = main_clip.set_position("center")
+            
+            color_clip = ColorClip(size=self.resolution_output, color=fill_color).set_duration(scene_duration)
+            final_clip = CompositeVideoClip([color_clip, main_clip], size=self.resolution_output).set_duration(scene_duration)
+            return final_clip.fl_image(force_rgb)
+        
+        elif fit_mode == "cover-zoom":
+            # Cover com zoom unidirecional linear
+            zoom_config = cfg.get("zoom_config", {})
+            direction = zoom_config.get("direction", "in")
+            speed = float(zoom_config.get("speed", 0.1))
+            start_scale = float(zoom_config.get("start_scale", 1.0))
+            end_scale = float(zoom_config.get("end_scale", 1.2))
+            
+            clip = ImageClip(path).set_duration(scene_duration)
+            
+            def cover_zoom_effect(get_frame, t):
+                frame = force_rgb(get_frame(t))
+                # Calcular progresso: 0 a 1 baseado no tempo e na velocidade
+                progress = min(t * speed, 1.0)
+                
+                if direction == "out":
+                    progress = 1.0 - progress
+                
+                # Escala varia de start_scale a end_scale
+                scale = start_scale + (end_scale - start_scale) * progress
+                h, w = frame.shape[:2]
+                new_h, new_w = int(h * scale), int(w * scale)
+                
+                if new_h > h and new_w > w:
+                    # Zoom in: aumentar e depois cortar do centro
+                    pil_img = Image.fromarray(frame.astype('uint8'))
+                    pil_img = pil_img.resize((new_w, new_h), Image.LANCZOS)
+                    resized = np.array(pil_img)
+                    y_start = (new_h - h) // 2
+                    x_start = (new_w - w) // 2
+                    return resized[y_start:y_start+h, x_start:x_start+w]
+                else:
+                    # Zoom out ou sem zoom: retornar frame original
+                    return frame
+            
+            # Aplicar zoom effect antes do cover crop
+            zoomed_clip = clip.fl(cover_zoom_effect)
+            # Depois aplicar cover para crop final
+            final_clip = _apply_cover(zoomed_clip, target_w, target_h)
+            return final_clip.fl_image(force_rgb)
+        
         else:
             # Default: cover — scale to fill, then crop (no distortion)
             clip = ImageClip(path).set_duration(scene_duration)
@@ -137,7 +212,7 @@ class BackgroundEngine:
                         self.remote_asset_manager.register_url(register_slug, src)
 
                     fit_mode = cfg.get("fit_mode", "cover")
-                    return self._fit_image(path, fit_mode, scene_duration)
+                    return self._fit_image(path, fit_mode, scene_duration, cfg)
 
                 print(f"[BackgroundEngine] Falha no download, tentando próxima URL...")
 
@@ -155,7 +230,7 @@ class BackgroundEngine:
             self.remote_asset_manager.register_url(register_slug, src)
 
         fit_mode = cfg.get("fit_mode", "cover")
-        return self._fit_image(path, fit_mode, scene_duration)
+        return self._fit_image(path, fit_mode, scene_duration, cfg)
 
     def _fit_video(self, clip, fit_mode: str):
         """Apply fit mode to a video clip."""

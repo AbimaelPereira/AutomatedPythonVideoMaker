@@ -60,7 +60,7 @@
         }
     },
     "youtube": {
-        "token_file_name": "vida_de_oracao.json",
+        "token_file_name": "devocional_com_jesus.json",
         "privacy_status": "private",
         "category_id": "22"
     }
