@@ -15,26 +15,26 @@
             "pitch": "-15Hz"
         },
         "subtitle": {
-            "font_path": "./assets/fonts/Montserrat/Montserrat-Black.ttf",
-            "font_size": 110,
+            "font_path": "./assets/fonts/Montserrat/Montserrat-ExtraBold.ttf",
+            "font_size": 82,
             "color": "#FFFFFF",
             "uppercase": true,
             "stroke_enabled": false,
             "shadow_enabled": true,
             "shadow_color": "#000000",
-            "shadow_opacity": 0.95,
-            "blur_radius": 6.0,
-            "shadow_offset": [
-                4,
-                4
-            ]
+            "shadow_opacity": 0.90,
+            "blur_radius": 8.0,
+            "shadow_offset": [3, 3],
+            "padding_bottom": 960,
+            "padding_top": 960,
+            "padding_side": 60
         },
         "background": {
             "visual": {
                 "type": "directory",
-                "source": "./assets/video/defaults/IA/CEU",
-                "fit_mode": "contain-blur",
-                "animation": {
+                "source": "/media/abimael/Grupo Win Lite BR/VIDEOS DEVOCIONAL COM JESUS",
+                "fit_mode//": "contain-blur",
+                "animation//": {
                     "type": "zoom",
                     "duration": 20.0,
                     "intensity": 0.12
@@ -50,9 +50,23 @@
                 }
             }
         },
-        "transitions": {
+        "transitions//": {
             "enabled": true,
             "audio": {
+                "type": "directory",
+                "source": "./assets/audio/effects/transitions",
+                "volume": 1.0
+            }
+        },
+        "transitions": {
+            "enabled": true,
+            "type": "fade",
+            "visual": {
+                "fade_in_duration": 0.2,
+                "fade_out_duration": 0.2,
+                "color": [0, 0, 0]
+            },
+            "audio//": {
                 "type": "directory",
                 "source": "./assets/audio/effects/transitions",
                 "volume": 1.0
