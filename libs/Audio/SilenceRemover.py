@@ -35,19 +35,19 @@ PRESETS = {
     "tight": {
         "silence_thresh":  -45,   # dBFS — detecta silêncios menos profundos
         "min_silence_len":  600,  # ms  — corta pausas curtas também
-        "keep_silence":      50,  # ms  — deixa só uma borda mínima
+        "keep_silence":      90,  # ms  — margem para decaimento natural do som
     },
     # Balanceado — uso geral, narração normal
     "normal": {
         "silence_thresh":  -50,
         "min_silence_len":  900,
-        "keep_silence":     80,
+        "keep_silence":    130,   # ms  — margem maior para preservar consoantes finais
     },
     # Preserva pausas — entrevistas, narração dramática, respirações intencionais
     "relaxed": {
         "silence_thresh":  -55,   # só silêncios muito profundos
         "min_silence_len": 1500,  # ignora pausas curtas
-        "keep_silence":    150,   # mantém bordas maiores
+        "keep_silence":    160,   # mantém bordas maiores
     },
 }
 
@@ -230,9 +230,20 @@ class SilenceRemover:
         current_ms    = 0          # cursor no novo timeline
         segment_map   = []         # [(orig_start, orig_end, new_start)]
 
-        for orig_start, orig_end in ranges:
+        FADE_MS = min(keep_silence, 25)  # fade suave nas bordas para evitar cliques
+
+        for i, (orig_start, orig_end) in enumerate(ranges):
             segment_map.append((orig_start, orig_end, current_ms))
-            new_audio  += audio[orig_start:orig_end]
+            chunk = audio[orig_start:orig_end]
+
+            # Aplica fade-in apenas se não é o primeiro segmento (bordas internas)
+            if i > 0:
+                chunk = chunk.fade_in(FADE_MS)
+            # Aplica fade-out apenas se não é o último segmento (bordas internas)
+            if i < len(ranges) - 1:
+                chunk = chunk.fade_out(FADE_MS)
+
+            new_audio  += chunk
             current_ms += (orig_end - orig_start)
 
         if not word_boundaries:

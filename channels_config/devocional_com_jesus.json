@@ -7,7 +7,11 @@
         "tts": {
             "provider": "google",
             "credentials_file": "./tokens/tts-automate-videos-20509ec7c438.json",
-            "voice": "pt-BR-Chirp3-HD-Algieba"
+            "voice": "pt-BR-Chirp3-HD-Algieba",
+            "silence_removal": {
+                "enabled": true,
+                "preset": "normal"
+            }
         },
         "tts//": {
             "provider": "edge",
@@ -24,7 +28,10 @@
             "shadow_color": "#000000",
             "shadow_opacity": 0.90,
             "blur_radius": 8.0,
-            "shadow_offset": [3, 3],
+            "shadow_offset": [
+                3,
+                3
+            ],
             "padding_bottom": 960,
             "padding_top": 960,
             "padding_side": 60
@@ -64,7 +71,11 @@
             "visual": {
                 "fade_in_duration": 0.2,
                 "fade_out_duration": 0.2,
-                "color": [0, 0, 0]
+                "color": [
+                    0,
+                    0,
+                    0
+                ]
             },
             "audio//": {
                 "type": "directory",
@@ -77,5 +88,12 @@
         "token_file_name": "devocional_com_jesus.json",
         "privacy_status": "private",
         "category_id": "22"
+    },
+    "tiktok": {
+        "token_file_name": "tiktok_devocional.json",
+        "privacy_level": "SELF_ONLY",
+        "disable_duet": false,
+        "disable_comment": false,
+        "disable_stitch": false
     }
 }

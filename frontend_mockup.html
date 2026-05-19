@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Video Review</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*{font-family:'Inter',sans-serif;box-sizing:border-box;}
+body{background:#0f1117;color:#e2e4ed;font-size:12px;}
+::-webkit-scrollbar{width:4px;height:4px;}
+::-webkit-scrollbar-track{background:#0f1117;}
+::-webkit-scrollbar-thumb{background:#252830;border-radius:3px;}
+
+.tog{position:relative;display:inline-block;width:30px;height:17px;flex-shrink:0;}
+.tog input{opacity:0;width:0;height:0;}
+.tog-t{position:absolute;cursor:pointer;inset:0;background:#252830;border-radius:17px;transition:.2s;}
+.tog-t::before{content:'';position:absolute;width:12px;height:12px;left:2.5px;bottom:2.5px;background:#5a5f72;border-radius:50%;transition:.2s;}
+.tog input:checked+.tog-t{background:#4f7ef8;}
+.tog input:checked+.tog-t::before{transform:translateX(13px);background:#fff;}
+
+.fi{width:100%;background:#0f1117;border:1px solid #252830;color:#e2e4ed;border-radius:5px;padding:5px 8px;font-size:11px;outline:none;transition:border-color .15s;}
+.fi:focus{border-color:#4f7ef8;}
+.fi:disabled{opacity:.35;cursor:not-allowed;}
+.fi option{background:#1a1d26;}
+textarea.fi{resize:none;}
+
+.ab{max-height:0;overflow:hidden;transition:max-height .25s ease;}
+.ab.open{max-height:3000px;}
+.chev{transition:transform .2s;}
+.chev.open{transform:rotate(90deg);}
+
+.sc{border-left:3px solid transparent;transition:border-color .15s;}
+.sc.active{border-left-color:#4f7ef8;}
+.sc-body{display:none;}
+.sc-body.open{display:block;}
+
+.chip{display:inline-flex;align-items:center;gap:3px;padding:1px 6px;background:#1e2130;border:1px solid #252830;border-radius:999px;font-size:10px;color:#6b7280;}
+.chip.ov{border-color:#7c4a1a;color:#f97316;}
+
+.ovb{font-size:9px;color:#f97316;font-weight:600;display:inline-flex;align-items:center;gap:2px;}
+.ovb::before{content:'';width:4px;height:4px;background:#f97316;border-radius:50%;display:inline-block;}
+.inh{font-size:10px;background:#0f1117;border:1px solid #252830;border-radius:4px;padding:4px 7px;color:#4b5268;margin-bottom:7px;}
+
+.tag{display:inline-flex;align-items:center;gap:2px;padding:2px 6px;background:#1e2130;border:1px solid #252830;border-radius:999px;font-size:10px;color:#9ba3bf;white-space:nowrap;}
+.tag .rm{cursor:pointer;color:#4b5268;font-size:12px;line-height:1;}
+.tag .rm:hover{color:#ef4444;}
+
+.btn{display:inline-flex;align-items:center;gap:4px;padding:5px 10px;border-radius:5px;font-size:11px;font-weight:500;cursor:pointer;border:1px solid transparent;transition:all .15s;}
+.bg{background:#22c55e;color:#fff;border-color:#22c55e;}.bg:hover{background:#16a34a;}
+.br{background:transparent;border-color:#ef4444;color:#ef4444;}.br:hover{background:#ef444415;}
+.bgh{background:transparent;border-color:#252830;color:#6b7280;}.bgh:hover{border-color:#4f7ef8;color:#e2e4ed;}
+.bbl{background:#4f7ef815;border-color:#4f7ef830;color:#4f7ef8;}.bbl:hover{background:#4f7ef825;}
+
+.rb{padding:4px 10px;border-radius:5px;font-size:11px;font-weight:500;cursor:pointer;background:transparent;border:1px solid #252830;color:#6b7280;transition:all .15s;}
+.rb.active{background:#4f7ef815;border-color:#4f7ef8;color:#4f7ef8;}
+
+.sl{font-size:9px;color:#4b5268;font-weight:600;text-transform:uppercase;letter-spacing:.07em;margin-bottom:5px;display:block;}
+.div{border-top:1px solid #1e2130;margin:8px 0;}
+
+input[type=range]{-webkit-appearance:none;height:3px;background:#252830;border-radius:3px;outline:none;width:100%;}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;background:#4f7ef8;border-radius:50%;cursor:pointer;}
+
+.ov-item{background:#0f1117;border:1px solid #252830;border-radius:6px;padding:8px;margin-bottom:6px;}
+
+.sec{border-top:1px solid #1e2130;padding-top:8px;margin-bottom:2px;}
+.sec-h{display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding-bottom:6px;}
+.sec-h:hover .sec-t{color:#e2e4ed;}
+.sec-t{font-size:11px;font-weight:500;color:#6b7280;transition:color .15s;}
+</style>
+</head>
+<body style="min-height:100vh;">
+
+<!-- NAV -->
+<nav style="position:fixed;top:0;left:0;right:0;z-index:50;background:#0f1117;border-bottom:1px solid #1e2130;display:flex;align-items:center;justify-content:space-between;padding:0 16px;height:42px;">
+  <div style="display:flex;align-items:center;gap:8px;">
+    <button style="color:#4b5268;" class="hover:text-white">
+      <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+    </button>
+    <span style="color:#4b5268;font-size:11px;">Vídeos</span>
+    <span style="color:#252830;">/</span>
+    <span style="font-weight:600;font-size:12px;">Revisão de Vídeo</span>
+    <span style="padding:1px 6px;background:#1e2130;border:1px solid #252830;border-radius:3px;font-size:10px;color:#6b7280;font-family:monospace;">9:16</span>
+    <span style="padding:1px 8px;background:#eab30815;border:1px solid #eab30835;border-radius:999px;font-size:10px;color:#eab308;font-weight:500;">Aguardando Revisão</span>
+  </div>
+  <div style="display:flex;gap:6px;">
+    <button class="btn br">Descartar</button>
+    <button class="btn bg">
+      <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+      Aprovar e Gerar
+    </button>
+  </div>
+</nav>
+
+<!-- MAIN -->
+<div style="padding-top:42px;display:flex;height:100vh;overflow:hidden;">
+
+<!-- LEFT -->
+<div style="flex:1;overflow-y:auto;padding:12px;min-width:0;">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+    <span class="sl" style="margin:0;">Cenas (3)</span>
+    <button class="btn bbl" style="padding:3px 8px;font-size:10px;" id="add-scene-btn">+ Cena</button>
+  </div>
+
+  <div id="scenes-container">
+
+  <!-- SCENE 1 -->
+  <div class="sc" style="background:#141720;border:1px solid #1e2130;border-radius:8px;overflow:hidden;margin-bottom:7px;">
+    <div class="sc-header" style="padding:10px 12px;cursor:pointer;display:flex;align-items:flex-start;gap:8px;">
+      <svg width="12" height="12" style="color:#252830;margin-top:1px;flex-shrink:0;" fill="currentColor" viewBox="0 0 20 20"><path d="M7 2a2 2 0 100 4 2 2 0 000-4zm0 6a2 2 0 100 4 2 2 0 000-6zm0 6a2 2 0 100 4 2 2 0 000-4zm6-12a2 2 0 100 4 2 2 0 000-4zm0 6a2 2 0 100 4 2 2 0 000-6zm0 6a2 2 0 100 4 2 2 0 000-4z"/></svg>
+      <div style="flex:1;min-width:0;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+          <span style="font-size:10px;color:#4b5268;font-weight:500;">Cena 01</span>
+          <span style="color:#4b5268;cursor:pointer;font-size:14px;line-height:1;" onclick="event.stopPropagation()">···</span>
+        </div>
+        <p style="font-size:11px;color:#c8cadb;line-height:1.4;margin-bottom:6px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">Deus não esqueceu de você. O que parece abandono é preparação para o que está por vir na sua vida.</p>
+        <div style="display:flex;flex-wrap:wrap;gap:3px;">
+          <span class="chip">🎙 Edge</span><span class="chip">🖼 directory</span><span class="chip">CC ON</span><span class="chip">⏱ auto</span>
+        </div>
+      </div>
+    </div>
+    <div class="sc-body" style="padding:0 10px 10px;">
+      <div class="div"></div>
+      <span class="sl">Narração</span>
+      <textarea class="fi" rows="3">Deus não esqueceu de você. O que parece abandono é preparação para o que está por vir na sua vida.</textarea>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px;">
+        <div style="display:flex;align-items:center;gap:5px;"><label class="tog"><input type="checkbox" checked><span class="tog-t"></span></label><span style="font-size:11px;color:#9ba3bf;">Legendas</span></div>
+        <div style="display:flex;align-items:center;gap:5px;"><span style="font-size:10px;color:#4b5268;">Duração (s)</span><input type="number" placeholder="auto" class="fi" style="width:54px;text-align:center;" step="0.1" min="0"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCENE 2 — ACTIVE -->
+  <div class="sc active" style="background:#141720;border:1px solid #1e2130;border-radius:8px;overflow:hidden;margin-bottom:7px;">
+    <div class="sc-header" style="padding:10px 12px;cursor:pointer;display:flex;align-items:flex-start;gap:8px;">
+      <svg width="12" height="12" style="color:#4f7ef8;margin-top:1px;flex-shrink:0;" fill="currentColor" viewBox="0 0 20 20"><path d="M7 2a2 2 0 100 4 2 2 0 000-4zm0 6a2 2 0 100 4 2 2 0 000-6zm0 6a2 2 0 100 4 2 2 0 000-4zm6-12a2 2 0 100 4 2 2 0 000-4zm0 6a2 2 0 100 4 2 2 0 000-6zm0 6a2 2 0 100 4 2 2 0 000-4z"/></svg>
+      <div style="flex:1;min-width:0;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+          <span style="font-size:10px;color:#4f7ef8;font-weight:500;">Cena 02 — editando</span>
+          <span style="color:#4b5268;cursor:pointer;font-size:14px;line-height:1;" onclick="event.stopPropagation()">···</span>
+        </div>
+        <p style="font-size:11px;color:#c8cadb;line-height:1.4;margin-bottom:6px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">Você ora, você jejua, mas continua esperando Deus mudar o que só você pode mudar. Chegou a hora.</p>
+        <div style="display:flex;flex-wrap:wrap;gap:3px;">
+          <span class="chip ov">🎙 local_file ●</span><span class="chip ov">🤖 AI ●</span><span class="chip">CC ON</span><span class="chip ov">↕ trans OFF ●</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="sc-body open" style="padding:0 10px 10px;">
+
+      <!-- NARRATION -->
+      <div class="sec">
+        <div class="sec-h" onclick="toggleSec(this)">
+          <div style="display:flex;align-items:center;gap:5px;">
+            <svg class="chev open" width="9" height="9" style="color:#4b5268;flex-shrink:0;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
+            <span class="sec-t">Narração</span>
+          </div>
+        </div>
+        <div class="ab open">
+          <textarea class="fi" rows="3">Você ora, você jejua, mas continua esperando Deus mudar o que só você pode mudar. Chegou a hora de agir. Hoje é o dia.</textarea>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-top:5px;">
+            <div style="display:flex;align-items:center;gap:5px;"><label class="tog"><input type="checkbox" checked><span class="tog-t"></span></label><span style="color:#9ba3bf;">Legendas</span></div>
+            <div style="display:flex;align-items:center;gap:5px;"><span style="font-size:10px;color:#4b5268;">Dur. (s)</span><input type="number" placeholder="auto" class="fi" style="width:50px;text-align:center;" step="0.1" min="0"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TTS -->
+      <div class="sec">
+        <div class="sec-h" onclick="toggleSec(this)">
+          <div style="display:flex;align-items:center;gap:5px;">
+            <svg class="chev open" width="9" height="9" style="color:#4b5268;flex-shrink:0;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
+            <span class="sec-t">TTS</span><span class="ovb" style="margin-left:3px;">override</span>
+          </div>
+        </div>
+        <div class="ab open">
+          <div class="inh">↑ Global: Edge TTS · pt-BR-FranciscaNeural</div>
+          <select class="fi tts-p" style="margin-bottom:5px;" onchange="updTTS(this)">
+            <option value="edge">Edge TTS</option><option value="google">Google Cloud TTS</option><option value="polly">AWS Polly</option><option value="local_file" selected>Local File</option>
+          </select>
+          <div class="tts-v" style="display:none;margin-bottom:5px;"><select class="fi tts-vs"></select></div>
+          <div class="tts-gc" style="display:none;margin-bottom:5px;"><label class="sl">Credenciais Google</label><input type="text" placeholder="./tokens/google_tts.json" class="fi" style="font-family:monospace;"></div>
+          <div class="tts-pr" style="display:none;margin-bottom:5px;"><label class="sl">Região AWS</label><select class="fi"><option>us-east-1</option><option>sa-east-1</option></select></div>
+          <div class="tts-lf"><label class="sl">Arquivo de áudio</label><input type="text" value="./temp/clip_02_confronto.mp3" class="fi" style="font-family:monospace;"></div>
+        </div>
+      </div>
+
+      <!-- BG VISUAL -->
+      <div class="sec">
+        <div class="sec-h" onclick="toggleSec(this)">
+          <div style="display:flex;align-items:center;gap:5px;">
+            <svg class="chev open" width="9" height="9" style="color:#4b5268;flex-shrink:0;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
+            <span class="sec-t">Background Visual</span><span class="ovb" style="margin-left:3px;">override</span>
+          </div>
+        </div>
+        <div class="ab open">
+          <div class="inh">↑ Global: directory · ./assets/videos/pregacoes/</div>
+          <select class="fi bgvt" style="margin-bottom:5px;" onchange="updBgV(this)">
+            <option value="directory">Directory</option><option value="file">Single File</option><option value="remote_asset">Remote Asset</option><option value="ai" selected>AI Generated</option>
+          </select>
+          <div class="bgv-dir" style="display:none;margin-bottom:5px;"><label class="sl">Pasta</label><input type="text" placeholder="./assets/videos/" class="fi" style="font-family:monospace;"></div>
+          <div class="bgv-file" style="display:none;margin-bottom:5px;"><label class="sl">Arquivo</label><input type="text" placeholder="./assets/video.mp4" class="fi" style="font-family:monospace;"></div>
+          <div class="bgv-rem" style="display:none;margin-bottom:5px;"><label class="sl">Slug do asset</label><input type="text" placeholder="asset_slug" class="fi" style="font-family:monospace;"></div>
+          <div class="bgv-ai">
+            <label class="sl">Prompt</label>
+            <textarea class="fi" rows="2" style="margin-bottom:5px;">Igreja evangélica com luz dourada, atmosfera de paz, estilo cinematográfico</textarea>
+            <label class="sl">Estilo</label>
+            <select class="fi"><option>realistic</option><option>cinematic</option><option>watercolor</option><option>oil-painting</option><option>anime</option></select>
+          </div>
+          <div style="border-top:1px solid #1e2130;margin-top:7px;padding-top:7px;">
+            <span class="sl">Filtros</span>
+            <div style="display:flex;align-items:center;gap:5px;margin-bottom:5px;">
+              <label class="tog"><input type="checkbox" class="zt" checked><span class="tog-t"></span></label>
+              <span style="color:#9ba3bf;">Zoom</span>
+            </div>
+            <div class="zs" style="padding-left:36px;margin-bottom:5px;">
+              <div style="display:flex;align-items:center;gap:6px;">
+                <span style="font-size:10px;color:#4b5268;width:52px;">Velocidade</span>
+                <input type="range" min="0.05" max="1" step="0.05" value="0.3" class="zr">
+                <span class="zv" style="font-size:10px;color:#4b5268;width:20px;text-align:right;">0.3</span>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:5px;">
+              <label class="tog"><input type="checkbox"><span class="tog-t"></span></label>
+              <span style="color:#9ba3bf;">Contain + Blur</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- BG AUDIO -->
+      <div class="sec">
+        <div class="sec-h" onclick="toggleSec(this)">
+          <div style="display:flex;align-items:center;gap:5px;">
+            <svg class="chev" width="9" height="9" style="color:#4b5268;flex-shrink:0;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
+            <span class="sec-t">Background Áudio</span>
+          </div>
+        </div>
+        <div class="ab">
+          <div style="display:flex;align-items:center;gap:5px;margin-bottom:6px;">
+            <label class="tog"><input type="checkbox" class="bga-en"><span class="tog-t"></span></label>
+            <span style="color:#9ba3bf;">Áudio personalizado</span>
+          </div>
+          <div class="bga-f" style="display:none;">
+            <div class="inh">↑ Global: sem áudio</div>
+            <select class="fi bga-t" style="margin-bottom:5px;" onchange="updBgA(this)">
+              <option value="directory">Directory</option><option value="file">Single File</option><option value="remote_asset">Remote Asset</option>
+            </select>
+            <div class="bga-p" style="margin-bottom:5px;"><label class="sl">Caminho</label><input type="text" placeholder="./assets/music/" class="fi" style="font-family:monospace;"></div>
+            <div class="bga-s" style="display:none;margin-bottom:5px;"><label class="sl">Slug</label><input type="text" class="fi" style="font-family:monospace;"></div>
+            <label class="sl">Volume — <span class="vol-lbl">70%</span></label>
+            <input type="range" min="0" max="100" value="70" class="vol-r">
+          </div>
+        </div>
+      </div>
+
+      <!-- OVERLAYS -->
+      <div class="sec">
+        <div class="sec-h" onclick="toggleSec(this)">
+          <div style="display:flex;align-items:center;gap:5px;">
+            <svg class="chev" width="9" height="9" style="color:#4b5268;flex-shrink:0;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
+            <span class="sec-t">Overlays</span>
+            <span style="font-size:9px;background:#1e2130;padding:1px 4px;border-radius:3px;color:#4b5268;">1</span>
+          </div>
+        </div>
+        <div class="ab">
+          <div class="ov-list">
+            <div class="ov-item">
+              <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
+                <div style="width:24px;height:24px;background:#1e2130;border-radius:4px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#4b5268;">
+                  <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                </div>
+                <div style="flex:1;min-width:0;">
+                  <div style="display:flex;justify-content:space-between;">
+                    <span style="font-size:11px;font-weight:500;">Logo overlay</span>
+                    <button class="rm-ov" style="color:#4b5268;cursor:pointer;font-size:14px;line-height:1;">×</button>
+                  </div>
+                  <span style="font-size:10px;color:#4b5268;font-family:monospace;">./assets/image/logo-transparent.png</span>
+                </div>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;">
+                <div><label class="sl">Tipo</label><select class="fi"><option>image</option><option>video</option></select></div>
+                <div><label class="sl">Posição</label><select class="fi"><option>top-left</option><option>top-center</option><option>top-right</option><option>center</option><option>bottom-left</option><option>bottom-center</option><option>bottom-right</option></select></div>
+                <div><label class="sl">Largura %</label><input type="number" value="30" min="1" max="100" class="fi"></div>
+                <div><label class="sl">Altura %</label><input type="number" placeholder="auto" class="fi"></div>
+              </div>
+            </div>
+          </div>
+          <button class="btn bgh add-ov" style="width:100%;justify-content:center;margin-top:2px;font-size:10px;padding:4px;">+ Overlay</button>
+        </div>
+      </div>
+
+      <!-- SUBTITLE STYLE -->
+      <div class="sec">
+        <div class="sec-h" onclick="toggleSec(this)">
+          <div style="display:flex;align-items:center;gap:5px;">
+            <svg class="chev" width="9" height="9" style="color:#4b5268;flex-shrink:0;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
+            <span class="sec-t">Estilo Legendas</span><span class="ovb" style="margin-left:3px;">override</span>
+          </div>
+        </div>
+        <div class="ab">
+          <div class="inh" style="margin-top:5px;">↑ Global: 90px · branco · bottom · 4 palavras</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:7px;">
+            <span style="color:#9ba3bf;">Sobrescrever</span>
+            <label class="tog"><input type="checkbox" class="sub-ov" checked><span class="tog-t"></span></label>
+          </div>
+          <div class="sub-f" style="display:grid;grid-template-columns:1fr 1fr;gap:4px;">
+            <div><label class="sl">Fonte px</label><input type="number" value="100" class="fi"></div>
+            <div><label class="sl">Máx. palavras</label><input type="number" value="3" class="fi"></div>
+            <div><label class="sl">Posição</label><select class="fi"><option>bottom</option><option>center</option><option>top</option></select></div>
+            <div><label class="sl">Cor fonte</label><div style="display:flex;gap:3px;"><input type="color" value="#FFFFFF" style="width:30px;height:27px;border-radius:4px;background:#0f1117;border:1px solid #252830;padding:2px;cursor:pointer;"><input type="text" value="#FFFFFF" class="fi" style="font-family:monospace;"></div></div>
+            <div><label class="sl">Cor borda</label><div style="display:flex;gap:3px;"><input type="color" value="#000000" style="width:30px;height:27px;border-radius:4px;background:#0f1117;border:1px solid #252830;padding:2px;cursor:pointer;"><input type="text" value="#000000" class="fi" style="font-family:monospace;"></div></div>
+            <div><label class="sl">Esp. borda</label><input type="number" value="2" min="0" max="10" class="fi"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TRANSITIONS -->
+      <div class="sec">
+        <div class="sec-h" onclick="toggleSec(this)">
+          <div style="display:flex;align-items:center;gap:5px;">
+            <svg class="chev open" width="9" height="9" style="color:#4b5268;flex-shrink:0;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
+            <span class="sec-t">Transições</span><span class="ovb" style="margin-left:3px;">override</span>
+          </div>
+        </div>
+        <div class="ab open">
+          <div class="inh" style="margin-top:0;">↑ Global: ON · Fade · 0.5s</div>
+          <div style="display:flex;align-items:center;gap:5px;margin-bottom:6px;">
+            <label class="tog"><input type="checkbox" class="tr-tog"><span class="tog-t"></span></label>
+            <span style="color:#9ba3bf;">Habilitar</span>
+            <span class="tr-off" style="font-size:10px;color:#ef4444;">— desabilitado (override)</span>
+          </div>
+          <div class="tr-f" style="display:none;grid-template-columns:1fr 1fr;gap:4px;">
+            <div><label class="sl">Tipo</label><select class="fi"><option>fade</option><option>zoom</option></select></div>
+            <div><label class="sl">Duração (s)</label><input type="number" value="0.5" step="0.1" min="0.1" max="3" class="fi"></div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- sc-body -->
+  </div><!-- scene 2 -->
+
+  <!-- SCENE 3 -->
+  <div class="sc" style="background:#141720;border:1px solid #1e2130;border-radius:8px;overflow:hidden;margin-bottom:7px;">
+    <div class="sc-header" style="padding:10px 12px;cursor:pointer;display:flex;align-items:flex-start;gap:8px;">
+      <svg width="12" height="12" style="color:#252830;margin-top:1px;flex-shrink:0;" fill="currentColor" viewBox="0 0 20 20"><path d="M7 2a2 2 0 100 4 2 2 0 000-4zm0 6a2 2 0 100 4 2 2 0 000-6zm0 6a2 2 0 100 4 2 2 0 000-4zm6-12a2 2 0 100 4 2 2 0 000-4zm0 6a2 2 0 100 4 2 2 0 000-6zm0 6a2 2 0 100 4 2 2 0 000-4z"/></svg>
+      <div style="flex:1;min-width:0;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+          <span style="font-size:10px;color:#4b5268;font-weight:500;">Cena 03</span>
+          <span style="color:#4b5268;cursor:pointer;font-size:14px;line-height:1;" onclick="event.stopPropagation()">···</span>
+        </div>
+        <p style="font-size:11px;color:#c8cadb;line-height:1.4;margin-bottom:6px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">Se você está assistindo isso hoje, não é coincidência. Deus tem um plano específico para a sua vida.</p>
+        <div style="display:flex;flex-wrap:wrap;gap:3px;">
+          <span class="chip ov">🎙 Google ●</span><span class="chip ov">🔗 remote ●</span><span class="chip ov">CC OFF ●</span><span class="chip">⏱ 8s</span>
+        </div>
+      </div>
+    </div>
+    <div class="sc-body" style="padding:0 10px 10px;">
+      <div class="div"></div>
+      <span class="sl">Narração</span>
+      <textarea class="fi" rows="3">Se você está assistindo isso hoje, não é coincidência. Deus tem um plano específico para a sua vida neste momento.</textarea>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:5px;">
+        <div style="display:flex;align-items:center;gap:5px;"><label class="tog"><input type="checkbox"><span class="tog-t"></span></label><span style="color:#9ba3bf;">Legendas</span><span class="ovb" style="margin-left:3px;">override</span></div>
+        <div style="display:flex;align-items:center;gap:4px;"><span style="font-size:10px;color:#4b5268;">Dur. (s)</span><input type="number" value="8" class="fi" style="width:50px;text-align:center;"><span class="ovb">override</span></div>
+      </div>
+    </div>
+  </div>
+
+  </div><!-- scenes-container -->
+</div><!-- LEFT -->
+
+<!-- RIGHT -->
+<div style="width:300px;flex-shrink:0;overflow-y:auto;border-left:1px solid #1e2130;padding:10px;">
+
+  <!-- GLOBAL SETTINGS -->
+  <div style="background:#141720;border:1px solid #1e2130;border-radius:8px;padding:10px;margin-bottom:8px;">
+    <div style="font-size:11px;font-weight:600;margin-bottom:10px;display:flex;align-items:center;gap:5px;color:#9ba3bf;">
+      <svg width="11" height="11" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+      Configurações Globais
+    </div>
+
+    <div style="margin-bottom:7px;"><label class="sl">Proporção</label><div style="display:flex;gap:4px;"><button class="rb active" data-r="9:16">9:16</button><button class="rb" data-r="16:9">16:9</button></div></div>
+    <div style="margin-bottom:7px;"><label class="sl">Canal</label><select class="fi"><option>devocional_com_jesus</option><option>hacker_patriota</option><option>vida_de_oracao</option></select></div>
+
+    <div style="border-top:1px solid #1e2130;padding-top:7px;margin-bottom:7px;">
+      <span class="sl">TTS Padrão</span>
+      <select class="fi g-tts-p" style="margin-bottom:4px;" onchange="updGTTS()">
+        <option value="edge" selected>Edge TTS</option><option value="google">Google Cloud TTS</option><option value="polly">AWS Polly</option>
+      </select>
+      <div class="g-tv" style="margin-bottom:4px;"><select class="fi"><option>pt-BR-FranciscaNeural</option><option>pt-BR-AntonioNeural</option><option>pt-BR-BrendaNeural</option><option>pt-BR-ElzaNeural</option></select></div>
+      <div class="g-gc" style="display:none;margin-bottom:4px;"><input type="text" placeholder="./tokens/google_tts.json" class="fi" style="font-family:monospace;"></div>
+      <div class="g-pr" style="display:none;margin-bottom:4px;"><select class="fi"><option>us-east-1</option><option>sa-east-1</option></select></div>
+    </div>
+
+    <div style="border-top:1px solid #1e2130;padding-top:7px;margin-bottom:7px;">
+      <span class="sl">Background Padrão</span>
+      <select class="fi g-bg-t" style="margin-bottom:4px;" onchange="updGBg()">
+        <option value="directory" selected>Directory</option><option value="file">Single File</option><option value="remote_asset">Remote Asset</option><option value="ai">AI Generated</option>
+      </select>
+      <div class="g-bg-p"><input type="text" value="./assets/videos/pregacoes/" class="fi" style="font-family:monospace;"></div>
+      <div class="g-bg-s" style="display:none;"><input type="text" placeholder="asset_slug" class="fi" style="font-family:monospace;"></div>
+      <div class="g-bg-a" style="display:none;"><textarea class="fi" rows="2" placeholder="Prompt padrão..."></textarea></div>
+    </div>
+
+    <div style="border-top:1px solid #1e2130;padding-top:7px;margin-bottom:7px;">
+      <span class="sl">Áudio de Fundo</span>
+      <select class="fi" style="margin-bottom:4px;"><option value="">Nenhum</option><option>Directory</option><option>Single File</option><option>Remote Asset</option></select>
+      <label class="sl">Volume — <span id="gvl">50%</span></label>
+      <input type="range" min="0" max="100" value="50" id="gvr">
+    </div>
+
+    <div style="border-top:1px solid #1e2130;padding-top:7px;margin-bottom:7px;">
+      <span class="sl">Transições Padrão</span>
+      <div style="display:flex;align-items:center;gap:5px;margin-bottom:5px;">
+        <label class="tog"><input type="checkbox" class="g-tr" checked><span class="tog-t"></span></label>
+        <span style="color:#9ba3bf;">Habilitar</span>
+      </div>
+      <div class="g-trf" style="display:grid;grid-template-columns:1fr 1fr;gap:4px;">
+        <div><label class="sl">Tipo</label><select class="fi"><option>fade</option><option>zoom</option></select></div>
+        <div><label class="sl">Dur. (s)</label><input type="number" value="0.5" step="0.1" min="0.1" class="fi"></div>
+      </div>
+    </div>
+
+    <div style="border-top:1px solid #1e2130;padding-top:7px;margin-bottom:7px;">
+      <span class="sl">Legendas Padrão</span>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;">
+        <div><label class="sl">Fonte px</label><input type="number" value="90" class="fi"></div>
+        <div><label class="sl">Máx. palavras</label><input type="number" value="4" class="fi"></div>
+        <div><label class="sl">Posição</label><select class="fi"><option>bottom</option><option>center</option><option>top</option></select></div>
+        <div><label class="sl">Cor</label><div style="display:flex;gap:3px;"><input type="color" value="#FFFFFF" style="width:27px;height:27px;border-radius:4px;background:#0f1117;border:1px solid #252830;padding:2px;cursor:pointer;"><input type="text" value="#FFF" class="fi" style="font-family:monospace;"></div></div>
+      </div>
+    </div>
+
+    <div style="border-top:1px solid #1e2130;padding-top:7px;">
+      <span class="sl">Padding de Áudio (s)</span>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;">
+        <div><label class="sl">Início</label><input type="number" value="0.3" step="0.1" min="0" class="fi"></div>
+        <div><label class="sl">Fim</label><input type="number" value="0.3" step="0.1" min="0" class="fi"></div>
+        <div><label class="sl">Entre</label><input type="number" value="0.1" step="0.1" min="0" class="fi"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- YOUTUBE -->
+  <div style="background:#141720;border:1px solid #1e2130;border-radius:8px;padding:10px;margin-bottom:8px;">
+    <div style="font-size:11px;font-weight:600;margin-bottom:10px;display:flex;align-items:center;gap:5px;color:#9ba3bf;">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="#ef4444"><path d="M23.498 6.186a3.016 3.016 0 00-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 00.502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 002.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 002.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+      YouTube
+    </div>
+    <div style="margin-bottom:6px;"><label class="sl">Título</label><input type="text" value="🙏 DEUS NÃO ESQUECEU DE VOCÊ 🙏" class="fi" id="yt-t"><div style="font-size:9px;color:#4b5268;text-align:right;margin-top:2px;"><span id="yt-c">47</span>/100</div></div>
+    <div style="margin-bottom:6px;"><label class="sl">Descrição</label><textarea class="fi" rows="3" style="font-size:11px;">"Você ora, você jejua..."
+
+📖 Leia a Bíblia diariamente.
+🙏 Inscreva-se.</textarea></div>
+    <div style="margin-bottom:6px;">
+      <label class="sl">Tags</label>
+      <div id="tags-c" style="display:flex;flex-wrap:wrap;gap:3px;padding:6px;background:#0f1117;border:1px solid #252830;border-radius:5px;min-height:32px;cursor:text;" onclick="$('#ti').focus()">
+        <span class="tag">devocional <span class="rm">×</span></span>
+        <span class="tag">palavra de deus <span class="rm">×</span></span>
+        <span class="tag">fé <span class="rm">×</span></span>
+        <span class="tag">bíblia <span class="rm">×</span></span>
+        <span class="tag">confronto amoroso <span class="rm">×</span></span>
+        <input type="text" id="ti" placeholder="tag..." style="background:transparent;outline:none;font-size:11px;color:#e2e4ed;border:none;width:50px;min-width:40px;">
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:6px;">
+      <div><label class="sl">Privacidade</label><select class="fi"><option>public</option><option>unlisted</option><option>private</option></select></div>
+      <div><label class="sl">Token</label><select class="fi"><option>devocional_token.json</option><option>main_token.json</option></select></div>
+    </div>
+    <div style="margin-bottom:6px;"><label class="sl">Publicar em</label><input type="datetime-local" value="2026-05-18T17:00" class="fi"></div>
+    <div><label class="sl">Thumbnail</label><div style="border:1px dashed #252830;border-radius:5px;padding:10px;text-align:center;cursor:pointer;" onmouseover="this.style.borderColor='#4f7ef8'" onmouseout="this.style.borderColor='#252830'"><p style="font-size:10px;color:#4b5268;">Upload ou arraste · PNG/JPG · 1280×720</p></div></div>
+  </div>
+
+  <!-- TIKTOK -->
+  <div style="background:#141720;border:1px solid #1e2130;border-radius:8px;padding:10px;margin-bottom:8px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+      <div style="font-size:11px;font-weight:600;display:flex;align-items:center;gap:5px;color:#9ba3bf;">
+        <svg width="11" height="11" fill="currentColor" viewBox="0 0 24 24"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V8.69a8.28 8.28 0 004.85 1.56V6.78a4.85 4.85 0 01-1.08-.09z"/></svg>
+        TikTok
+      </div>
+      <label class="tog"><input type="checkbox" id="tt-tog"><span class="tog-t"></span></label>
+    </div>
+    <p id="tt-off" style="font-size:11px;color:#4b5268;">Ative para publicar também no TikTok.</p>
+    <div id="tt-f" style="display:none;">
+      <div style="margin-bottom:5px;"><label class="sl">Caption</label><textarea class="fi" rows="2" style="font-size:11px;">🙏 Deus não esqueceu de você! #devocional #fe #evangelico</textarea></div>
+      <div style="margin-bottom:5px;"><label class="sl">Privacidade</label><select class="fi"><option>SELF_ONLY</option><option>MUTUAL_FOLLOW_FRIENDS</option><option>FOLLOWER_OF_CREATOR</option><option>PUBLIC_TO_EVERYONE</option></select></div>
+      <div style="border:1px solid #1e2130;border-radius:6px;padding:7px;margin-bottom:5px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;"><span style="color:#9ba3bf;">Desabilitar Duet</span><label class="tog"><input type="checkbox"><span class="tog-t"></span></label></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;"><span style="color:#9ba3bf;">Desabilitar Comentários</span><label class="tog"><input type="checkbox"><span class="tog-t"></span></label></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;"><span style="color:#9ba3bf;">Desabilitar Stitch</span><label class="tog"><input type="checkbox"><span class="tog-t"></span></label></div>
+      </div>
+      <div><label class="sl">Token</label><select class="fi"><option>tiktok_devocional.json</option><option>tiktok_main.json</option></select></div>
+    </div>
+  </div>
+
+</div><!-- RIGHT -->
+</div><!-- MAIN -->
+
+<script>
+// section toggle
+function toggleSec(h){const b=$(h).next('.ab'),c=$(h).find('.chev');b.toggleClass('open');c.toggleClass('open');}
+
+// scene cards
+$(document).on('click','.sc-header',function(e){
+  if($(e.target).closest('button,span[onclick]').length)return;
+  const c=$(this).closest('.sc'),b=c.find('.sc-body'),open=b.hasClass('open');
+  $('.sc').removeClass('active');$('.sc-body').removeClass('open').hide();
+  if(!open){c.addClass('active');b.addClass('open').show();}
+});
+
+// TTS
+const edgeVoices='<option>pt-BR-FranciscaNeural</option><option>pt-BR-AntonioNeural</option><option>pt-BR-BrendaNeural</option><option>pt-BR-ElzaNeural</option><option>pt-BR-GiovannaNeural</option><option>pt-BR-HumbertoNeural</option><option>pt-BR-JulioNeural</option><option>pt-BR-LeticiaNeural</option><option>pt-BR-ValerioNeural</option><option>pt-BR-YaraNeural</option>';
+const googleVoices='<option>pt-BR-Wavenet-A</option><option>pt-BR-Wavenet-B</option><option>pt-BR-Neural2-A</option><option>pt-BR-Neural2-B</option><option>pt-BR-Standard-A</option>';
+const pollyVoices='<option>Camila</option><option>Vitoria</option><option>Ricardo</option>';
+
+function updTTS(s){
+  const v=$(s).val(),p=$(s).parent();
+  p.find('.tts-v').toggle(v==='edge'||v==='google'||v==='polly');
+  p.find('.tts-gc').toggle(v==='google');
+  p.find('.tts-pr').toggle(v==='polly');
+  p.find('.tts-lf').toggle(v==='local_file');
+  if(v==='edge')p.find('.tts-vs').html(edgeVoices);
+  else if(v==='google')p.find('.tts-vs').html(googleVoices);
+  else if(v==='polly')p.find('.tts-vs').html(pollyVoices);
+}
+$('.tts-p').each(function(){updTTS(this);});
+
+// BG Visual
+function updBgV(s){
+  const v=$(s).val(),p=$(s).parent();
+  p.find('.bgv-dir').toggle(v==='directory');
+  p.find('.bgv-file').toggle(v==='file');
+  p.find('.bgv-rem').toggle(v==='remote_asset');
+  p.find('.bgv-ai').toggle(v==='ai');
+}
+$('.bgvt').each(function(){updBgV(this);});
+
+// BG Audio
+$(document).on('change','.bga-en',function(){$(this).closest('div').parent().find('.bga-f').toggle($(this).is(':checked'));});
+function updBgA(s){const v=$(s).val(),p=$(s).closest('.bga-f');p.find('.bga-p').toggle(v!=='remote_asset');p.find('.bga-s').toggle(v==='remote_asset');}
+$(document).on('change','.bga-t',function(){updBgA(this);});
+$(document).on('input','.vol-r',function(){$(this).prev('label').find('.vol-lbl').text($(this).val()+'%');});
+
+// Global TTS
+function updGTTS(){const v=$('.g-tts-p').val();$('.g-tv').toggle(v!=='local_file');$('.g-gc').toggle(v==='google');$('.g-pr').toggle(v==='polly');}
+$('.g-tts-p').on('change',updGTTS);
+
+// Global BG
+function updGBg(){const v=$('.g-bg-t').val();$('.g-bg-p').toggle(v==='directory'||v==='file');$('.g-bg-s').toggle(v==='remote_asset');$('.g-bg-a').toggle(v==='ai');}
+$('.g-bg-t').on('change',updGBg);
+
+// Global trans
+$('.g-tr').on('change',function(){$('.g-trf').css('opacity',$(this).is(':checked')?'1':'0.35').find('input,select').prop('disabled',!$(this).is(':checked'));});
+
+// Global audio vol
+$('#gvr').on('input',function(){$('#gvl').text($(this).val()+'%');});
+
+// Zoom
+$(document).on('change','.zt',function(){$(this).closest('div').next('.zs').toggle($(this).is(':checked'));});
+$(document).on('input','.zr',function(){$(this).closest('.zs').find('.zv').text(parseFloat($(this).val()).toFixed(2));});
+
+// Subtitle override
+$(document).on('change','.sub-ov',function(){const f=$(this).closest('div').next('.sub-f');if($(this).is(':checked')){f.css('opacity','1').find('input,select').prop('disabled',false);}else{f.css('opacity','0.35').find('input,select').prop('disabled',true);}});
+
+// Transitions toggle
+$(document).on('change','.tr-tog',function(){const b=$(this).closest('.ab');const on=$(this).is(':checked');b.find('.tr-f').css('display',on?'grid':'none');b.find('.tr-off').toggle(!on);});
+
+// TikTok
+$('#tt-tog').on('change',function(){const on=$(this).is(':checked');$('#tt-f').toggle(on);$('#tt-off').toggle(!on);});
+
+// Ratio buttons
+$(document).on('click','.rb',function(){$('.rb').removeClass('active');$(this).addClass('active');});
+
+// YouTube title counter
+$('#yt-t').on('input',function(){$('#yt-c').text($(this).val().length);});
+
+// Tags
+function addTag(t){t=t.trim().replace(/,$/,'').trim();if(!t)return;const c=$('<span class="tag"></span>').text(t+' ').append('<span class="rm">×</span>');$('#ti').before(c);}
+$('#ti').on('keydown',function(e){if(e.key==='Enter'||e.key===','){e.preventDefault();addTag($(this).val());$(this).val('');}});
+$(document).on('click','.tag .rm',function(){$(this).parent().remove();});
+
+// Overlays
+$(document).on('click','.add-ov',function(){
+  const l=$(this).prev('.ov-list');
+  const item=$(`<div class="ov-item"><div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;"><div style="width:24px;height:24px;background:#1e2130;border-radius:4px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#4b5268;"><svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg></div><div style="flex:1;min-width:0;"><div style="display:flex;justify-content:space-between;"><input type="text" placeholder="Nome" class="fi" style="font-size:11px;padding:2px 6px;"><button class="rm-ov" style="color:#4b5268;cursor:pointer;font-size:14px;margin-left:4px;">×</button></div><input type="text" placeholder="./assets/img.png" class="fi" style="font-family:monospace;font-size:10px;padding:2px 6px;margin-top:2px;"></div></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:3px;"><div><label class="sl">Tipo</label><select class="fi"><option>image</option><option>video</option></select></div><div><label class="sl">Posição</label><select class="fi"><option>top-left</option><option>top-center</option><option>top-right</option><option>center</option><option>bottom-left</option><option>bottom-center</option><option>bottom-right</option></select></div><div><label class="sl">Largura %</label><input type="number" placeholder="30" class="fi"></div><div><label class="sl">Altura %</label><input type="number" placeholder="auto" class="fi"></div></div></div>`);
+  l.append(item);
+});
+$(document).on('click','.rm-ov',function(){$(this).closest('.ov-item').remove();});
+
+// Add scene
+$('#add-scene-btn').on('click',function(){
+  const n=$('.sc').length+1;
+  $('#scenes-container').append(`<div class="sc" style="background:#141720;border:1px solid #1e2130;border-radius:8px;overflow:hidden;margin-bottom:7px;"><div class="sc-header" style="padding:10px 12px;cursor:pointer;display:flex;align-items:flex-start;gap:8px;"><svg width="12" height="12" style="color:#252830;margin-top:1px;flex-shrink:0;" fill="currentColor" viewBox="0 0 20 20"><path d="M7 2a2 2 0 100 4 2 2 0 000-4zm0 6a2 2 0 100 4 2 2 0 000-6zm0 6a2 2 0 100 4 2 2 0 000-4zm6-12a2 2 0 100 4 2 2 0 000-4zm0 6a2 2 0 100 4 2 2 0 000-6zm0 6a2 2 0 100 4 2 2 0 000-4z"/></svg><div style="flex:1;"><span style="font-size:10px;color:#4b5268;font-weight:500;">Cena ${String(n).padStart(2,'0')}</span><p style="font-size:11px;color:#4b5268;font-style:italic;margin-top:3px;">Nova cena</p><div style="display:flex;gap:3px;margin-top:4px;"><span class="chip">🎙 herdado</span><span class="chip">🖼 herdado</span></div></div></div><div class="sc-body" style="padding:0 10px 10px;"><div class="div"></div><label class="sl">Narração</label><textarea class="fi" rows="3" placeholder="Digite o texto da narração..."></textarea></div></div>`);
+  $('span.sl:first').text(`Cenas (${$('.sc').length})`);
+});
+</script>
+</body>
+</html>

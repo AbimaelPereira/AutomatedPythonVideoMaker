@@ -17,6 +17,7 @@ from libs.Subtitle import Subtitle
 from libs.MediaDownloader import MediaDownloader
 from libs.LayoutEngine import LayoutEngine
 from libs.YouTube import YouTube
+from libs.TikTok import TikTok
 from libs.Background.BackgroundEngine import BackgroundEngine
 from libs.Audio.NarrationEngine import NarrationEngine
 from libs.Transitions.TransitionEngine import TransitionEngine
@@ -1349,6 +1350,18 @@ class UnifiedVideoEngine:
                     youtube_uploader.upload_thumbnail(video_id, thumbnail_path)
             except Exception as e:
                 print(f"[UVE] Upload YouTube falhou: {e}")
+
+        # 12b. Upload TikTok
+        tiktok_config = self.video_data.get("tiktok") or self.global_settings.get("tiktok")
+        if tiktok_config and self.video_data.get("debug") is not True:
+            try:
+                print("[UVE] Iniciando upload para o TikTok...")
+                tiktok_params = tiktok_config.copy()
+                tiktok_params["video_path"] = final_path
+                tiktok_uploader = TikTok(params=tiktok_params)
+                tiktok_uploader.upload()
+            except Exception as e:
+                print(f"[UVE] Upload TikTok falhou: {e}")
 
         # 13. Abrir vídeo (debug)
         if self.video_data.get("debug") is True:

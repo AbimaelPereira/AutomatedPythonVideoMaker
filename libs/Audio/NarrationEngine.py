@@ -338,6 +338,17 @@ class NarrationEngine:
             print(f"[NarrationEngine] ⚠️ Áudio local não encontrado: {audio_file}")
             return None, 4.0, None
 
+        silence_removal = scene_data.get("tts", {}).get("silence_removal") or self.silence_removal
+        if silence_removal:
+            scene_id = scene_data.get("id", "unknown")
+            print(f"[NarrationEngine] Aplicando silence_removal no local_file da cena '{scene_id}'...")
+            tts_result = self._apply_silence_removal(
+                {"audio_file": audio_file, "word_boundaries": None},
+                audio_file.rsplit(".", 1)[0],
+                silence_removal,
+            )
+            audio_file = tts_result["audio_file"]
+
         audio_clip = AudioFileClip(audio_file)
         return audio_clip, float(audio_clip.duration or 4.0), subtitle_file
 

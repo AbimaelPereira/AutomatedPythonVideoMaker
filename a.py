@@ -25,10 +25,10 @@ load_dotenv()
 # Número mínimo de palavras por cena (evita cenas muito curtas)
 MIN_WORDS_SCENE  = 12
 # Número máximo de palavras por cena
-MAX_WORDS_SCENE  = 30
+MAX_WORDS_SCENE  = 18
 
 CHANNEL_NAME     = "devocional_com_jesus"
-OUTPUT_DIR       = "./output"
+JSONS_DIR        = "./jsons"
 TEMP_DIR         = "./temp"
 
 GEMINI_MODELS = [
@@ -150,7 +150,7 @@ def today_publish_at() -> str:
 
 
 def ensure_dirs():
-    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    os.makedirs(JSONS_DIR, exist_ok=True)
     os.makedirs(TEMP_DIR, exist_ok=True)
 
 
@@ -423,21 +423,17 @@ def main():
         doc = build_json(clip, clip_filename)
         all_json.append(doc)
 
-        json_path = os.path.join(OUTPUT_DIR, f"clip_{n:02d}_{slug[:40]}.json")
-        with open(json_path, "w", encoding="utf-8") as f:
-            json.dump([doc], f, ensure_ascii=False, indent=2)
-        print(f"    JSON: {json_path}")
         print(f"    Cenas geradas: {len(doc['scenes'])}")
         for s in doc["scenes"]:
             words = len(s["narration"]["text"].split())
             print(f"      [{s['id']}] {words} palavras: {s['narration']['text'][:60]}...")
 
     # salvar JSON consolidado
-    consolidated_path = os.path.join(OUTPUT_DIR, f"{video_id}_all_clips.json")
+    consolidated_path = os.path.join(JSONS_DIR, f"{video_id}.json")
     with open(consolidated_path, "w", encoding="utf-8") as f:
         json.dump(all_json, f, ensure_ascii=False, indent=2)
 
-    print(f"\n[✓] Concluído! {len(clips)} clips gerados em ./{OUTPUT_DIR}/")
+    print(f"\n[✓] Concluído! {len(clips)} clips gerados.")
     print(f"[✓] JSON consolidado: {consolidated_path}")
 
 
