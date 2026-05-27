@@ -1,0 +1,20 @@
+{
+  "audio_path": "./temp/C9x34Ne_w3c.mp3",
+  "clips": [
+    {
+      "start_time": 42.0,
+      "end_time": 102.0,
+      "title": "Não pode pregar como antes?",
+      "scenes_text": [
+        "Século 21 chegou, pode pregar como pregava mais não, meu filho. Não pode dar muito lugar.",
+        "Não pode dar vazão mais não. Você chora demais, não pode mais chorar, é feio.",
+        "Se chorar, tem que ter época. É feio! É Século 21, só tem gente importante.",
+        "Na igreja, tem que se afastar do microfone, não deixa nem tocar no teu lábio.",
+        "Não pode estar andando para lá e para cá no altar. Fica no cantinho. Dois passinhos.",
+        "Não pode falar em línguas estranhas quando estiver pregando. Pode não, é feio.",
+        "Quebra a ética. Não dá para mim, doutor! Eu sou da Assembleia de Deus.",
+        "Eu nasci no meio do fogo. Eu sou Pentecostal!"
+      ]
+    }
+  ]
+}

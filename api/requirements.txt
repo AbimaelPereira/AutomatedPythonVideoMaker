@@ -1,0 +1,10 @@
+fastapi==0.115.5
+pydantic-settings==2.6.1
+uvicorn[standard]==0.32.1
+sqlmodel==0.0.22
+pymysql==1.1.1
+cryptography==43.0.3
+python-jose[cryptography]==3.3.0
+bcrypt==4.2.1
+python-dotenv==1.0.1
+python-multipart==0.0.12

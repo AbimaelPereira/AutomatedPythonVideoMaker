@@ -1,0 +1,37 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@keyframes slide-in {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-slide-in {
+  animation: slide-in 0.2s ease-out;
+}
+
+@layer base {
+  body {
+    background-color: #0d1117;
+    color: #e8edf5;
+  }
+}
+
+/* Scrollbar customizada para o ReelsCutter */
+.rc-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #1e3470 transparent;
+}
+.rc-scroll::-webkit-scrollbar {
+  width: 5px;
+}
+.rc-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.rc-scroll::-webkit-scrollbar-thumb {
+  background-color: #1e3470;
+  border-radius: 99px;
+}
+.rc-scroll::-webkit-scrollbar-thumb:hover {
+  background-color: #2f4a8f;
+}

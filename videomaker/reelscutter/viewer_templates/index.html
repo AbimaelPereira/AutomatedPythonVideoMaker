@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reels Pipelines</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<!-- json-viewer web component -->
+<script type="module" src="https://cdn.jsdelivr.net/npm/@andypf/json-viewer@2.1.4/dist/iife/index.js"></script>
+<style>
+  * { font-family: 'Inter', sans-serif; box-sizing: border-box; }
+  body { background: #0f1117; color: #e2e4ed; font-size: 12px; }
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: #0f1117; }
+  ::-webkit-scrollbar-thumb { background: #252830; border-radius: 3px; }
+
+  .fi { width: 100%; background: #0f1117; border: 1px solid #252830; color: #e2e4ed;
+        border-radius: 5px; padding: 5px 8px; font-size: 11px; outline: none; }
+  .fi:focus { border-color: #4f7ef8; }
+
+  .btn { display: inline-flex; align-items: center; gap: 4px; padding: 5px 12px;
+         border-radius: 5px; font-size: 11px; font-weight: 500; cursor: pointer;
+         border: none; transition: opacity .15s; }
+  .btn:hover { opacity: .8; }
+  .btn-primary { background: #4f7ef8; color: #fff; }
+  .btn-ghost { background: #1a1d26; color: #9ba3bf; border: 1px solid #252830; }
+
+  .row { display: grid; grid-template-columns: 80px 1fr 120px 140px 100px;
+         align-items: center; gap: 12px; padding: 8px 12px;
+         border-bottom: 1px solid #1a1d26; transition: background .1s; }
+  .row:hover { background: #13161f; }
+  .row.header { background: #13161f; border-bottom: 1px solid #252830;
+                color: #5a5f72; font-weight: 600; font-size: 10px; text-transform: uppercase; }
+
+  .badge { display: inline-flex; align-items: center; gap: 3px; padding: 2px 7px;
+           border-radius: 999px; font-size: 10px; font-weight: 500; }
+  .badge-ok   { background: #0d2b1a; color: #34d399; }
+  .badge-part { background: #1c1a06; color: #fbbf24; }
+
+  /* Modal */
+  #modal-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.7);
+                    z-index: 50; align-items: center; justify-content: center; }
+  #modal-backdrop.open { display: flex; }
+  #modal { background: #13161f; border: 1px solid #252830; border-radius: 8px;
+           width: 90vw; max-width: 960px; max-height: 90vh;
+           display: flex; flex-direction: column; overflow: hidden; }
+
+  /* Tabs */
+  .tabs { display: flex; gap: 2px; padding: 10px 14px 0; border-bottom: 1px solid #252830; }
+  .tab { padding: 6px 12px; border-radius: 5px 5px 0 0; cursor: pointer;
+         font-size: 11px; color: #5a5f72; transition: color .15s; }
+  .tab.active { color: #e2e4ed; background: #1a1d26; }
+  .tab-panel { display: none; flex: 1; overflow: auto; padding: 14px; }
+  .tab-panel.active { display: block; }
+
+  json-viewer { --background-color: #0f1117; --color: #e2e4ed; font-size: 11px; }
+</style>
+</head>
+<body>
+
+<div class="max-w-5xl mx-auto px-4 py-6">
+  <div class="flex items-center justify-between mb-5">
+    <h1 class="text-sm font-semibold text-white">Reels Pipelines</h1>
+    <span class="text-xs text-gray-500">{{ total }} registro(s)</span>
+  </div>
+
+  <!-- Tabela -->
+  <div class="border border-[#252830] rounded-lg overflow-hidden">
+    <div class="row header">
+      <span>Video ID</span>
+      <span>Status</span>
+      <span>Criado em</span>
+      <span>Atualizado</span>
+      <span></span>
+    </div>
+    {% for r in records %}
+    <div class="row">
+      <span class="font-mono text-[#4f7ef8] text-[11px]">{{ r.video_id }}</span>
+      <span>
+        {% if r.exported_jsons %}
+          <span class="badge badge-ok">completo</span>
+        {% elif r.gemini_json %}
+          <span class="badge badge-part">parcial</span>
+        {% else %}
+          <span class="badge" style="background:#1a1d26;color:#5a5f72">só transcrição</span>
+        {% endif %}
+      </span>
+      <span class="text-gray-500">{{ r.created_at[:16] if r.created_at else '—' }}</span>
+      <span class="text-gray-500">{{ r.updated_at[:16] if r.updated_at else '—' }}</span>
+      <span>
+        <button class="btn btn-ghost" onclick="openModal({{ r | tojson }})">Ver dados</button>
+      </span>
+    </div>
+    {% else %}
+    <div class="px-4 py-8 text-center text-gray-600 text-xs">Nenhum pipeline encontrado.</div>
+    {% endfor %}
+  </div>
+
+  <!-- Paginação -->
+  {% if total_pages > 1 %}
+  <div class="flex items-center justify-center gap-2 mt-4">
+    {% if page > 1 %}
+    <a href="?page={{ page - 1 }}" class="btn btn-ghost">← Anterior</a>
+    {% endif %}
+    <span class="text-xs text-gray-500">{{ page }} / {{ total_pages }}</span>
+    {% if page < total_pages %}
+    <a href="?page={{ page + 1 }}" class="btn btn-ghost">Próxima →</a>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+
+<!-- Modal -->
+<div id="modal-backdrop" onclick="closeModal(event)">
+  <div id="modal">
+    <div class="flex items-center justify-between px-4 pt-3 pb-0">
+      <span id="modal-title" class="text-xs font-semibold text-white"></span>
+      <button class="btn btn-ghost text-[10px]" onclick="closeModalBtn()">✕ Fechar</button>
+    </div>
+    <div class="tabs" id="modal-tabs"></div>
+    <div id="modal-panels" style="flex:1;overflow:auto;padding:14px;"></div>
+  </div>
+</div>
+
+<script>
+const TABS = [
+  { key: "transcript_json", label: "Transcrição" },
+  { key: "gemini_json",     label: "Gemini" },
+  { key: "curation_json",   label: "Curadoria" },
+  { key: "exported_jsons",  label: "JSONs Exportados" },
+];
+
+function openModal(record) {
+  document.getElementById("modal-title").textContent = "Video: " + record.video_id;
+
+  const tabsEl = document.getElementById("modal-tabs");
+  const panelsEl = document.getElementById("modal-panels");
+  tabsEl.innerHTML = "";
+  panelsEl.innerHTML = "";
+
+  let firstActive = null;
+  TABS.forEach((t, i) => {
+    const hasData = record[t.key] != null;
+
+    const tab = document.createElement("div");
+    tab.className = "tab" + (firstActive === null && hasData ? " active" : "");
+    tab.textContent = t.label + (hasData ? "" : " —");
+    tab.style.opacity = hasData ? "1" : "0.35";
+    tab.dataset.idx = i;
+    tab.onclick = () => activateTab(i);
+    tabsEl.appendChild(tab);
+
+    const panel = document.createElement("div");
+    panel.className = "tab-panel" + (firstActive === null && hasData ? " active" : "");
+    panel.dataset.idx = i;
+
+    if (hasData) {
+      const viewer = document.createElement("json-viewer");
+      viewer.setAttribute("data", JSON.stringify(record[t.key]));
+      viewer.setAttribute("expanded", "2");
+      panel.appendChild(viewer);
+      if (firstActive === null) firstActive = i;
+    } else {
+      panel.innerHTML = '<p class="text-gray-600 text-xs">Sem dados.</p>';
+    }
+    panelsEl.appendChild(panel);
+  });
+
+  document.getElementById("modal-backdrop").classList.add("open");
+}
+
+function activateTab(idx) {
+  document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active", +t.dataset.idx === idx));
+  document.querySelectorAll(".tab-panel").forEach(p => p.classList.toggle("active", +p.dataset.idx === idx));
+}
+
+function closeModalBtn() {
+  document.getElementById("modal-backdrop").classList.remove("open");
+}
+
+function closeModal(e) {
+  if (e.target === document.getElementById("modal-backdrop")) closeModalBtn();
+}
+</script>
+</body>
+</html>
