@@ -9,6 +9,8 @@ from admin.router import router as admin_router
 from assets.router import router as assets_router
 from jobs.router import router as jobs_router
 from reelscutter_api.router import router as reelscutter_router
+from channels.router import router as channels_router
+import channels.models  # noqa: F401 — garante que a tabela é criada
 
 
 @asynccontextmanager
@@ -32,6 +34,7 @@ app.include_router(admin_router, tags=["admin"])
 app.include_router(assets_router, prefix="/remote-assets", tags=["assets"])
 app.include_router(jobs_router, prefix="/jobs", tags=["jobs"])
 app.include_router(reelscutter_router, prefix="/reelscutter", tags=["reelscutter"])
+app.include_router(channels_router, prefix="/channels", tags=["channels"])
 
 
 @app.get("/health")

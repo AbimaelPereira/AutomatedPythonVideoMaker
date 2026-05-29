@@ -9,6 +9,14 @@ def main():
     parser.add_argument("json_file", help="Caminho para o arquivo JSON de geração do vídeo")
     args = parser.parse_args()
 
+    # Resolve para absoluto antes do chdir, para que caminhos relativos passados
+    # na linha de comando continuem funcionando.
+    args.json_file = os.path.abspath(args.json_file)
+
+    # Garante que caminhos relativos internos (tokens/, output/, cache/) resolvam
+    # a partir do diretório do main.py, independente de onde o script é invocado.
+    os.chdir(os.path.dirname(os.path.abspath(__file__)))
+
     if not os.path.exists(args.json_file):
         print(f"Erro Crítico: O arquivo '{args.json_file}' não foi encontrado.")
         return

@@ -4,7 +4,9 @@
 **/*.pyo
 *.egg-info/
 .venv/
+**/.venv/
 venv/
+**/venv/
 venv-whisper/
 
 # Env e secrets
@@ -27,3 +29,9 @@ web/.next/
 # OS
 .DS_Store
 Thumbs.db
+
+# Assets binários locais
+videomaker/assets/sem-fundo/
+
+# Planejamento local
+.claude/PLANEJAMENTO.MD

@@ -38,12 +38,9 @@ class PollinationsProvider:
             api_token: Token da API.  Se None, busca em POLLINATIONS_API_TOKEN
         """
         self.api_token = api_token or os.getenv('POLLINATIONS_API_TOKEN')
-        if not self.api_token:
-            raise ValueError("API Token necessário.  Configure POLLINATIONS_API_TOKEN ou passe via parâmetro")
         
         self.session = requests.Session()
         self.session.headers.update({
-            "Authorization":  f"Bearer {self.api_token}",
             "User-Agent": "AutomatedPythonVideoMaker/1.0"
         })
     
@@ -112,7 +109,10 @@ class PollinationsProvider:
                     "quality": quality,
                     "transparent": str(transparent).lower()
                 }
-                
+
+                if self.api_token:
+                    params["key"] = self.api_token
+
                 if seed is not None:
                     params["seed"] = seed
                 
