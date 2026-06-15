@@ -6,6 +6,7 @@ from libs.Whisper.WhisperWorker import WhisperWorker
 from libs.Audio.tts.TTS_Edge import EdgeTTS
 from libs.Audio.tts.TTS_Polly import PollyTTS
 from libs.Audio.tts.TTS_GoogleCloud import GoogleCloudTTS
+from libs.Audio.tts.TTS_Kokoro import KokoroTTS
 from libs.Audio.SilenceRemover import SilenceRemover
 from libs.Audio.AudioSegmenter import AudioSegmenter
 
@@ -143,6 +144,8 @@ class NarrationEngine:
                 tts_result = self._synthesize_polly(text, scene_data, audio_basename)
             elif provider == "google":
                 tts_result = self._synthesize_google(text, scene_data, audio_basename)
+            elif provider == "kokoro":
+                tts_result = self._synthesize_kokoro(text, scene_data, audio_basename)
             else:
                 raise ValueError(f"Provider TTS não suportado: {provider}")
 
@@ -280,6 +283,43 @@ class NarrationEngine:
                     params[key] = parsed
 
         tts = GoogleCloudTTS(params=params)
+        return tts.generate_audio_and_subtitles()
+
+    def _synthesize_kokoro(self, text: str, scene_data: dict, audio_basename: str) -> dict:
+        """
+        Kokoro TTS — modelo local de 82M (gratuito, sem credenciais).
+
+        Roda num subprocesso isolado (venv-whisper) por causa do conflito de
+        numpy. Legendas (word boundaries) vêm do Whisper, igual ao Google TTS.
+
+        Configuração no JSON:
+        "tts": {
+            "provider": "kokoro",
+            "voice": "pf_dora",           // pf_dora (F), pm_alex / pm_santa (M)
+            "lang_code": "p",             // p = português brasileiro
+            "speed": 1.0,
+            "whisper_model": "base",
+            "silence_removal": { "enabled": true, "preset": "normal" }
+        }
+        """
+        scene_tts = scene_data.get("tts", {})
+
+        def _resolve(key, default):
+            return scene_tts.get(key) or self.tts_config.get(key) or default
+
+        params = {
+            "text":             text,
+            "output_basename":  audio_basename,
+            "voice_id":         _resolve("voice", "pf_dora"),
+            "lang_code":        _resolve("lang_code", "p"),
+            "speed":            float(_resolve("speed", 1.0)),
+            "whisper_model":    _resolve("whisper_model", "base"),
+            "whisper_language": _resolve("whisper_language", "pt"),
+        }
+        if "whisper_enabled" in self.tts_config:
+            params["whisper_enabled"] = self.tts_config["whisper_enabled"]
+
+        tts = KokoroTTS(params=params)
         return tts.generate_audio_and_subtitles()
 
     # ------------------------------------------------------------------

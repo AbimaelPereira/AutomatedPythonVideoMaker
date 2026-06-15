@@ -8,3 +8,9 @@ python-jose[cryptography]==3.3.0
 bcrypt==4.2.1
 python-dotenv==1.0.1
 python-multipart==0.0.12
+
+# Preview de legendas — reusa a renderização PIL do videomaker (libs/Subtitle).
+# numpy<2 é obrigatório: moviepy==1.0.3 do videomaker é incompatível com numpy>=2.
+pillow==10.4.0
+numpy<2
+srt==3.5.3

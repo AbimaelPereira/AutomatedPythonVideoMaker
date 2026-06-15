@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Pencil, Trash2, Plus, Image, Video, FileQuestion, AlertTriangle, CheckCircle, ArrowLeft } from 'lucide-react'
+import { Pencil, Trash2, Plus, Image, Video, FileQuestion, AlertTriangle, CheckCircle, ArrowLeft, Images } from 'lucide-react'
 import Layout from '../../components/Layout'
 import ConfirmModal from '../../components/ui/ConfirmModal'
+import CopyButton, { googleImagesUrl } from '../../components/ui/CopyButton'
+import { normalizeUrls } from '../../components/ui/AddMidiaModal'
 import { api } from '../../services/api'
 import { useToast } from '../../contexts/ToastContext'
 
@@ -55,8 +57,26 @@ export default function RemoteAssetDetailPage() {
     }
   }
 
+  // Reorganiza o conteúdo colado/digitado para uma URL por linha.
+  function handleBulkChange(text: string) {
+    const urls = normalizeUrls(text)
+    // Se há URLs reconhecíveis, normaliza para uma por linha; senão preserva o texto cru (digitação em andamento).
+    setBulkUrls(urls.length ? urls.join('\n') : text)
+  }
+
+  function handleBulkPaste(e: React.ClipboardEvent<HTMLTextAreaElement>) {
+    const pasted = e.clipboardData.getData('text')
+    const urls = normalizeUrls(pasted)
+    if (!urls.length) return // deixa o paste padrão acontecer
+    e.preventDefault()
+    setBulkUrls(prev => {
+      const existing = normalizeUrls(prev)
+      return Array.from(new Set([...existing, ...urls])).join('\n')
+    })
+  }
+
   async function handleBulkAdd() {
-    const urls = bulkUrls.split('\n').map(u => u.trim()).filter(Boolean)
+    const urls = normalizeUrls(bulkUrls)
     if (!urls.length) return
     setAddingBulk(true)
     try {
@@ -125,9 +145,20 @@ export default function RemoteAssetDetailPage() {
             <ArrowLeft size={16} />
           </button>
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <h2 className="text-base font-semibold text-white">{asset.name}</h2>
               <span className="text-xs font-mono text-navy-500 bg-navy-800 px-2 py-0.5 rounded">{asset.slug}</span>
+              <CopyButton value={asset.slug} title="Copiar slug" size={12} className="!p-1" />
+              <a
+                href={googleImagesUrl(asset.name || asset.slug)}
+                target="_blank"
+                rel="noreferrer"
+                title="Buscar no Google Imagens"
+                aria-label="Buscar no Google Imagens"
+                className="p-1 text-navy-400 hover:text-white bg-navy-800 hover:bg-navy-700 rounded-lg transition-colors"
+              >
+                <Images size={12} />
+              </a>
             </div>
             {asset.description && <p className="text-xs text-navy-400 mt-0.5">{asset.description}</p>}
           </div>
@@ -145,13 +176,17 @@ export default function RemoteAssetDetailPage() {
       {/* Bulk add */}
       {showBulk && (
         <div className="rounded-xl border border-navy-700 p-5 mb-6" style={{ background: '#141920' }}>
-          <p className="text-xs font-medium text-navy-300 mb-2">Cole as URLs abaixo (uma por linha):</p>
+          <p className="text-xs font-medium text-navy-300 mb-2">
+            Cole as URLs abaixo — elas são separadas automaticamente, uma por linha.
+            {(() => { const n = normalizeUrls(bulkUrls).length; return n > 0 ? <span className="text-navy-500"> ({n} {n === 1 ? 'link' : 'links'})</span> : null })()}
+          </p>
           <textarea
             value={bulkUrls}
-            onChange={e => setBulkUrls(e.target.value)}
+            onChange={e => handleBulkChange(e.target.value)}
+            onPaste={handleBulkPaste}
             rows={5}
             placeholder={"https://exemplo.com/video1.mp4\nhttps://exemplo.com/imagem1.jpg"}
-            className="w-full border border-navy-700 rounded-lg px-3 py-2 text-sm text-white placeholder-navy-600 focus:outline-none focus:border-navy-500 resize-none font-mono"
+            className="w-full border border-navy-700 rounded-lg px-3 py-2 text-sm text-white placeholder-navy-600 focus:outline-none focus:border-navy-500 resize-y font-mono"
             style={{ background: '#0d1117' }}
           />
           <div className="flex justify-end gap-2 mt-3">

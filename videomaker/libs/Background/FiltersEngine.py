@@ -8,6 +8,11 @@ import numpy as np
 import random
 from PIL import Image, ImageDraw, ImageFilter
 
+# Fator de downscale para processamento interno dos filtros.
+# O blur é aplicado em resolução reduzida e depois o frame é upscalado,
+# reduzindo o custo do GaussianBlur em ~16x sem perda visual perceptível.
+_FILTER_SCALE = 0.25
+
 def _hex_to_rgb(hex_value):
     if not isinstance(hex_value, str):
         return tuple(hex_value)
@@ -37,154 +42,163 @@ class FiltersEngine:
 
     def _build_light_leak(self, cfg: Dict, duration: float) -> VideoClip:
         """
-        Gera Light Leaks orgânicos: Manchas arredondadas que deslizam pelas bordas.
+        Light leak cinematográfico estilo filme analógico: a luz vaza a partir de
+        UMA BORDA da moldura e decai em direção ao centro (gradiente direcional),
+        não como manchas/bolas radiais. Ao longo da borda há um "morro" de luz suave
+        que desliza devagar, dando vida sem parecer uma bolha. Pensado para blend
+        "screen" (ver BackgroundEngine._apply_filters): a cor desenhada É a luz.
+
+        Parâmetros (JSON):
+          intensity — brilho geral da luz
+          size      — quão FUNDO a luz entra a partir da borda (profundidade)
+          speed     — velocidade do deslize/pulsação
+          count     — quantos vazamentos (cada um numa borda)
+          palette   — cores da luz
         """
         W, H = self.resolution
-        
-        # Parâmetros
-        speed_mult = float(cfg.get("speed", 0.5))
-        intensity_mult = float(cfg.get("intensity", 1.0))
-        
-        # Paleta "Burn" (Laranja, Vermelho, Dourado)
-        palette = [
-            (255, 60, 0),    # Vermelho Neon
-            (255, 120, 20),  # Laranja
-            (255, 180, 50),  # Dourado
-            (200, 20, 0)     # Vermelho Sangue
+        sw, sh = max(1, int(W * _FILTER_SCALE)), max(1, int(H * _FILTER_SCALE))
+
+        speed_mult = float(cfg.get("speed", 1.0))
+        intensity_mult = float(cfg.get("intensity", 0.8))
+        size_mult = float(cfg.get("size", 1.0))
+        num_leaks = int(cfg.get("count", 2))
+
+        default_palette = [
+            (255, 150, 40),
+            (255, 190, 80),
+            (255, 120, 20),
         ]
+        raw_palette = cfg.get("palette")
+        palette = [_hex_to_rgb(c) for c in raw_palette] if raw_palette else default_palette
 
-        # Configuração dos "Atores" (Manchas de luz)
-        # Vamos criar 4 a 6 manchas que se comportam independentemente
-        num_blobs = 5
-        blobs = []
+        # Coordenadas normalizadas [0,1] da grade de baixa-res.
+        yy, xx = np.mgrid[0:sh, 0:sw].astype(np.float32)
+        nx = xx / max(1, sw - 1)
+        ny = yy / max(1, sh - 1)
 
-        for i in range(num_blobs):
-            # Escolhe uma borda aleatória: 0=Esq, 1=Dir, 2=Topo, 3=Baixo
-            edge = random.choice([0, 1, 1, 2, 3]) # Leve preferência por laterais
-            
-            # Cor aleatória
-            color = random.choice(palette)
-            
-            # Tamanho base (bem grande para parecer luz vazada)
-            base_size = random.uniform(W * 0.4, W * 0.8)
-            
-            # Velocidade e Fase
-            speed = random.uniform(0.1, 0.4) * speed_mult
+        leaks = []
+        for i in range(num_leaks):
+            edge = random.choice(["left", "right", "top", "bottom"])
+            color = np.array(random.choice(palette), dtype=np.float32)
+            # Profundidade: fração da tela que a luz penetra a partir da borda.
+            # size_mult escala isso. ~0.25–0.45 da tela por padrão.
+            depth = random.uniform(0.25, 0.45) * size_mult
+            speed = random.uniform(0.15, 0.4) * speed_mult
             phase = random.uniform(0, 2 * np.pi)
-            
-            blobs.append({
-                "edge": edge,
-                "color": color,
-                "base_size": base_size,
-                "speed": speed,
-                "phase": phase,
-                # Posição inicial (offset) ao longo da borda (0.0 a 1.0)
-                "offset_start": random.uniform(-0.2, 0.8) 
+            # Centro do "morro" de luz ao longo da borda e sua largura.
+            band_center = random.uniform(0.3, 0.7)
+            band_width = random.uniform(0.35, 0.6)
+            # Direção e velocidade da DERIVA ao longo da borda: o morro percorre a
+            # borda de uma ponta à outra (não só oscila no lugar).
+            drift_dir = random.choice([1.0, -1.0])
+            drift_speed = random.uniform(0.06, 0.14) * speed_mult
+            leaks.append({
+                "edge": edge, "color": color, "depth": max(0.05, depth),
+                "speed": speed, "phase": phase,
+                "band_center": band_center, "band_width": band_width,
+                "drift_dir": drift_dir, "drift_speed": drift_speed,
             })
 
-        def draw_blobs(t, mode="rgb"):
-            # Cria imagem preta (vazia)
-            img = Image.new("RGB" if mode == "rgb" else "L", (W, H), (0, 0, 0) if mode == "rgb" else 0)
-            draw = ImageDraw.Draw(img)
+        def draw_leak(t):
+            light = np.zeros((sh, sw, 3), dtype=np.float32)
 
-            for b in blobs:
-                # Movimento contínuo ao longo do tempo
-                # O movimento é linear com um pouco de oscilação senoidal
-                progress = (b["offset_start"] + t * b["speed"]) % 1.5 - 0.25 # Vai de -0.25 a 1.25
-                
-                # Oscilação de tamanho ("respiração")
-                pulse = np.sin(t * 1.5 + b["phase"]) 
-                current_size = b["base_size"] * (1.0 + 0.2 * pulse)
-                radius = current_size / 2
+            for lk in leaks:
+                pulse = 0.55 + 0.45 * np.sin(t * lk["speed"] * 4 + lk["phase"])
+                brightness = intensity_mult * 0.7 * pulse
+                if brightness <= 0.01:
+                    continue
 
-                # Define centro (cx, cy) baseado na borda
-                if b["edge"] == 0:   # Esquerda (move verticalmente)
-                    cx = 0 - radius * 0.4 # Parcialmente fora da tela
-                    cy = H * progress
-                elif b["edge"] == 1: # Direita (move verticalmente)
-                    cx = W + radius * 0.4
-                    cy = H * (1.0 - progress) # Inverso
-                elif b["edge"] == 2: # Topo (move horizontalmente)
-                    cx = W * progress
-                    cy = 0 - radius * 0.4
-                else:                # Baixo
-                    cx = W * (1.0 - progress)
-                    cy = H + radius * 0.4
+                # 1) Gradiente de PROFUNDIDADE: forte na borda → 0 rumo ao centro.
+                #    depth_axis vai de 0 (na borda) a 1 (na borda oposta).
+                if lk["edge"] == "left":
+                    depth_axis = nx
+                elif lk["edge"] == "right":
+                    depth_axis = 1.0 - nx
+                elif lk["edge"] == "top":
+                    depth_axis = ny
+                else:  # bottom
+                    depth_axis = 1.0 - ny
+                # Decaimento exponencial: luz concentrada perto da borda.
+                depth_falloff = np.exp(-depth_axis / lk["depth"])
 
-                # Coordenadas do Bounding Box
-                x1, y1 = cx - radius, cy - radius
-                x2, y2 = cx + radius, cy + radius
-
-                # Desenhar
-                if mode == "rgb":
-                    draw.ellipse([x1, y1, x2, y2], fill=b["color"])
+                # 2) Variação ao longo da borda: um "morro" gaussiano que SE MOVE
+                #    com direção (deriva contínua de uma ponta à outra) + uma leve
+                #    oscilação por cima, pra dar vida sem ficar mecânico.
+                if lk["edge"] in ("left", "right"):
+                    along = ny
                 else:
-                    # Na máscara, a opacidade varia com o pulso também
-                    opacity = int(255 * intensity_mult * (0.6 + 0.4 * pulse)) # Min 60% Max 100%
-                    draw.ellipse([x1, y1, x2, y2], fill=opacity)
+                    along = nx
+                # Deriva direcional: percorre [-0.3, 1.3] em loop e reentra suave.
+                drift = (lk["band_center"] + lk["drift_dir"] * t * lk["drift_speed"]) % 1.6 - 0.3
+                center = drift + 0.12 * np.sin(t * lk["speed"] * 2 + lk["phase"])
+                band = np.exp(-((along - center) ** 2) / (2.0 * lk["band_width"] ** 2))
 
-            # Blur Pesado é o segredo do "Light Leak"
-            # Reduz a resolução para o blur ser rápido e depois aumenta (opcional), 
-            # mas aqui faremos direto pois são poucos objetos.
-            img = img.filter(ImageFilter.GaussianBlur(radius=80)) # Blur muito forte
+                falloff = depth_falloff * band
+                light += falloff[..., None] * lk["color"][None, None, :] * brightness
 
+            # Clamp translúcido: nunca estoura para branco sólido.
+            light = np.clip(light, 0, 190).astype(np.uint8)
+
+            img = Image.fromarray(light, "RGB")
+            img = img.resize((W, H), Image.BILINEAR)
             return np.array(img)
 
-        # 1. Gerador RGB
-        def make_rgb(t):
-            return draw_blobs(t, mode="rgb")
-
-        # 2. Gerador Mask (Grayscale / Alpha)
-        def make_mask(t):
-            mask_arr = draw_blobs(t, mode="mask")
-            # Normaliza para 0..1 float
-            return mask_arr.astype(np.float64) / 255.0
-
-        # Criação dos Clips Separados (Seguro contra erros de broadcast)
-        clip_rgb = VideoClip(make_rgb, duration=duration)
-        clip_mask = VideoClip(make_mask, duration=duration, ismask=True)
-        
-        final_clip = clip_rgb.set_mask(clip_mask)
-        return final_clip
+        # Sem máscara: o RGB é a luz. Composição via blend "screen" no BackgroundEngine.
+        return VideoClip(draw_leak, duration=duration)
 
     def _build_particles(self, cfg: Dict, duration: float) -> VideoClip:
-        # Mantendo o código de partículas original que funciona
         W, H = self.resolution
+
+        # Resolução interna reduzida para o processamento das partículas
+        sw, sh = max(1, int(W * _FILTER_SCALE)), max(1, int(H * _FILTER_SCALE))
+
         density = float(cfg.get("density", 0.5))
         base_speed = float(cfg.get("speed", 0.5))
         size_factor = float(cfg.get("size", 0.5))
         color_hex = cfg.get("color", "#FFFFFF")
-        blur_radius = float(cfg.get("blur_radius", 2.0))
-        
+        blur_radius = float(cfg.get("blur_radius", 2.0)) * _FILTER_SCALE
+
         rgb = _hex_to_rgb(color_hex)
         num_particles = int(50 * density)
-        
-        xs = np.random.uniform(0, W, num_particles)
-        ys = np.random.uniform(0, H, num_particles)
-        vys = np.random.uniform(-50, -10, num_particles) * base_speed
-        vxs = np.random.uniform(-10, 10, num_particles) * base_speed
-        sizes = np.random.uniform(2, 10, num_particles) * size_factor + 2
-        opacities = np.random.uniform(0.3, 0.9, num_particles)
-        phases = np.random.uniform(0, 2*np.pi, num_particles)
 
-        def make_frame_rgba(t):
-            img = Image.new('RGBA', (W, H), (0, 0, 0, 0))
+        xs = np.random.uniform(0, sw, num_particles)
+        ys = np.random.uniform(0, sh, num_particles)
+        vys = np.random.uniform(-50, -10, num_particles) * base_speed * _FILTER_SCALE
+        vxs = np.random.uniform(-10, 10, num_particles) * base_speed * _FILTER_SCALE
+        sizes = (np.random.uniform(2, 10, num_particles) * size_factor + 2) * _FILTER_SCALE
+        opacities = np.random.uniform(0.3, 0.9, num_particles)
+        phases = np.random.uniform(0, 2 * np.pi, num_particles)
+
+        def draw_particles(t, mode="rgb"):
+            img = Image.new('RGBA', (sw, sh), (0, 0, 0, 0))
             draw = ImageDraw.Draw(img)
-            
-            curr_xs = (xs + vxs * t * 60 + np.sin(t * 2 + phases) * 10) % W
-            curr_ys = (ys + vys * t * 60) % H
-            
+
+            curr_xs = (xs + vxs * t * 60 + np.sin(t * 2 + phases) * 10 * _FILTER_SCALE) % sw
+            curr_ys = (ys + vys * t * 60) % sh
+
             for i in range(num_particles):
                 x, y = curr_xs[i], curr_ys[i]
                 s = sizes[i]
                 o = int(opacities[i] * 255)
                 bbox = [x - s, y - s, x + s, y + s]
                 draw.ellipse(bbox, fill=(rgb[0], rgb[1], rgb[2], o))
-            
+
             if blur_radius > 0:
                 img = img.filter(ImageFilter.GaussianBlur(blur_radius))
-            
-            return np.array(img)
 
-        clip_rgba = VideoClip(make_frame_rgba, duration=duration)
-        return clip_rgba.to_RGB().set_mask(clip_rgba.to_mask())
+            img = img.resize((W, H), Image.BILINEAR)
+
+            if mode == "rgb":
+                return np.array(img.convert("RGB"))
+            else:
+                return np.array(img.split()[3])  # canal alpha
+
+        def make_rgb(t):
+            return draw_particles(t, mode="rgb")
+
+        def make_mask(t):
+            return draw_particles(t, mode="mask").astype(np.float64) / 255.0
+
+        clip_rgb = VideoClip(make_rgb, duration=duration)
+        clip_mask = VideoClip(make_mask, duration=duration, ismask=True)
+        return clip_rgb.set_mask(clip_mask)

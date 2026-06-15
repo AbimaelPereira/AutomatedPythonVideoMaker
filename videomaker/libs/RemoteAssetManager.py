@@ -2,7 +2,7 @@ import os
 from datetime import datetime
 from typing import Optional, Dict
 from libs.Storage.RemoteAssetStorage import RemoteAssetStorage
-from libs.Storage.JSONAssetStorage import JSONAssetStorage
+from libs.Storage.HTTPAssetStorage import HTTPAssetStorage
 
 
 class RemoteAssetManager:
@@ -24,12 +24,12 @@ class RemoteAssetManager:
         Inicializa o manager.
         
         Args:
-            storage: Implementação de RemoteAssetStorage (default: JSONAssetStorage)
+            storage: Implementação de RemoteAssetStorage (default: HTTPAssetStorage — fala com a API)
             config: Configurações opcionais do global_settings
         """
         # Storage
         if storage is None:
-            storage = JSONAssetStorage()
+            storage = HTTPAssetStorage()
         
         self.storage = storage
         

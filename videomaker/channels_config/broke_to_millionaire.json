@@ -9,6 +9,7 @@
             "voice": "en-US-AndrewNeural"
         },
         "subtitle": {
+            "enabled": true,
             "font_path": "./assets/fonts/BebasNeue/BebasNeue-Regular.ttf",
             "font_size": 110,
             "color": "#FFFFFF",

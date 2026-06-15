@@ -16,6 +16,9 @@ class Settings(BaseSettings):
     FRONTEND_URL: str = "http://localhost:5173"
     ENVIRONMENT: str = "development"
 
+    # Token de serviço para chamadas internas (ex: videomaker -> API de remote assets)
+    SERVICE_TOKEN: str = "dev-service-token"
+
     @computed_field
     @property
     def DATABASE_URL(self) -> str:

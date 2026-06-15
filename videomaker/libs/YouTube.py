@@ -301,6 +301,6 @@ class YouTube:
 
 
 if __name__ == "__main__":
-    FILE_JSON_SAVE = "geopolitica_em_foco.json"
+    FILE_JSON_SAVE = "the_touchline_record.json"
     yt = YouTube(params={"token_file_name": FILE_JSON_SAVE})
     yt.generate_token()

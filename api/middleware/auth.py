@@ -1,13 +1,21 @@
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, Header
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlmodel import Session
 from jose import JWTError
+from typing import Optional
 
 from database import get_session
 from auth.models import User
 from auth.service import decode_access_token
+from config import settings
 
 bearer = HTTPBearer()
+
+
+def require_service_token(x_service_token: Optional[str] = Header(default=None)) -> None:
+    """Autentica chamadas internas (ex: videomaker -> API) via header X-Service-Token."""
+    if not x_service_token or x_service_token != settings.SERVICE_TOKEN:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Service token inválido")
 
 
 def get_current_user(

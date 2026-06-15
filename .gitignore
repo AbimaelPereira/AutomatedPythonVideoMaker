@@ -35,3 +35,6 @@ videomaker/assets/sem-fundo/
 
 # Planejamento local
 .claude/PLANEJAMENTO.MD
+
+# Memória interna do Claude Code
+.claude/projects/

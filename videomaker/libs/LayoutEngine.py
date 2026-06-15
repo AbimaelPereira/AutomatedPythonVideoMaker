@@ -1,5 +1,3 @@
-from moviepy.editor import TextClip
-
 class LayoutEngine:
     @staticmethod
     def calculate_dimension(value, total_size):
@@ -77,6 +75,85 @@ class LayoutEngine:
         return (x, y)
 
     @staticmethod
+    def safe_area(canvas_size, paddings):
+        """Retorna o retângulo de área segura (x, y, w, h) a partir dos paddings.
+
+        Paddings significam apenas margem segura — a faixa onde elementos podem
+        ser ancorados. `paddings` é um dict/obj com padding_side/top/bottom.
+        """
+        cw, ch = canvas_size
+        pad_side = getattr(paddings, "padding_side", None)
+        if pad_side is None and isinstance(paddings, dict):
+            pad_side = paddings.get("padding_side", 0)
+        pad_top = getattr(paddings, "padding_top", None)
+        if pad_top is None and isinstance(paddings, dict):
+            pad_top = paddings.get("padding_top", 0)
+        pad_bot = getattr(paddings, "padding_bottom", None)
+        if pad_bot is None and isinstance(paddings, dict):
+            pad_bot = paddings.get("padding_bottom", 0)
+
+        pad_side = int(pad_side or 0)
+        pad_top = int(pad_top or 0)
+        pad_bot = int(pad_bot or 0)
+
+        x = pad_side
+        y = pad_top
+        w = max(1, cw - 2 * pad_side)
+        h = max(1, ch - pad_top - pad_bot)
+        return (x, y, w, h)
+
+    @staticmethod
+    def resolve_anchor(placement, element_size, canvas_size, safe_rect):
+        """Resolve um bloco `placement` numa posição absoluta (x, y) na tela.
+
+        `placement` = {"anchor": [x, y], "width": ..., "region": ...}
+          - anchor[0] (x): left | center | right | "70%" | px
+          - anchor[1] (y): top  | center | bottom | "50%" | px
+        Âncoras nomeadas (left/right/top/bottom/center) são resolvidas DENTRO da
+        área segura (`safe_rect` = (sx, sy, sw, sh)); percentuais/px são relativos
+        à área segura também, para manter tudo dentro da margem.
+
+        Retorna (x, y) já considerando o tamanho do elemento (canto superior esq.).
+        """
+        ew, eh = element_size
+        sx, sy, sw, sh = safe_rect
+
+        anchor = placement.get("anchor", ["center", "center"])
+        if isinstance(anchor, str):
+            ax, ay = anchor, "center"
+        elif isinstance(anchor, (list, tuple)):
+            ax = anchor[0] if len(anchor) > 0 else "center"
+            ay = anchor[1] if len(anchor) > 1 else "center"
+        else:
+            ax, ay = "center", "center"
+
+        # X dentro da área segura
+        if ax == "left":
+            x = sx
+        elif ax == "right":
+            x = sx + sw - ew
+        elif ax == "center":
+            x = sx + (sw - ew) // 2
+        elif isinstance(ax, str) and "%" in ax:
+            x = sx + int(sw * (float(ax.strip("%")) / 100.0))
+        else:
+            x = sx + LayoutEngine.calculate_dimension(ax, sw)
+
+        # Y dentro da área segura
+        if ay == "top":
+            y = sy
+        elif ay == "bottom":
+            y = sy + sh - eh
+        elif ay == "center":
+            y = sy + (sh - eh) // 2
+        elif isinstance(ay, str) and "%" in ay:
+            y = sy + int(sh * (float(ay.strip("%")) / 100.0))
+        else:
+            y = sy + LayoutEngine.calculate_dimension(ay, sh)
+
+        return (int(x), int(y))
+
+    @staticmethod
     def process_stack_layout(visual_items, config):
         """
         Calcula posições para empilhar itens visualmente na área verde (entre Topo e Legenda).
@@ -101,17 +178,27 @@ class LayoutEngine:
 
         # Altura disponível para os visuais (Da margem segura até o topo da área da legenda)
         available_visual_height = (H - pad_bot) - pad_top
-        
+
+        # Área segura (margens) — usada pelo posicionamento via `placement`.
+        safe_rect = LayoutEngine.safe_area((W, H), config)
+
         if not visual_items:
             return []
 
-        # --- Separa itens com posição explícita dos itens do stack normal ---
+        # --- Separa itens por modo de posicionamento ---
+        #  placement (novo) > layout.position explícito (legado) > stack (default)
         EXPLICIT_POSITIONS = {"center", "top", "bottom"}
 
-        stack_items   = []  # índice original → entra no stack
-        explicit_items = [] # (índice original, item, position_value)
+        stack_items     = []  # índice original → entra no stack
+        explicit_items  = []  # (índice original, item, position_value) — modo legado
+        placement_items = []  # (índice original, item, placement_dict) — modo novo
 
         for idx, item in enumerate(visual_items):
+            placement = item.get('placement')
+            if isinstance(placement, dict) and placement.get('anchor') is not None:
+                placement_items.append((idx, item, placement))
+                continue
+
             layout_data = item.get('layout', {})
             pos = layout_data.get('position')
             if pos is not None and (
@@ -124,6 +211,84 @@ class LayoutEngine:
 
         # Pré-aloca resultado com None para manter índice original
         final_results = [None] * len(visual_items)
+
+        # --- Posiciona itens via `placement` (área segura + anchor) ---
+        for idx, item, placement in placement_items:
+            orig_w, orig_h = item.get('original_size', (1920, 1080))
+            if orig_h == 0: orig_h = 1080
+            aspect_ratio = orig_w / orig_h
+
+            req_width  = placement.get('width')
+            req_height = placement.get('height')
+            safe_h = safe_rect[3]
+            safe_w = safe_rect[2]
+            crop_height = None  # altura de crop cover (None = sem crop)
+
+            if req_width is not None and req_height is not None:
+                # width + height: cover — o final_size é sempre (target_w, crop_height).
+                # Resize pela dimensão que garante cobertura total da caixa, depois crop o excesso.
+                desired_w = LayoutEngine.calculate_dimension(req_width, safe_w)
+                desired_h = LayoutEngine.calculate_dimension(req_height, safe_h)
+                # Escala pela dimensão que mais cresce para garantir cobertura total
+                scale_by_w = desired_w / (orig_w or 1)
+                scale_by_h = desired_h / (orig_h or 1)
+                scale = max(scale_by_w, scale_by_h)
+                target_w = int(orig_w * scale)  # pode ser maior que desired_w (crop horizontal)
+                target_h = int(orig_h * scale)  # pode ser maior que desired_h (crop vertical)
+                crop_height = desired_h          # altura final uniforme
+            elif req_height is not None:
+                # só height: height-driven, width derivado pelo aspect ratio
+                target_h = LayoutEngine.calculate_dimension(req_height, safe_h)
+                target_w = int(target_h * aspect_ratio)
+            else:
+                # só width (comportamento original, width default 100%)
+                target_w = LayoutEngine.calculate_dimension(req_width if req_width is not None else 1.0, safe_w)
+                target_h = int(target_w / aspect_ratio)
+
+            # Clamp só no modo SEM cover (preserva aspect ratio reduzindo se estourar).
+            # No modo cover, target_w/target_h são o tamanho do RESIZE (aspect preservado);
+            # o recorte para a caixa é feito via crop_width/crop_height no worker.
+            if crop_height is None:
+                if target_h > safe_h and target_h > 0:
+                    scale = safe_h / target_h
+                    target_h = safe_h
+                    target_w = int(target_w * scale)
+                if target_w > safe_w and target_w > 0:
+                    scale = safe_w / target_w
+                    target_w = safe_w
+                    target_h = int(target_h * scale)
+
+            if target_w < 2: target_w = 2
+            if target_h < 2: target_h = 2
+
+            # No modo cover, o tamanho FINAL (caixa) é (desired_w, desired_h);
+            # o resize usa (target_w, target_h) e o crop centralizado recorta o excesso.
+            if crop_height is not None:
+                final_w, final_h = desired_w, desired_h
+                crop_width  = desired_w if target_w > desired_w else None
+                resize_to   = (target_w, target_h)
+                anchor_size = (final_w, final_h)
+            else:
+                final_w, final_h = target_w, target_h
+                crop_width  = None
+                resize_to   = (target_w, target_h)
+                anchor_size = (target_w, target_h)
+
+            fx, fy = LayoutEngine.resolve_anchor(
+                placement, anchor_size, (W, H), safe_rect
+            )
+
+            final_results[idx] = {
+                'final_size': (final_w, final_h),
+                'final_position': (fx, fy),
+                'crop_height': crop_height,
+                'crop_width': crop_width,
+                '_resize_to': resize_to,
+                'border_radius': item.get('border_radius', 0),
+                # Em modo cover (crop_height != None), animation é adiada e aplicada
+                # no worker pós-crop dentro de janela fixa. Fora do cover é None aqui.
+                'deferred_animation': item.get('animation') if crop_height is not None else None,
+            }
 
         # --- Posiciona itens explícitos ---
         for idx, item, pos in explicit_items:

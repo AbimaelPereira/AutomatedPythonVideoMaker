@@ -1,4 +1,4 @@
 from .RemoteAssetStorage import RemoteAssetStorage
-from .JSONAssetStorage import JSONAssetStorage
+from .HTTPAssetStorage import HTTPAssetStorage
 
-__all__ = ["RemoteAssetStorage", "JSONAssetStorage"]
+__all__ = ["RemoteAssetStorage", "HTTPAssetStorage"]

@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { Images } from 'lucide-react'
 import Layout from '../../components/Layout'
 import Tabs from '../../components/ui/Tabs'
 import FormField from '../../components/ui/FormField'
+import CopyButton, { googleImagesUrl } from '../../components/ui/CopyButton'
 import { api } from '../../services/api'
 import { useToast } from '../../contexts/ToastContext'
 
@@ -68,13 +70,33 @@ export default function RemoteAssetFormPage() {
                   placeholder="Ex: Fundos Natureza"
                   error={errors.name}
                 />
-                <FormField
-                  label="Slug"
-                  value={form.slug}
-                  onChange={e => setForm(f => ({ ...f, slug: slugify(e.target.value) }))}
-                  placeholder="Ex: fundos-natureza"
-                  error={errors.slug}
-                />
+                <div>
+                  <label className="block text-xs font-medium text-navy-300 mb-1.5">Slug</label>
+                  <div className="flex items-stretch gap-2">
+                    <input
+                      value={form.slug}
+                      onChange={e => setForm(f => ({ ...f, slug: slugify(e.target.value) }))}
+                      placeholder="Ex: fundos-natureza"
+                      className={`flex-1 min-w-0 border rounded-lg px-3 py-2 text-sm text-white placeholder-navy-500 focus:outline-none transition-colors
+                        ${errors.slug ? 'border-red-500 bg-red-950' : 'border-navy-700 focus:border-navy-500'}`}
+                      style={errors.slug ? {} : { background: '#0d1117' }}
+                    />
+                    <CopyButton value={form.slug} title="Copiar slug" />
+                    <a
+                      href={googleImagesUrl(form.name || form.slug)}
+                      target="_blank"
+                      rel="noreferrer"
+                      title="Buscar no Google Imagens"
+                      aria-label="Buscar no Google Imagens"
+                      className={`shrink-0 flex items-center justify-center p-2 rounded-lg transition-colors ${
+                        (form.name || form.slug) ? 'text-navy-400 hover:text-white bg-navy-800 hover:bg-navy-700' : 'text-navy-700 bg-navy-900 pointer-events-none'
+                      }`}
+                    >
+                      <Images size={14} />
+                    </a>
+                  </div>
+                  {errors.slug && <p className="mt-1 text-xs text-red-400">{errors.slug}</p>}
+                </div>
                 <div className="sm:col-span-2">
                   <label className="block text-xs font-medium text-navy-300 mb-1.5">Descrição</label>
                   <textarea

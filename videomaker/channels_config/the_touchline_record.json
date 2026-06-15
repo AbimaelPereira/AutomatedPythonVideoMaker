@@ -1,0 +1,81 @@
+{
+    "global_settings": {
+        "tts/": {
+            "provider": "local_file",
+            "audio_file": "./temp/geo.wav"
+        },
+        "tts": {
+            "provider": "edge",
+            "voice": "en-US-ChristopherNeural",
+            "rate": "+5%",
+            "pitch": "-8Hz"
+        },
+        "subtitle": {
+            "enabled": true,
+            "type": "karaoke",
+            "uppercase": true,
+            "min_chars_per_line": 20,
+            "line_fill_ratio": 0.5,
+            "lines_per_group": 1,
+            "palette": [
+                {
+                    "font_path": "./assets/fonts/Montserrat/Montserrat-Black.ttf",
+                    "fill": "#FFFFFF",
+                    "shadow": {
+                        "color": "#ffffff",
+                        "opacity": 1,
+                        "blur": 9,
+                        "offset": [
+                            4,
+                            4
+                        ]
+                    }
+                }
+            ],
+            "placement": {
+                "anchor": [
+                    "center",
+                    "bottom"
+                ]
+            }
+        },
+        "padding_side": 96,
+        "padding_top": 54,
+        "padding_bottom": 160,
+        "background": {
+            "audio": {
+                "type": "directory",
+                "source": "./assets/audio/background/inspiration"
+            },
+            "visual": {
+                "type": "color",
+                "source": "#212121",
+                "/fit_mode": "contain-blur",
+                "animation": {
+                    "type": "zoom",
+                    "duration": 20.0,
+                    "intensity": 0.12
+                }
+            },
+            "filters": {
+                "light_leak": {
+                    "speed": 1.8,
+                    "intensity": 0.2,
+                    "count": 6,
+                    "size": 0.1,
+                    "palette": [
+                        "#206faf"
+                    ]
+                }
+            }
+        },
+        "transitions": {
+            "enabled": true
+        }
+    },
+    "youtube": {
+        "token_file_name": "the_touchline_record.json",
+        "privacy_status": "private",
+        "category_id": "22"
+    }
+}

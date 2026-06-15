@@ -11,6 +11,7 @@
             "rate": "+20%"
         },
         "subtitle": {
+            "enabled": true,
             "font_path": "./assets/fonts/Montserrat/Montserrat-Black.ttf",
             "font_size": 110,
             "color": "#1beb0c",

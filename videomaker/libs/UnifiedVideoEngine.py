@@ -11,9 +11,9 @@ import multiprocessing
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from types import SimpleNamespace
 
-from libs.utils import deep_merge, load_channel_config, resolve_output_resolution
-from libs.VisualClip import VisualClip, force_rgb
-from libs.Subtitle import Subtitle
+from libs.utils import deep_merge, load_channel_config, resolve_output_resolution, resolve_output_quality
+from libs.VisualClip import VisualClip, force_rgb, apply_border_radius_clip, apply_animation_in_window
+from libs.Subtitle.SubtitleEngine import SubtitleEngine
 from libs.MediaDownloader import MediaDownloader
 from libs.LayoutEngine import LayoutEngine
 from libs.YouTube import YouTube
@@ -175,6 +175,29 @@ def _resolve_scene_tts(effective_gs_tts: dict, scene: dict) -> dict:
     return deep_merge(effective_gs_tts, scene_tts)
 
 
+def _default_safe_paddings(resolution: tuple) -> dict:
+    """Paddings padrão de "área segura" conforme a orientação da tela.
+
+    Paddings significam apenas margem segura (a faixa onde visuais e legendas
+    podem ser ancorados via `placement`). Verticais: 9:16 mantém os históricos
+    (top 100 / bottom 850, calibrados para a legenda legada); 16:9 usa margens
+    simétricas de ~5% por não ter zona de legenda dedicada.
+    """
+    w, h = resolution
+    if w >= h:  # paisagem (16:9 etc.) — margens simétricas de ~5%
+        return {
+            "padding_side":   int(w * 0.05),   # 1920 → 96
+            "padding_top":    int(h * 0.05),   # 1080 → 54
+            "padding_bottom": int(h * 0.05),   # 1080 → 54
+        }
+    # retrato (9:16) — preserva os defaults históricos
+    return {
+        "padding_side":   50,
+        "padding_top":    100,
+        "padding_bottom": 850,
+    }
+
+
 def _resolve_scene_subtitle(base_subtitle_config: dict, effective_gs: dict, scene: dict) -> dict:
     """
     Resolve a config de legenda efetiva para uma cena.
@@ -188,6 +211,17 @@ def _resolve_scene_subtitle(base_subtitle_config: dict, effective_gs: dict, scen
     return merged
 
 
+def _subtitles_enabled(effective_gs: dict, scene: dict) -> bool:
+    """
+    Decide se a legenda deve ser renderizada para a cena.
+
+    Controlado por `subtitle.enabled`, resolvido na cadeia canal < global < cena
+    (mesmo merge de `_resolve_scene_subtitle`). Default: desligado.
+    """
+    merged = deep_merge(effective_gs.get("subtitle", {}), scene.get("subtitle", {}))
+    return bool(merged.get("enabled", False))
+
+
 def _process_scene_worker(scene_data_bundle):
     """Worker isolado para processar uma cena em paralelo."""
     scene_index = scene_data_bundle["scene_index"]
@@ -195,6 +229,7 @@ def _process_scene_worker(scene_data_bundle):
     total_scenes = scene_data_bundle["total_scenes"]
     output_dir = scene_data_bundle["output_dir"]
     resolution_output = scene_data_bundle["resolution_output"]
+    output_quality = scene_data_bundle["output_quality"]
     tts_config = scene_data_bundle["tts_config"]
     effective_gs = scene_data_bundle["effective_gs"]
     layout_params = scene_data_bundle["layout_params"]
@@ -252,7 +287,7 @@ def _process_scene_worker(scene_data_bundle):
         )
 
         subtitle_clip = None
-        if scene.get("narration", {}).get("subtitles", False):
+        if _subtitles_enabled(effective_gs, scene):
             subtitle_clip = _create_subtitle_clip_worker(
                 scene_duration, subtitle_file, layout_params,
                 resolution_output, effective_gs, scene_data=scene
@@ -314,12 +349,13 @@ def _process_scene_worker(scene_data_bundle):
             audio_codec='aac',
             temp_audiofile=temp_audiofile,
             remove_temp=True,
-            fps=30,
-            preset='medium',
+            fps=output_quality["fps"],
+            preset=output_quality["preset"],
             threads=4,
             verbose=False,
             logger=None,
-            ffmpeg_params=['-vsync', 'cfr', '-g', '60', '-bf', '2']
+            ffmpeg_params=['-crf', str(output_quality["crf"]), '-pix_fmt', output_quality["pix_fmt"],
+                           '-vsync', 'cfr', '-g', '60', '-bf', '2']
         )
 
         print(f"[Worker-{scene_index}] Cena renderizada: {os.path.basename(scene_clip_path)}")
@@ -395,7 +431,24 @@ def _create_visual_elements_clip_worker(scene_data, scene_duration, scene_dir,
                 break
             layout = layout_results[i]
             try:
-                clip_resized = clip.resize(newsize=layout['final_size'])
+                resize_to = layout.get('_resize_to') or layout['final_size']
+                clip_resized = clip.resize(newsize=resize_to)
+                # Cover crop centralizado (horizontal e/ou vertical)
+                crop_h = layout.get('crop_height')
+                crop_w = layout.get('crop_width')
+                if crop_h and crop_h < clip_resized.h:
+                    y1 = (clip_resized.h - crop_h) // 2
+                    clip_resized = clip_resized.crop(y1=y1, y2=y1 + crop_h)
+                if crop_w and crop_w < clip_resized.w:
+                    x1 = (clip_resized.w - crop_w) // 2
+                    clip_resized = clip_resized.crop(x1=x1, x2=x1 + crop_w)
+                # Ordem no modo cover: animation (janela fixa) → border_radius
+                deferred_anim = layout.get('deferred_animation')
+                if deferred_anim:
+                    clip_resized = apply_animation_in_window(clip_resized, deferred_anim)
+                border_radius = layout.get('border_radius', 0)
+                if border_radius and border_radius > 0:
+                    clip_resized = apply_border_radius_clip(clip_resized, int(border_radius))
                 clip_positioned = clip_resized.set_position(layout['final_position'])
                 final_clips.append(clip_positioned)
             except Exception as e:
@@ -442,7 +495,7 @@ def _create_subtitle_clip_worker(scene_duration, subtitle_file, layout_params,
         # FIX: merge correto — base < global < cena
         subtitle_config = _resolve_scene_subtitle(base_subtitle_config, effective_gs, scene_data or {})
 
-        subtitle_generator = Subtitle(params=subtitle_config)
+        subtitle_generator = SubtitleEngine(params=subtitle_config)
         subtitle_clip = subtitle_generator.generate()
 
         if subtitle_clip:
@@ -478,20 +531,27 @@ class UnifiedVideoEngine:
             video_data.get("youtube", {})
         )
 
-        # 3. Resolução
-        output_ratio = video_data.get("output_ratio", "9:16")
+        # 3. Resolução + qualidade
+        # Novo formato: objeto raiz "output" = {"ratio": ..., "quality": ...}.
+        # Retrocompat: "output_ratio" solto na raiz ainda funciona.
+        output_cfg = video_data.get("output", {}) or {}
+        output_ratio = output_cfg.get("ratio") or video_data.get("output_ratio", "9:16")
         self.resolution_output = resolve_output_resolution(output_ratio)
+        self.output_quality = resolve_output_quality(output_cfg.get("quality"))
 
         # 4. tts_config
         self.tts_config = self.global_settings.get("tts", {})
 
         # 5. Layout params
+        # Defaults de área segura dependem da orientação (9:16 mantém históricos,
+        # 16:9 usa margens simétricas). global_settings/env sobrescrevem.
+        pad_defaults = _default_safe_paddings(self.resolution_output)
         self.layout_params = {
             "width":             self.resolution_output[0],
             "height":            self.resolution_output[1],
-            "padding_bottom":    self.global_settings.get("padding_bottom", int(os.getenv("PADDING_BOTTOM", 850))),
-            "padding_top":       self.global_settings.get("padding_top",    int(os.getenv("PADDING_TOP", 100))),
-            "padding_side":      self.global_settings.get("padding_side",   int(os.getenv("PADDING_SIDE", 50))),
+            "padding_bottom":    self.global_settings.get("padding_bottom", int(os.getenv("PADDING_BOTTOM", pad_defaults["padding_bottom"]))),
+            "padding_top":       self.global_settings.get("padding_top",    int(os.getenv("PADDING_TOP", pad_defaults["padding_top"]))),
+            "padding_side":      self.global_settings.get("padding_side",   int(os.getenv("PADDING_SIDE", pad_defaults["padding_side"]))),
             "stack_gap_percent": self.global_settings.get("stack_gap_percent", float(os.getenv("STACK_GAP_PERCENT", 0.02))),
         }
         self.layout_config = SimpleNamespace(**self.layout_params)
@@ -627,7 +687,24 @@ class UnifiedVideoEngine:
                     break
                 layout = layout_results[i]
                 try:
-                    clip_resized = clip.resize(newsize=layout['final_size'])
+                    resize_to = layout.get('_resize_to') or layout['final_size']
+                    clip_resized = clip.resize(newsize=resize_to)
+                    # Cover crop centralizado (horizontal e/ou vertical)
+                    crop_h = layout.get('crop_height')
+                    crop_w = layout.get('crop_width')
+                    if crop_h and crop_h < clip_resized.h:
+                        y1 = (clip_resized.h - crop_h) // 2
+                        clip_resized = clip_resized.crop(y1=y1, y2=y1 + crop_h)
+                    if crop_w and crop_w < clip_resized.w:
+                        x1 = (clip_resized.w - crop_w) // 2
+                        clip_resized = clip_resized.crop(x1=x1, x2=x1 + crop_w)
+                    # Ordem no modo cover: animation (janela fixa) → border_radius
+                    deferred_anim = layout.get('deferred_animation')
+                    if deferred_anim:
+                        clip_resized = apply_animation_in_window(clip_resized, deferred_anim)
+                    border_radius = layout.get('border_radius', 0)
+                    if border_radius and border_radius > 0:
+                        clip_resized = apply_border_radius_clip(clip_resized, int(border_radius))
                     clip_positioned = clip_resized.set_position(layout['final_position'])
                     final_clips.append(clip_positioned)
                     print(f"[UVE] Elemento {i + 1} posicionado: {layout['final_size']} @ {layout['final_position']}")
@@ -679,7 +756,7 @@ class UnifiedVideoEngine:
             # FIX: merge correto — base < global < cena
             subtitle_config = _resolve_scene_subtitle(base_subtitle_config, effective_gs, scene_data or {})
 
-            subtitle_generator = Subtitle(params=subtitle_config)
+            subtitle_generator = SubtitleEngine(params=subtitle_config)
             subtitle_clip = subtitle_generator.generate()
 
             if subtitle_clip:
@@ -853,9 +930,7 @@ class UnifiedVideoEngine:
                 "ffmpeg", "-y",
                 "-i", video_path, "-i", temp_mixed,
                 "-map", "0:v:0", "-map", "1:a:0",
-                "-c:v", "libx264", "-preset", "medium", "-crf", "20",
-                "-r", "30", "-vsync", "cfr", "-g", "60", "-bf", "2",
-                "-pix_fmt", "yuv420p",
+                *self._ffmpeg_video_args(),
                 "-c:a", "aac", "-b:a", "192k", "-ar", "44100", "-ac", "2",
                 "-shortest", "-movflags", "+faststart",
                 output_path
@@ -918,12 +993,13 @@ class UnifiedVideoEngine:
             output_path,
             codec='libx264',
             audio_codec='aac',
-            fps=30,
-            preset='medium',
+            fps=self.output_quality["fps"],
+            preset=self.output_quality["preset"],
             threads=4,
             verbose=False,
             logger=None,
-            ffmpeg_params=['-vsync', 'cfr']
+            ffmpeg_params=['-crf', str(self.output_quality["crf"]), '-pix_fmt', self.output_quality["pix_fmt"],
+                           '-vsync', 'cfr']
         )
 
         video_clip.close()
@@ -932,6 +1008,16 @@ class UnifiedVideoEngine:
 
         print(f"[UVE] Áudio de fundo aplicado: {os.path.basename(output_path)}")
         return output_path
+
+    def _ffmpeg_video_args(self):
+        """Args de encoding de vídeo (x264) derivados de self.output_quality,
+        usados nos re-encodes de concatenação via ffmpeg."""
+        q = self.output_quality
+        return [
+            "-c:v", "libx264", "-preset", q["preset"], "-crf", str(q["crf"]),
+            "-r", str(q["fps"]), "-vsync", "cfr", "-g", "60", "-bf", "2",
+            "-pix_fmt", q["pix_fmt"],
+        ]
 
     # ------------------------------------------------------------------
     # RENDER SCENE
@@ -949,13 +1035,13 @@ class UnifiedVideoEngine:
             audio_codec='aac',
             temp_audiofile=temp_audiofile,
             remove_temp=True,
-            fps=30,
-            bitrate="2000k",
-            preset='faster',
+            fps=self.output_quality["fps"],
+            preset=self.output_quality["preset"],
             threads=4,
             verbose=False,
             logger=None,
-            ffmpeg_params=['-vsync', 'cfr', '-g', '60', '-bf', '2']
+            ffmpeg_params=['-crf', str(self.output_quality["crf"]), '-pix_fmt', self.output_quality["pix_fmt"],
+                           '-vsync', 'cfr', '-g', '60', '-bf', '2']
         )
 
         print(f"[UVE] Cena {scene_index + 1} renderizada: {os.path.basename(scene_clip_path)}")
@@ -1008,9 +1094,8 @@ class UnifiedVideoEngine:
             ffmpeg_cmd = [
                 "ffmpeg", "-y",
                 "-f", "concat", "-safe", "0", "-i", concat_list,
-                "-c:v", "libx264", "-preset", "medium", "-crf", "20",
-                "-r", "30", "-vsync", "cfr", "-g", "60", "-bf", "2",
-                "-pix_fmt", "yuv420p", "-keyint_min", "60", "-sc_threshold", "0",
+                *self._ffmpeg_video_args(),
+                "-keyint_min", "60", "-sc_threshold", "0",
                 "-c:a", "aac", "-b:a", "192k", "-ar", "44100", "-ac", "2",
                 "-movflags", "+faststart",
                 segment_concat
@@ -1039,9 +1124,7 @@ class UnifiedVideoEngine:
         ffmpeg_final = [
             "ffmpeg", "-y",
             "-f", "concat", "-safe", "0", "-i", concat_final_list,
-            "-c:v", "libx264", "-preset", "medium", "-crf", "20",
-            "-r", "30", "-vsync", "cfr", "-g", "60", "-bf", "2",
-            "-pix_fmt", "yuv420p",
+            *self._ffmpeg_video_args(),
             "-c:a", "aac", "-b:a", "192k", "-ar", "44100", "-ac", "2",
             "-movflags", "+faststart",
             final_path
@@ -1058,8 +1141,103 @@ class UnifiedVideoEngine:
         return final_path
 
     # ------------------------------------------------------------------
+    # VIDEO RECORD
+    # ------------------------------------------------------------------
+
+    def _save_video_record(self, youtube_id: str, thumbnail_path: str | None, scenes: list):
+        """Salva o registro do vídeo chamando a API via HTTP."""
+        try:
+            import requests
+
+            api_url = os.getenv("API_URL", "http://localhost:8000")
+
+            transcript = "\n".join(
+                scene.get("narration", {}).get("text", "")
+                for scene in scenes
+                if scene.get("narration", {}).get("text")
+            ) or None
+
+            yt = self.youtube_config
+            tags = yt.get("tags") or []
+            if isinstance(tags, str):
+                tags = [t.strip() for t in tags.split(",")]
+
+            payload = {
+                "youtube_id": youtube_id,
+                "title": yt.get("title", ""),
+                "description": yt.get("description"),
+                "tags": tags,
+                "category_id": str(yt.get("category_id", "")) or None,
+                "slug": self.video_data.get("slug"),
+                "privacy_status": yt.get("privacy_status"),
+                "thumbnail_path": thumbnail_path,
+                "transcript": transcript,
+            }
+
+            response = requests.post(f"{api_url}/videos/", json=payload, timeout=10)
+            response.raise_for_status()
+            video = response.json()
+            print(f"[UVE] Registro do vídeo salvo no banco (id={video['id']}, youtube_id={youtube_id})")
+        except Exception as e:
+            print(f"[UVE] Aviso: falha ao salvar registro do vídeo no banco: {e}")
+
+    # ------------------------------------------------------------------
     # RUN
     # ------------------------------------------------------------------
+
+    def _resolve_visual_elements_ai_sources(self, scenes: list) -> None:
+        """Pré-resolve sources de IA em visual_elements antes do pool de workers.
+        Substitui cada source com type=ai por um path de arquivo local.
+        Modifica as cenas in-place.
+        """
+        if not AI_AVAILABLE:
+            return
+
+        from libs.AIProviders.PollinationsProvider import PollinationsProvider
+        provider = PollinationsProvider()
+
+        for scene in scenes:
+            elements = scene.get("visual_elements", [])
+            for element in elements:
+                source = element.get("source")
+                if not isinstance(source, dict) or source.get("type") != "ai":
+                    continue
+
+                prompt = source.get("prompt", "")
+                if not prompt:
+                    print(f"[UVE] visual_element ai source sem prompt — ignorado")
+                    continue
+
+                model = source.get("model", "flux")
+                width = source.get("width", 576)
+                height = source.get("height", 1024)
+                scene_id = scene.get("id", "scene")
+
+                print(f"[UVE] Gerando imagem IA para visual_element da cena '{scene_id}' (model={model})...")
+
+                result = provider.generate_image(
+                    prompt=prompt,
+                    model=model,
+                    width=width,
+                    height=height,
+                )
+
+                if not result.get("success"):
+                    print(f"[UVE] Falha ao gerar imagem IA para visual_element da cena '{scene_id}': {result.get('error')}")
+                    continue
+
+                ai_assets_dir = os.path.join(self.output_dir, "ai_assets")
+                os.makedirs(ai_assets_dir, exist_ok=True)
+
+                import hashlib
+                h = hashlib.md5(prompt.encode()).hexdigest()[:8]
+                file_path = os.path.join(ai_assets_dir, f"ve_ai_{scene_id}_{h}.png")
+
+                with open(file_path, "wb") as f:
+                    f.write(result["content"])
+
+                element["source"] = file_path
+                print(f"[UVE] Imagem IA salva: {file_path}")
 
     def run(self):
         print("[UVE] Iniciando processamento do vídeo...")
@@ -1070,6 +1248,12 @@ class UnifiedVideoEngine:
         if not scenes:
             print("[UVE] Nenhuma cena encontrada na configuração")
             return None
+
+        # PRÉ-PROCESSAMENTO: resolve imagens IA em visual_elements antes do pool
+        try:
+            self._resolve_visual_elements_ai_sources(scenes)
+        except Exception as e:
+            print(f"[UVE] Pré-processamento de IA em visual_elements falhou: {e}")
 
         # PRÉ-PROCESSAMENTO
         try:
@@ -1142,7 +1326,7 @@ class UnifiedVideoEngine:
                     visual_clip = self._create_visual_elements_clip(scene, scene_duration, scene_dir)
 
                     subtitle_clip = None
-                    if scene.get("narration", {}).get("subtitles", False):
+                    if _subtitles_enabled(effective_gs, scene):
                         has_visuals = bool(scene.get("visual_elements"))
                         subtitle_clip = self._create_subtitle_clip(
                             scene_duration, subtitle_file, effective_gs,
@@ -1224,6 +1408,7 @@ class UnifiedVideoEngine:
                     "total_scenes": total_scenes,
                     "output_dir": self.output_dir,
                     "resolution_output": self.resolution_output,
+                    "output_quality": self.output_quality,
                     "tts_config": tts_config,
                     "effective_gs": effective_gs,
                     "layout_params": self.layout_params,
@@ -1292,9 +1477,8 @@ class UnifiedVideoEngine:
                 ffmpeg_cmd = [
                     "ffmpeg", "-y",
                     "-f", "concat", "-safe", "0", "-i", concat_list_path,
-                    "-c:v", "libx264", "-preset", "medium", "-crf", "20",
-                    "-r", "30", "-vsync", "cfr", "-g", "60", "-bf", "2",
-                    "-pix_fmt", "yuv420p", "-keyint_min", "60",
+                    *self._ffmpeg_video_args(),
+                    "-keyint_min", "60",
                     "-sc_threshold", "0",
                     "-force_key_frames", "expr:gte(t,n_forced*2)",
                     "-c:a", "aac", "-b:a", "192k", "-ar", "44100", "-ac", "2",
@@ -1348,6 +1532,8 @@ class UnifiedVideoEngine:
                 if thumbnail_path:
                     print(f"[UVE] Enviando thumbnail: {os.path.basename(thumbnail_path)}")
                     youtube_uploader.upload_thumbnail(video_id, thumbnail_path)
+
+                self._save_video_record(video_id, thumbnail_path, scenes)
             except Exception as e:
                 print(f"[UVE] Upload YouTube falhou: {e}")
 
