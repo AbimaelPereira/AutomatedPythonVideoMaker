@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Pencil, Trash2, Plus, Image, Video, FileQuestion, AlertTriangle, CheckCircle, ArrowLeft, Images } from 'lucide-react'
+import { Pencil, Trash2, Plus, Image, Video, FileQuestion, AlertTriangle, CheckCircle, ArrowLeft, Images, List, LayoutGrid } from 'lucide-react'
 import Layout from '../../components/Layout'
 import ConfirmModal from '../../components/ui/ConfirmModal'
+import MediaPreviewModal, { MediaThumb } from '../../components/ui/MediaPreviewModal'
 import CopyButton, { googleImagesUrl } from '../../components/ui/CopyButton'
 import { normalizeUrls } from '../../components/ui/AddMidiaModal'
 import { api } from '../../services/api'
@@ -43,6 +44,8 @@ export default function RemoteAssetDetailPage() {
   const [deleteId, setDeleteId] = useState<number | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [filterInvalid, setFilterInvalid] = useState<'all' | 'valid' | 'invalid'>('all')
+  const [viewMode, setViewMode] = useState<'table' | 'grid'>('table')
+  const [previewMidia, setPreviewMidia] = useState<Midia | null>(null)
 
   useEffect(() => {
     load()
@@ -109,6 +112,7 @@ export default function RemoteAssetDetailPage() {
       await api.delete(`/remote-assets/midia/${deleteId}`)
       setAsset(a => a ? { ...a, midia: a.midia.filter(m => m.id !== deleteId) } : a)
       toast.success('Mídia excluída com sucesso!')
+      setPreviewMidia(null)
     } catch {
       toast.error('Erro ao excluir mídia.')
     } finally {
@@ -136,6 +140,15 @@ export default function RemoteAssetDetailPage() {
         onConfirm={handleDelete}
         onCancel={() => setDeleteId(null)}
         loading={deleting}
+      />
+
+      <MediaPreviewModal
+        open={previewMidia !== null}
+        url={previewMidia?.url ?? null}
+        type={previewMidia?.type ?? 'image'}
+        onClose={() => setPreviewMidia(null)}
+        onRemove={previewMidia ? () => setDeleteId(previewMidia.id) : undefined}
+        removing={deleting}
       />
 
       {/* Header */}
@@ -201,7 +214,7 @@ export default function RemoteAssetDetailPage() {
       )}
 
       {/* Stats + filtro */}
-      <div className="flex flex-wrap items-center gap-3 mb-5">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
         <div className="flex gap-2">
           {(['all', 'valid', 'invalid'] as const).map(f => (
             <button
@@ -215,6 +228,22 @@ export default function RemoteAssetDetailPage() {
             </button>
           ))}
         </div>
+        <div className="flex gap-1 bg-navy-800 rounded-lg p-1">
+          <button
+            onClick={() => setViewMode('table')}
+            className={`p-1.5 rounded-md transition-colors ${viewMode === 'table' ? 'bg-navy-600 text-white' : 'text-navy-400 hover:text-white'}`}
+            title="Visualizar em tabela"
+          >
+            <List size={14} />
+          </button>
+          <button
+            onClick={() => setViewMode('grid')}
+            className={`p-1.5 rounded-md transition-colors ${viewMode === 'grid' ? 'bg-navy-600 text-white' : 'text-navy-400 hover:text-white'}`}
+            title="Visualizar em grid"
+          >
+            <LayoutGrid size={14} />
+          </button>
+        </div>
       </div>
 
       {/* Lista de mídias */}
@@ -223,11 +252,43 @@ export default function RemoteAssetDetailPage() {
           <FileQuestion size={40} className="mb-2 opacity-30" />
           <p className="text-sm">Nenhuma mídia encontrada.</p>
         </div>
+      ) : viewMode === 'grid' ? (
+        <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3">
+          {filtered.map(m => (
+            <div
+              key={m.id}
+              className={`group relative rounded-xl border border-navy-800 overflow-hidden aspect-square bg-navy-900 transition-colors ${m.is_invalid ? 'opacity-50' : ''}`}
+            >
+              <button onClick={() => setPreviewMidia(m)} className="w-full h-full block">
+                {m.type === 'video' ? (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <Video size={28} className="text-purple-400" />
+                  </div>
+                ) : (
+                  <img src={m.url} alt="" className="w-full h-full object-cover" loading="lazy" />
+                )}
+              </button>
+              <div className="absolute top-1.5 right-1.5">
+                {m.is_invalid
+                  ? <AlertTriangle size={14} className="text-red-400 drop-shadow" />
+                  : null}
+              </div>
+              <button
+                onClick={() => setDeleteId(m.id)}
+                className="absolute bottom-1.5 right-1.5 p-1.5 text-red-400 bg-red-950/90 hover:bg-red-800 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                title="Excluir mídia"
+              >
+                <Trash2 size={12} />
+              </button>
+            </div>
+          ))}
+        </div>
       ) : (
         <div className="rounded-xl border border-navy-800 overflow-hidden">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-navy-800 text-left" style={{ background: '#141920' }}>
+                <th className="px-4 py-3 text-xs font-semibold text-navy-400 uppercase tracking-wider w-16">Preview</th>
                 <th className="px-4 py-3 text-xs font-semibold text-navy-400 uppercase tracking-wider w-8">Tipo</th>
                 <th className="px-4 py-3 text-xs font-semibold text-navy-400 uppercase tracking-wider">URL</th>
                 <th className="px-4 py-3 text-xs font-semibold text-navy-400 uppercase tracking-wider w-24 hidden sm:table-cell">Ext.</th>
@@ -238,6 +299,9 @@ export default function RemoteAssetDetailPage() {
             <tbody>
               {filtered.map(m => (
                 <tr key={m.id} className={`border-b border-navy-900 transition-colors ${m.is_invalid ? 'opacity-50' : 'hover:bg-navy-900'}`}>
+                  <td className="px-4 py-3">
+                    <MediaThumb url={m.url} type={m.type} onClick={() => setPreviewMidia(m)} />
+                  </td>
                   <td className="px-4 py-3"><TypeIcon type={m.type} /></td>
                   <td className="px-4 py-3 max-w-0">
                     <a href={m.url} target="_blank" rel="noreferrer" className="text-navy-300 hover:text-white text-xs font-mono truncate block" title={m.url}>
