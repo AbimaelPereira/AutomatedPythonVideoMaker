@@ -1,4 +1,5 @@
 from sqlmodel import SQLModel, Field
+from sqlalchemy import Column, Text
 from typing import Optional
 from datetime import datetime
 
@@ -15,14 +16,14 @@ class Video(SQLModel, table=True):
 
     # Metadados do vídeo
     title: str
-    description: Optional[str] = Field(default=None)
-    tags: Optional[str] = Field(default=None)        # JSON array serializado
+    description: Optional[str] = Field(default=None, sa_column=Column(Text))
+    tags: Optional[str] = Field(default=None, sa_column=Column(Text))        # JSON array serializado
     category_id: Optional[str] = Field(default=None)
     duration_seconds: Optional[float] = Field(default=None)
     thumbnail_path: Optional[str] = Field(default=None)
 
     # Transcrição completa extraída das cenas
-    transcript: Optional[str] = Field(default=None)
+    transcript: Optional[str] = Field(default=None, sa_column=Column(Text))
 
     # Status de publicação
     privacy_status: Optional[str] = Field(default=None)  # public, private, unlisted
@@ -42,10 +43,10 @@ class Video(SQLModel, table=True):
     estimated_minutes_watched: Optional[float] = Field(default=None)
 
     # Métricas detalhadas em JSON (audience retention, top countries, faixas etárias, etc.)
-    audience_retention_data: Optional[str] = Field(default=None)
-    top_countries: Optional[str] = Field(default=None)
-    age_group_data: Optional[str] = Field(default=None)
-    traffic_source_types: Optional[str] = Field(default=None)
+    audience_retention_data: Optional[str] = Field(default=None, sa_column=Column(Text))
+    top_countries: Optional[str] = Field(default=None, sa_column=Column(Text))
+    age_group_data: Optional[str] = Field(default=None, sa_column=Column(Text))
+    traffic_source_types: Optional[str] = Field(default=None, sa_column=Column(Text))
 
     # Controle
     metrics_updated_at: Optional[datetime] = Field(default=None)

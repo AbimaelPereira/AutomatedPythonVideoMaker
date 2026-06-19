@@ -17,6 +17,7 @@ class VideoCreateRequest(BaseModel):
     category_id: Optional[str] = None
     slug: Optional[str] = None
     channel_id: Optional[int] = None
+    channel_slug: Optional[str] = None
     privacy_status: Optional[str] = None
     thumbnail_path: Optional[str] = None
     duration_seconds: Optional[float] = None
