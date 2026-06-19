@@ -12,7 +12,7 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 from types import SimpleNamespace
 
 from libs.utils import deep_merge, load_channel_config, resolve_output_resolution, resolve_output_quality
-from libs.VisualClip import VisualClip, force_rgb, apply_border_radius_clip, apply_animation_in_window
+from libs.VisualClip import VisualClip, force_rgb, apply_border_radius_clip, apply_animation_in_window, apply_visual_filters
 from libs.Subtitle.SubtitleEngine import SubtitleEngine
 from libs.MediaDownloader import MediaDownloader
 from libs.LayoutEngine import LayoutEngine
@@ -222,6 +222,23 @@ def _subtitles_enabled(effective_gs: dict, scene: dict) -> bool:
     return bool(merged.get("enabled", False))
 
 
+def _resolve_scene_layout_params(layout_params: dict, scene: dict) -> dict:
+    """Permite que uma cena sobrescreva os paddings (área segura) só para ela.
+
+    Os `padding_top/bottom/side` da raiz do JSON viram o `layout_params` global
+    (resolvido uma vez no __init__). Se a CENA declarar qualquer `padding_*`, ele
+    vence apenas para essa cena — visuais e legenda usam a versão sobrescrita.
+    Sem override na cena, retorna o `layout_params` original inalterado.
+    """
+    overrides = {k: scene[k] for k in ("padding_top", "padding_bottom", "padding_side")
+                 if k in scene}
+    if not overrides:
+        return layout_params
+    merged = dict(layout_params)
+    merged.update(overrides)
+    return merged
+
+
 def _process_scene_worker(scene_data_bundle):
     """Worker isolado para processar uma cena em paralelo."""
     scene_index = scene_data_bundle["scene_index"]
@@ -234,6 +251,8 @@ def _process_scene_worker(scene_data_bundle):
     effective_gs = scene_data_bundle["effective_gs"]
     layout_params = scene_data_bundle["layout_params"]
     remote_assets_config = scene_data_bundle["remote_assets_config"]
+    # A cena pode zerar/ajustar os paddings só para ela (visuais + legenda).
+    layout_params = _resolve_scene_layout_params(layout_params, scene)
     ai_cache_dir = scene_data_bundle["ai_cache_dir"]
 
     try:
@@ -449,6 +468,8 @@ def _create_visual_elements_clip_worker(scene_data, scene_duration, scene_dir,
                 border_radius = layout.get('border_radius', 0)
                 if border_radius and border_radius > 0:
                     clip_resized = apply_border_radius_clip(clip_resized, int(border_radius))
+                clip_resized = apply_visual_filters(
+                    clip_resized, valid_element_data_for_layout[i].get('filters'))
                 clip_positioned = clip_resized.set_position(layout['final_position'])
                 final_clips.append(clip_positioned)
             except Exception as e:
@@ -636,7 +657,8 @@ class UnifiedVideoEngine:
     # VISUAL ELEMENTS
     # ------------------------------------------------------------------
 
-    def _create_visual_elements_clip(self, scene_data, scene_duration, scene_dir):
+    def _create_visual_elements_clip(self, scene_data, scene_duration, scene_dir, layout_config=None):
+        layout_config = layout_config or self.layout_config
         elements = scene_data.get("visual_elements", [])
         if not elements:
             return None
@@ -678,7 +700,7 @@ class UnifiedVideoEngine:
 
         try:
             layout_results = LayoutEngine.process_stack_layout(
-                valid_element_data_for_layout, self.layout_config
+                valid_element_data_for_layout, layout_config
             )
 
             final_clips = []
@@ -705,6 +727,8 @@ class UnifiedVideoEngine:
                     border_radius = layout.get('border_radius', 0)
                     if border_radius and border_radius > 0:
                         clip_resized = apply_border_radius_clip(clip_resized, int(border_radius))
+                    clip_resized = apply_visual_filters(
+                        clip_resized, valid_element_data_for_layout[i].get('filters'))
                     clip_positioned = clip_resized.set_position(layout['final_position'])
                     final_clips.append(clip_positioned)
                     print(f"[UVE] Elemento {i + 1} posicionado: {layout['final_size']} @ {layout['final_position']}")
@@ -736,8 +760,9 @@ class UnifiedVideoEngine:
             return None
 
     def _create_subtitle_clip(self, scene_duration, subtitle_file, effective_gs,
-                               has_visual_elements=False, scene_data=None):
+                               has_visual_elements=False, scene_data=None, layout_params=None):
         try:
+            layout_params = layout_params or self.layout_params
             if not subtitle_file or not os.path.exists(subtitle_file):
                 print("[UVE] Arquivo de legenda não encontrado")
                 return None
@@ -747,9 +772,9 @@ class UnifiedVideoEngine:
             base_subtitle_config = {
                 "subtitle_narration_file": subtitle_file,
                 "resolution_output": self.resolution_output,
-                "padding_bottom": self.layout_params.get('padding_bottom', 200),
-                "padding_side":   self.layout_params.get('padding_side', 50),
-                "padding_top":    self.layout_params.get('padding_top', 200),
+                "padding_bottom": layout_params.get('padding_bottom', 200),
+                "padding_side":   layout_params.get('padding_side', 50),
+                "padding_top":    layout_params.get('padding_top', 200),
                 "has_visual_elements": True,
             }
 
@@ -1169,6 +1194,7 @@ class UnifiedVideoEngine:
                 "tags": tags,
                 "category_id": str(yt.get("category_id", "")) or None,
                 "slug": self.video_data.get("slug"),
+                "channel_slug": self.video_data.get("channel_name"),
                 "privacy_status": yt.get("privacy_status"),
                 "thumbnail_path": thumbnail_path,
                 "transcript": transcript,
@@ -1323,14 +1349,20 @@ class UnifiedVideoEngine:
                         effective_gs, scene, float(scene_duration), scene_dir, self.output_dir
                     )
 
-                    visual_clip = self._create_visual_elements_clip(scene, scene_duration, scene_dir)
+                    # A cena pode zerar/ajustar os paddings só para ela.
+                    scene_layout_params = _resolve_scene_layout_params(self.layout_params, scene)
+                    scene_layout_config = SimpleNamespace(**scene_layout_params)
+
+                    visual_clip = self._create_visual_elements_clip(
+                        scene, scene_duration, scene_dir, layout_config=scene_layout_config
+                    )
 
                     subtitle_clip = None
                     if _subtitles_enabled(effective_gs, scene):
                         has_visuals = bool(scene.get("visual_elements"))
                         subtitle_clip = self._create_subtitle_clip(
                             scene_duration, subtitle_file, effective_gs,
-                            has_visuals, scene_data=scene
+                            has_visuals, scene_data=scene, layout_params=scene_layout_params
                         )
 
                     # 4. Composição

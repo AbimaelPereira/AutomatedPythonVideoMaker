@@ -74,6 +74,23 @@ def apply_animation_in_window(clip, anim):
     return clip
 
 
+# Chaves de `filters` consumidas pelo VisualClip (não pelo FilterEngine).
+_NON_ENGINE_FILTERS = ("remove_bg",)
+
+
+def apply_visual_filters(clip, filters_cfg):
+    """Aplica filtros KIND='modifier' (brightness_pulse, …) a um clip de
+    visual_element via FilterEngine. Ignora chaves do VisualClip (remove_bg).
+    Standalone para ser chamável tanto no worker quanto no caminho sequencial."""
+    if not filters_cfg or not isinstance(filters_cfg, dict):
+        return clip
+    engine_cfg = {k: v for k, v in filters_cfg.items() if k not in _NON_ENGINE_FILTERS}
+    if not engine_cfg:
+        return clip
+    from libs.Filters import FilterEngine
+    return FilterEngine(clip.size).apply(clip, engine_cfg)
+
+
 class VisualClip:
     # Extensões consideradas vídeo ao resolver um remote_asset
     _VIDEO_EXTS = ('.mp4', '.mov', '.webm', '.mkv', '.avi', '.gif')

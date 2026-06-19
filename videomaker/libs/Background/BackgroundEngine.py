@@ -8,7 +8,7 @@ from libs.utils import deep_merge
 from libs.VisualClip import force_rgb
 from libs.MediaDownloader import MediaDownloader
 from libs.Background.DirectoryType import DirectoryType
-from libs.Background.FiltersEngine import FiltersEngine
+from libs.Filters import FilterEngine
 from PIL import Image, ImageFilter
 import numpy as np
 
@@ -517,28 +517,8 @@ class BackgroundEngine:
         if not filters_cfg:
             return bg_clip.fl_image(force_rgb)
 
-        engine = FiltersEngine(self.resolution_output)
-        fclip = engine.create_filters_clip(filters_cfg, float(scene_duration))
-        if fclip is None:
-            return bg_clip.fl_image(force_rgb)
-
-        # Light leak / glow é composto com blend "screen": a luz SEMPRE clareia
-        # o fundo e nunca o tampa (diferente do alpha "over" do CompositeVideoClip).
-        # screen(a, b) = 1 - (1-a)*(1-b)  →  preto no filtro = sem efeito.
-        leak_is_screen = ("light_leak" in filters_cfg) or ("particles" in filters_cfg)
-        if leak_is_screen:
-            bg_clip = bg_clip.fl_image(force_rgb)
-
-            def screen_blend(get_frame, t):
-                base = get_frame(t).astype(np.float32) / 255.0
-                leak = fclip.get_frame(t).astype(np.float32) / 255.0
-                out = 1.0 - (1.0 - base) * (1.0 - leak)
-                return (np.clip(out, 0.0, 1.0) * 255.0).astype('uint8')
-
-            return bg_clip.fl(screen_blend).set_duration(scene_duration)
-
-        composed = CompositeVideoClip([bg_clip, fclip], size=self.resolution_output).set_duration(scene_duration)
-        return composed.fl_image(force_rgb)
+        engine = FilterEngine(self.resolution_output)
+        return engine.compose(bg_clip, filters_cfg, float(scene_duration))
 
     def build_scene_background(self, global_settings: Dict, scene_data: Dict, scene_duration: float,
                                scene_dir: str, video_dir: str):
