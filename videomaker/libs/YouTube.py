@@ -234,7 +234,10 @@ class YouTube:
         creds = self._get_credentials()
         youtube = build("youtube", "v3", credentials=creds)
 
-        media = MediaFileUpload(thumbnail_path, mimetype="image/jpeg", resumable=True)
+        ext = os.path.splitext(thumbnail_path)[1].lower()
+        mimetype = "image/png" if ext == ".png" else "image/jpeg"
+
+        media = MediaFileUpload(thumbnail_path, mimetype=mimetype, resumable=True)
         youtube.thumbnails().set(videoId=video_id, media_body=media).execute()
 
         print(f"✅ Thumbnail enviada: {os.path.basename(thumbnail_path)}")

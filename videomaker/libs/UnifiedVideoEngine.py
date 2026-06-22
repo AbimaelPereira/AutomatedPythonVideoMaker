@@ -22,6 +22,7 @@ from libs.Background.BackgroundEngine import BackgroundEngine
 from libs.Audio.NarrationEngine import NarrationEngine
 from libs.Transitions.TransitionEngine import TransitionEngine
 from libs.RemoteAssetManager import RemoteAssetManager
+from libs.FaceDetector import detect_focus_point
 
 try:
     from libs.AIProviders import ai_manager
@@ -46,6 +47,22 @@ def hex_to_rgb(hex_value):
             return (0, 0, 0)
     except ValueError:
         return (0, 0, 0)
+
+
+def _cover_crop_offset(clip, axis_size: int, crop_size: int, focus: str, axis: str) -> int:
+    """Calcula o início do crop cover (eixo 'x' ou 'y') de visual_elements.
+    focus='face' centraliza no maior rosto detectado no primeiro frame;
+    qualquer outro valor (default 'center') mantém o crop geométrico centralizado."""
+    center = axis_size / 2
+    if focus == "face":
+        try:
+            point = detect_focus_point(clip.get_frame(0))
+            if point:
+                center = point[0] if axis == "x" else point[1]
+        except Exception as e:
+            print(f"[UVE] Falha na detecção de rosto, usando centro: {e}")
+    offset = int(center - crop_size / 2)
+    return min(max(offset, 0), axis_size - crop_size)
 
 
 def _probe_has_audio(video_path: str) -> bool:
@@ -455,11 +472,12 @@ def _create_visual_elements_clip_worker(scene_data, scene_duration, scene_dir,
                 # Cover crop centralizado (horizontal e/ou vertical)
                 crop_h = layout.get('crop_height')
                 crop_w = layout.get('crop_width')
+                focus = valid_element_data_for_layout[i].get('focus', 'center')
                 if crop_h and crop_h < clip_resized.h:
-                    y1 = (clip_resized.h - crop_h) // 2
+                    y1 = _cover_crop_offset(clip_resized, clip_resized.h, crop_h, focus, 'y')
                     clip_resized = clip_resized.crop(y1=y1, y2=y1 + crop_h)
                 if crop_w and crop_w < clip_resized.w:
-                    x1 = (clip_resized.w - crop_w) // 2
+                    x1 = _cover_crop_offset(clip_resized, clip_resized.w, crop_w, focus, 'x')
                     clip_resized = clip_resized.crop(x1=x1, x2=x1 + crop_w)
                 # Ordem no modo cover: animation (janela fixa) → border_radius
                 deferred_anim = layout.get('deferred_animation')
@@ -714,11 +732,12 @@ class UnifiedVideoEngine:
                     # Cover crop centralizado (horizontal e/ou vertical)
                     crop_h = layout.get('crop_height')
                     crop_w = layout.get('crop_width')
+                    focus = valid_element_data_for_layout[i].get('focus', 'center')
                     if crop_h and crop_h < clip_resized.h:
-                        y1 = (clip_resized.h - crop_h) // 2
+                        y1 = _cover_crop_offset(clip_resized, clip_resized.h, crop_h, focus, 'y')
                         clip_resized = clip_resized.crop(y1=y1, y2=y1 + crop_h)
                     if crop_w and crop_w < clip_resized.w:
-                        x1 = (clip_resized.w - crop_w) // 2
+                        x1 = _cover_crop_offset(clip_resized, clip_resized.w, crop_w, focus, 'x')
                         clip_resized = clip_resized.crop(x1=x1, x2=x1 + crop_w)
                     # Ordem no modo cover: animation (janela fixa) → border_radius
                     deferred_anim = layout.get('deferred_animation')

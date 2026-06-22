@@ -37,8 +37,13 @@ google-generativeai==0.8.5
 
 # ── Remoção de fundo (rembg) ──────────────────────────────────────────────────
 rembg==2.0.67
-opencv-python-headless==4.12.0.88
+# Nota: 4.12.0.88 exige numpy>=2, incompatível com o pin do moviepy. 4.10.0.84
+# é a versão mais recente ainda compatível com numpy==1.22.0 no Python 3.10.
+opencv-python-headless==4.10.0.84
 onnxruntime==1.23.2
+
+# ── Detecção de rosto (focus point no crop "cover" de background/visual_elements) ──
+mediapipe==0.10.35
 
 # ── Utilitários ───────────────────────────────────────────────────────────────
 python-dotenv==1.0.1

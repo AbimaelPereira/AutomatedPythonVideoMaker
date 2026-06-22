@@ -9,6 +9,7 @@ from libs.VisualClip import force_rgb
 from libs.MediaDownloader import MediaDownloader
 from libs.Background.DirectoryType import DirectoryType
 from libs.Filters import FilterEngine
+from libs.FaceDetector import detect_focus_point
 from PIL import Image, ImageFilter
 import numpy as np
 
@@ -32,13 +33,33 @@ def _hex_to_rgb(hex_value):
         pass
     return (0, 0, 0)
 
-def _apply_cover(clip, target_w: int, target_h: int):
-    """Scale + crop to fill target resolution (CSS cover behavior), preserving aspect ratio."""
+def _resolve_focus_point(clip, new_w: int, new_h: int, focus: str) -> Tuple[float, float]:
+    """Centro padrão (geométrico) ou, se focus='face', centro do maior rosto
+    detectado no primeiro frame (com fallback silencioso para o centro)."""
+    if focus == "face":
+        try:
+            frame = clip.get_frame(0)
+            w, h = clip.size
+            point = detect_focus_point(frame)
+            if point:
+                scale_x, scale_y = new_w / w, new_h / h
+                return (point[0] * scale_x, point[1] * scale_y)
+        except Exception as e:
+            print(f"[BackgroundEngine] Falha na detecção de rosto, usando centro: {e}")
+    return (new_w / 2, new_h / 2)
+
+
+def _apply_cover(clip, target_w: int, target_h: int, focus: str = "center"):
+    """Scale + crop to fill target resolution (CSS cover behavior), preserving aspect ratio.
+    focus='face' centraliza o crop no maior rosto detectado; default 'center' é o comportamento legado."""
     w, h = clip.size
     scale = max(target_w / w, target_h / h)
     new_w, new_h = int(w * scale), int(h * scale)
     clip = mpy_resize(clip, newsize=(new_w, new_h))
-    x_center, y_center = new_w / 2, new_h / 2
+    x_center, y_center = _resolve_focus_point(clip, new_w, new_h, focus)
+    # Clamp para a janela de crop nunca sair dos limites do clipe redimensionado
+    x_center = min(max(x_center, target_w / 2), new_w - target_w / 2)
+    y_center = min(max(y_center, target_h / 2), new_h - target_h / 2)
     clip = crop(
         clip,
         x1=int(x_center - target_w / 2),
@@ -159,13 +180,13 @@ class BackgroundEngine:
             # Aplicar zoom effect antes do cover crop
             zoomed_clip = clip.fl(cover_zoom_effect)
             # Depois aplicar cover para crop final
-            final_clip = _apply_cover(zoomed_clip, target_w, target_h)
+            final_clip = _apply_cover(zoomed_clip, target_w, target_h, focus=cfg.get("focus", "center"))
             return final_clip.fl_image(force_rgb)
-        
+
         else:
             # Default: cover — scale to fill, then crop (no distortion)
             clip = ImageClip(path).set_duration(scene_duration)
-            clip = _apply_cover(clip, target_w, target_h)
+            clip = _apply_cover(clip, target_w, target_h, focus=cfg.get("focus", "center"))
             return clip.fl_image(force_rgb)
 
     def _build_image(self, cfg: Dict, scene_duration: float, storage_dir: str):
@@ -232,11 +253,11 @@ class BackgroundEngine:
         fit_mode = cfg.get("fit_mode", "cover")
         return self._fit_image(path, fit_mode, scene_duration, cfg)
 
-    def _fit_video(self, clip, fit_mode: str):
+    def _fit_video(self, clip, fit_mode: str, focus: str = "center"):
         """Apply fit mode to a video clip."""
         target_w, target_h = self.resolution_output
         if fit_mode == "cover":
-            return _apply_cover(clip, target_w, target_h)
+            return _apply_cover(clip, target_w, target_h, focus=focus)
         # contain / stretch fallback
         return clip.resize(newsize=self.resolution_output)
 
@@ -285,7 +306,7 @@ class BackgroundEngine:
                         self.remote_asset_manager.register_url(register_slug, src)
 
                     clip = VideoFileClip(path, audio=False)
-                    clip = self._fit_video(clip, fit_mode)
+                    clip = self._fit_video(clip, fit_mode, focus=cfg.get("focus", "center"))
                     if clip.duration < scene_duration:
                         clip = clip.loop(duration=scene_duration)
                     else:
@@ -320,7 +341,7 @@ class BackgroundEngine:
             self.remote_asset_manager.register_url(register_slug, src)
 
         clip = VideoFileClip(path, audio=False)
-        clip = self._fit_video(clip, fit_mode)
+        clip = self._fit_video(clip, fit_mode, focus=cfg.get("focus", "center"))
         if clip.duration < scene_duration:
             clip = clip.loop(duration=scene_duration)
         else:
