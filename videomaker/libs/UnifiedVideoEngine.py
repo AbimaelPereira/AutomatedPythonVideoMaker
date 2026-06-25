@@ -488,6 +488,9 @@ def _create_visual_elements_clip_worker(scene_data, scene_duration, scene_dir,
                     clip_resized = apply_border_radius_clip(clip_resized, int(border_radius))
                 clip_resized = apply_visual_filters(
                     clip_resized, valid_element_data_for_layout[i].get('filters'))
+                opacity = valid_element_data_for_layout[i].get('opacity')
+                if opacity is not None and float(opacity) < 1.0:
+                    clip_resized = clip_resized.set_opacity(float(opacity))
                 clip_positioned = clip_resized.set_position(layout['final_position'])
                 final_clips.append(clip_positioned)
             except Exception as e:
@@ -748,6 +751,9 @@ class UnifiedVideoEngine:
                         clip_resized = apply_border_radius_clip(clip_resized, int(border_radius))
                     clip_resized = apply_visual_filters(
                         clip_resized, valid_element_data_for_layout[i].get('filters'))
+                    opacity = valid_element_data_for_layout[i].get('opacity')
+                    if opacity is not None and float(opacity) < 1.0:
+                        clip_resized = clip_resized.set_opacity(float(opacity))
                     clip_positioned = clip_resized.set_position(layout['final_position'])
                     final_clips.append(clip_positioned)
                     print(f"[UVE] Elemento {i + 1} posicionado: {layout['final_size']} @ {layout['final_position']}")

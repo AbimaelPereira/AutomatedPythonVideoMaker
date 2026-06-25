@@ -7,8 +7,9 @@ from PIL import Image, ImageDraw, ImageFont
 from rembg import remove
 from moviepy.editor import *
 from libs.LayoutEngine import LayoutEngine
+from libs.Filters.utils import hex_to_rgb
 # Importa a nova biblioteca de download
-from libs.MediaDownloader import MediaDownloader 
+from libs.MediaDownloader import MediaDownloader
 
 # Helper: Force 3-channel RGB
 def force_rgb(im):
@@ -79,16 +80,20 @@ _NON_ENGINE_FILTERS = ("remove_bg",)
 
 
 def apply_visual_filters(clip, filters_cfg):
-    """Aplica filtros KIND='modifier' (brightness_pulse, …) a um clip de
-    visual_element via FilterEngine. Ignora chaves do VisualClip (remove_bg).
-    Standalone para ser chamável tanto no worker quanto no caminho sequencial."""
+    """Aplica filtros KIND='modifier' (brightness_pulse, …) e KIND='overlay'
+    (light_leak, particles, …) a um clip de visual_element via FilterEngine.
+    Ignora chaves do VisualClip (remove_bg). Standalone para ser chamável
+    tanto no worker quanto no caminho sequencial."""
     if not filters_cfg or not isinstance(filters_cfg, dict):
         return clip
     engine_cfg = {k: v for k, v in filters_cfg.items() if k not in _NON_ENGINE_FILTERS}
     if not engine_cfg:
         return clip
     from libs.Filters import FilterEngine
-    return FilterEngine(clip.size).apply(clip, engine_cfg)
+    engine = FilterEngine(clip.size)
+    clip = engine.apply(clip, engine_cfg)
+    clip = engine.compose(clip, engine_cfg, clip.duration)
+    return clip
 
 
 class VisualClip:
@@ -169,6 +174,8 @@ class VisualClip:
             clip = self._create_video_clip()
         elif el_type == "text_box":
             clip = self._create_text_box_clip()
+        elif el_type == "color":
+            clip = self._create_color_clip()
 
         if not clip: return None
 
@@ -304,6 +311,12 @@ class VisualClip:
             clip = clip.volumex(audio_cfg.get("volume", 1.0))
             
         return clip
+
+    def _create_color_clip(self):
+        """Cria um ColorClip sólido (ex.: overlay de escurecimento). Tamanho
+        é um placeholder — o worker redimensiona via placement.width/height."""
+        color = hex_to_rgb(self.data.get("color", "#000000"))
+        return ColorClip(size=self.resolution, color=color).set_duration(self.duration)
 
     def _create_text_box_clip(self):
         content = self.data.get("content", "")
