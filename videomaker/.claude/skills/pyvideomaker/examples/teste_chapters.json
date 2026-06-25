@@ -1,0 +1,37 @@
+{
+  "slug": "teste_chapters",
+  "channel_name": "exemplo",
+  "output_ratio": "9:16",
+  "chapters": [
+    {
+      "id": "intro",
+      "global_settings": {
+        "background": {
+          "audio": { "type": "directory", "source": "./assets/audio/background/calm", "volume": 0.2 }
+        }
+      },
+      "scenes": [
+        {
+          "id": "intro_01",
+          "narration": { "text": "Essa e a introducao calma do video, com uma trilha de fundo tranquila." },
+          "background": { "visual": { "type": "directory", "source": "./assets/video/background/generic" } }
+        }
+      ]
+    },
+    {
+      "id": "climax",
+      "global_settings": {
+        "background": {
+          "audio": { "type": "directory", "source": "./assets/audio/background/tense", "ducking": { "enabled": true, "ducking_db": -10.0 } }
+        }
+      },
+      "scenes": [
+        {
+          "id": "climax_01",
+          "narration": { "text": "Aqui a trilha sonora muda para algo mais tenso, marcando o climax do video." },
+          "background": { "visual": { "type": "directory", "source": "./assets/video/background/generic" } }
+        }
+      ]
+    }
+  ]
+}

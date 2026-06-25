@@ -1,0 +1,51 @@
+{
+  "slug": "teste_placement_16x9",
+  "channel_name": "exemplo",
+  "output_ratio": "16:9",
+  "scenes": [
+    {
+      "id": "cena_01_visual_direita_legenda_esquerda",
+      "narration": {
+        "text": "O visual ocupa setenta por cento da tela a direita e a legenda fica confinada nos trinta por cento a esquerda, sem sobreposicao."
+      },
+      "background": {
+        "visual": { "type": "directory", "source": "./assets/video/background/generic" }
+      },
+      "visual_elements": [
+        {
+          "type": "image",
+          "source": "./assets/image/exemplo/foto_pessoa.png",
+          "placement": {
+            "anchor": ["right", "center"],
+            "width": "70%"
+          }
+        }
+      ],
+      "subtitle": {
+        "enabled": true,
+        "type": "classic",
+        "placement": {
+          "anchor": ["left", "center"],
+          "region": "30%"
+        }
+      }
+    },
+    {
+      "id": "cena_02_legenda_centralizada_sem_visual",
+      "narration": {
+        "text": "Sem visual_elements na cena, a legenda pode usar a tela inteira normalmente."
+      },
+      "background": {
+        "visual": { "type": "directory", "source": "./assets/video/background/generic" }
+      },
+      "subtitle": {
+        "enabled": true,
+        "type": "classic",
+        "placement": {
+          "anchor": ["center", "bottom"],
+          "region": "90%"
+        }
+      }
+    }
+  ]
+}

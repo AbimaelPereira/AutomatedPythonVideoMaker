@@ -1,0 +1,51 @@
+{
+  "slug": "teste_canal_completo",
+  "channel_name": "exemplo",
+  "output": { "ratio": "16:9-2k", "quality": "high" },
+  "global_settings": {
+    "tts": { "provider": "edge", "voice": "pt-BR-AntonioNeural", "rate": "+15%" },
+    "subtitle": {
+      "enabled": true,
+      "type": "classic",
+      "font_path": "./assets/fonts/Montserrat/Montserrat-Black.ttf",
+      "font_size": 80,
+      "color": "#FFFFFF",
+      "shadow_enabled": true,
+      "blur_radius": 8.0
+    },
+    "background": {
+      "audio": { "type": "directory", "source": "./assets/audio/background/generic", "volume": 0.2 }
+    },
+    "transitions": { "enabled": true, "type": "zoom" }
+  },
+  "chapters": [
+    {
+      "id": "intro",
+      "scenes": [
+        {
+          "id": "intro_01",
+          "narration": { "text": "Bem-vindo ao video de exemplo, que junta capitulos, qualidade 2K e upload configurado." },
+          "background": { "visual": { "type": "directory", "source": "./assets/video/background/generic" } }
+        }
+      ]
+    },
+    {
+      "id": "corpo",
+      "scenes": [
+        {
+          "id": "corpo_01",
+          "narration": { "text": "Esse e o corpo principal do video, com a legenda padrao herdada do global_settings." },
+          "background": { "visual": { "type": "directory", "source": "./assets/video/background/generic" } }
+        }
+      ]
+    }
+  ],
+  "youtube": {
+    "title": "Vídeo de exemplo — canal completo",
+    "description": "Demonstra output 2K, capítulos e upload no mesmo JSON.",
+    "tags": ["exemplo", "videomaker"],
+    "token_file_name": "exemplo.json",
+    "privacy_status": "private",
+    "category_id": "22"
+  }
+}

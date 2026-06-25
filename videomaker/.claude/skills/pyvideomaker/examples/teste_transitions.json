@@ -1,0 +1,40 @@
+{
+  "slug": "teste_transitions",
+  "channel_name": "exemplo",
+  "output_ratio": "9:16",
+  "global_settings": {
+    "transitions": {
+      "enabled": true,
+      "type": "zoom",
+      "visual": {
+        "zoom_max_scale": 15.0,
+        "duration": { "zoom_out": 0.2, "shake_out": 0.4 },
+        "physics": { "shake_amplitude": 0.12 }
+      },
+      "audio": { "type": "directory", "source": "./assets/audio/effects/transitions", "volume": 0.8 }
+    }
+  },
+  "scenes": [
+    {
+      "id": "cena_01_zoom",
+      "narration": { "text": "Primeira cena, usando a transicao de zoom padrao do global_settings." },
+      "background": { "visual": { "type": "directory", "source": "./assets/video/background/generic" } }
+    },
+    {
+      "id": "cena_02_fade_override",
+      "narration": { "text": "Segunda cena, sobrescrevendo a transicao global para usar fade em vez de zoom." },
+      "background": { "visual": { "type": "directory", "source": "./assets/video/background/generic" } },
+      "transitions": {
+        "enabled": true,
+        "type": "fade",
+        "visual": { "fade_in_duration": 0.5, "fade_out_duration": 0.5, "color": [0, 0, 0] }
+      }
+    },
+    {
+      "id": "cena_03_sem_transicao",
+      "narration": { "text": "Terceira cena, com a transicao desabilitada apenas para ela." },
+      "background": { "visual": { "type": "directory", "source": "./assets/video/background/generic" } },
+      "transitions": { "enabled": false }
+    }
+  ]
+}

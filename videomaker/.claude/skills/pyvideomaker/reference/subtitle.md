@@ -1,13 +1,16 @@
 # Legendas (`subtitle`) — referência completa
 
+> Visão geral da estrutura do JSON e ordem de leitura: [../SKILL.md](../SKILL.md).
+
 Tudo sobre legenda vive no objeto **`subtitle`**, definível em três níveis e
 mesclado na cadeia **canal < `global_settings` < cena** via `deep_merge`
 (dicts fundem recursivamente; **listas substituem** — ver `palette`).
+Ver [global_settings.md](global_settings.md) para a cadeia completa de merge.
 
 - Liga/desliga: **`subtitle.enabled`** (default **desligado** quando ausente).
 - Não existe mais `narration.subtitles` — foi removido.
 
-O `SubtitleEngine` ([SubtitleEngine.py](../../../libs/Subtitle/SubtitleEngine.py))
+O `SubtitleEngine` ([SubtitleEngine.py](../../../../libs/Subtitle/SubtitleEngine.py))
 despacha por **`subtitle.type`**:
 
 | `type`      | Comportamento |
@@ -27,7 +30,7 @@ Renderiza cada entrada do SRT como uma imagem (PIL) com stroke e sombra
 opcionais, posicionada por `placement` (novo) ou `subtitle_position` + paddings
 (legado).
 
-### Campos e defaults (de [ClassicSubtitle.py](../../../libs/Subtitle/types/ClassicSubtitle.py))
+### Campos e defaults (de [ClassicSubtitle.py](../../../../libs/Subtitle/types/ClassicSubtitle.py))
 
 | Campo | Default | Descrição |
 |-------|---------|-----------|
@@ -82,7 +85,7 @@ largura disponível (`fit_font_size`) — **não vem da paleta**. Cada palavra/l
 recebe, em rotação, um item de `palette` (`fill`, `stroke`, `stroke_width`,
 `shadow`, `font_path`); a rotação reinicia a cada grupo.
 
-Veja [KaraokeSubtitle.py](../../../libs/Subtitle/types/KaraokeSubtitle.py).
+Veja [KaraokeSubtitle.py](../../../../libs/Subtitle/types/KaraokeSubtitle.py).
 
 ### Dois modos de agrupamento (escolhidos pela presença dos campos)
 
@@ -93,7 +96,7 @@ Veja [KaraokeSubtitle.py](../../../libs/Subtitle/types/KaraokeSubtitle.py).
 
 O modo LINHAS resolve o problema de palavra curta órfã/gigante.
 
-### Campos e defaults (de [KaraokeSubtitle.py](../../../libs/Subtitle/types/KaraokeSubtitle.py))
+### Campos e defaults (de [KaraokeSubtitle.py](../../../../libs/Subtitle/types/KaraokeSubtitle.py))
 
 | Campo | Default | Descrição |
 |-------|---------|-----------|
@@ -173,51 +176,29 @@ A 1ª palavra usa o estilo 0, a 2ª o estilo 1, a 3ª volta ao 0… (rotação r
 - Última linha órfã (abaixo de `min_chars_per_line`) é grudada na anterior.
 - A paleta rotaciona por linha; com 1 item, todas as linhas iguais.
 
-Exemplo de produção: [jsons/teste_karaoke.json](../../../jsons/teste_karaoke.json).
+Exemplo completo (ambos os modos): [../examples/teste_karaoke.json](../examples/teste_karaoke.json).
 
 ---
 
 ## Posicionamento — `placement` (novo) vs legado
 
-Tanto `subtitle` quanto `visual_elements[]` aceitam um bloco **`placement`** que
-ancora o elemento dentro da **área segura** (margem definida pelos paddings).
-`placement` é **opt-in**: ausente → comportamento legado.
+`subtitle` aceita o bloco `placement` (`anchor` + `region`) descrito em
+[placement.md](placement.md) — é a mesma mecânica usada por `visual_elements[]`,
+com `region` no lugar de `width`. No **karaokê**, a largura da faixa também
+encolhe o `font_size` (via `fit_font_size`): `region: "30%"` → palavras menores.
 
-```jsonc
-"subtitle": {
-  "placement": {
-    "anchor": ["left", "center"],  // x: left|center|right|"70%"|px • y: top|center|bottom
-    "region": "30%"                // confina o texto a uma faixa dessa largura
-  }
-}
-```
-
-- `region` define a largura da faixa; `anchor[0]` define onde ela começa.
-- `anchor[1]` define o alinhamento vertical dentro da caixa (`top`/`center`/`bottom`).
-- No **karaokê**, a largura da faixa também encolhe o `font_size` (via `fit_font_size`):
-  `region: "30%"` → palavras menores.
-- Caso de uso clássico: visual 70% à direita + legenda
-  `anchor: ["left","center"], region: "30%"` = legenda nos 30% à esquerda, sem sobreposição.
+Caso de uso clássico: visual 70% à direita + legenda
+`anchor: ["left","center"], region: "30%"` = legenda nos 30% à esquerda, sem
+sobreposição. Exemplo completo: [../examples/teste_placement_16x9.json](../examples/teste_placement_16x9.json).
 
 ### Modo legado (sem `placement`)
 
 Usa `subtitle_position` (`top`/`center`/`bottom`) + paddings
-(`padding_top` / `padding_bottom` / `padding_side`).
-
-### Paddings = área segura
-
-Margem uniforme onde tudo é ancorado. Defaults dependem da orientação:
-
-| Orientação | padding_top | padding_bottom | padding_side |
-|------------|-------------|----------------|--------------|
-| 9:16 (1080×1920) | 100 | 850 | 50 |
-| 16:9 (1920×1080) | ~54 | ~54 | ~96 (≈5% simétrico) |
-
-Sobrescrevíveis em `global_settings` (`padding_top` / `padding_bottom` / `padding_side`).
+(`padding_top` / `padding_bottom` / `padding_side`) — ver
+[placement.md](placement.md) para os defaults de padding por orientação.
 
 Núcleo do cálculo: `SubtitleUtils.resolve_subtitle_box`
-([SubtitleUtils.py](../../../libs/Subtitle/SubtitleUtils.py)) e
-`LayoutEngine.safe_area` ([LayoutEngine.py](../../../libs/LayoutEngine.py)).
+([SubtitleUtils.py](../../../../libs/Subtitle/SubtitleUtils.py)).
 
 ---
 
@@ -234,3 +215,9 @@ Núcleo do cálculo: `SubtitleUtils.resolve_subtitle_box`
   relativo a partir de `videomaker/`.
 - **Karaokê com palavra gigante/órfã** → use o modo LINHAS (`min_chars_per_line`
   + `line_fill_ratio`) em vez do legado.
+
+---
+
+Próximos passos: [placement.md](placement.md) (posicionamento) ·
+[visual_elements.md](visual_elements.md) (overlays que dividem tela com a legenda) ·
+[global_settings.md](global_settings.md) (ordem de merge).
