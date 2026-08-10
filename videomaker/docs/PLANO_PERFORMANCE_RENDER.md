@@ -65,7 +65,10 @@ Multiplicados, explicam a ordem de grandeza dos 45x realtime observados.
 
 ## Fase 0 — ganhos sem trocar a arquitetura
 
-Alvo: **~5–8x**, poucos dias, risco baixo, cada item isolado e reversível.
+> **STATUS: IMPLEMENTADA** (commit `24d3c38`). Alvo era ~5–8x; **o ganho real foi ~3%.**
+> A seção "Resultado medido" abaixo explica por quê e o que isso muda para a fase 1.
+
+Alvo original: ~5–8x, poucos dias, risco baixo, cada item isolado e reversível.
 
 ### 0.1 — Parar de encodar cenas intermediárias em `slow`/crf18
 
@@ -188,6 +191,73 @@ de espaço em `run()`, que pode entrar junto com `0.1`.
 
 ---
 
+## Resultado medido da Fase 0 — e por que ficou muito abaixo do previsto
+
+Teste: 3 cenas reais do canal `the_touchline_record` (14,7 s de vídeo, 1080p, karaokê
+ligado, zoom animado sobre fundo sólido), `DEBUG=1`.
+
+| cenário | encode_cena | wall clock |
+|---|---|---|
+| `quality: draft`, sem otimização (`INTERMEDIATE_ENCODE=0`) | 3m30s | 5m01s |
+| `quality: draft`, com otimização | 3m14s | 4m38s |
+| `quality: high`, sem otimização (**produção hoje**) | 3m28s | 5m01s |
+| `quality: high`, com otimização | 3m22s | 4m55s |
+
+**~3% de ganho, não 5x.** A medição que explica tudo:
+
+```
+x264 puro (slow/crf18) re-encodando as MESMAS cenas:  ~1,9 s cada
+encode_cena medido pelo profiler:                     ~67 s cada
+```
+
+**O encoder é ~3% do custo. Os outros ~97% são o MoviePy compondo frames em Python** —
+e o `write_videofile` engloba as duas coisas, então o profiler atribui tudo a
+`encode_cena`.
+
+### Onde eu errei a estimativa
+
+O benchmark que embasou o "~5x da fase 0" mediu **x264 isolado sobre conteúdo denso**
+(`testsrc2`, 43 Mbps). O conteúdo real deste canal é quase estático: fundo de cor sólida
++ zoom lento + karaokê, com bitrate de **~220 kbps**. Para esse material o x264 é
+praticamente de graça em qualquer preset — trocar `slow` por `ultrafast` economiza
+segundos, não horas.
+
+O gargalo real é o que o benchmark C→D já mostrava (72,1 s vs 14,8 s) e que eu subestimei
+no peso relativo: **composição frame a frame em Python**. Neste canal ela é agravada por
+dois multiplicadores que o teste expôs:
+
+- **karaokê** — bitmap PIL renderizado e composto **por frame**;
+- **zoom animado** (`resize(lambda t)`) — reamostragem do frame inteiro **por frame**.
+
+### O que a Fase 0 entregou de fato
+
+Ganho de tempo pequeno, mas os itens não são inúteis — mudam o custo estrutural:
+
+- **Instrumentação** — foi o que permitiu descobrir o erro de diagnóstico acima.
+  Sem ela, a fase 1 seria construída sobre a mesma premissa errada.
+- **Passes de encode eliminados** (áudio de fundo, ducking, concat de capítulo) — o
+  ganho não aparece neste teste porque ele **não tem** música de fundo nem capítulos.
+  Em vídeos que usam esses caminhos, cada passe removido era um encode do vídeo inteiro
+  — e isso escala com a duração, então tende a pesar mais em 45 min do que em 15 s.
+- **Timeout proporcional à duração** — os 600 s fixos estourariam em cenas longas de
+  vídeos de 45 min. Era um bug latente para o objetivo do projeto.
+- **Pico de disco menor** e checagem de espaço antes de começar.
+- **Bug do `debug`** — `"debug": true` no JSON era ignorado, e o vídeo subia pro YouTube.
+
+### Consequência para a Fase 1
+
+A fase 1 deixa de ser "mais 5x em cima da fase 0" e passa a ser **a fase que efetivamente
+resolve o problema**. A projeção de ganho total praticamente não muda (o teto continua
+sendo a composição), mas agora está claro que ~97% dele vem da fase 1.
+
+Prioridade dentro da fase 1, revisada pela medição — atacar primeiro o que domina o custo:
+
+1. **legendas → ASS/libass** (karaokê por frame é o item mais caro deste canal);
+2. **zoom/animação → expressão de filtro** (elimina o `resize(lambda t)` por frame);
+3. o resto da composição (`overlay`, `scale`, `crop`).
+
+---
+
 ## Fase 1 — composição via filtergraph ffmpeg
 
 Alvo: **~5x adicional**. A ideia: **Python deixa de tocar frames e passa a compilar
@@ -239,9 +309,13 @@ O ponto crítico: **não é um rewrite big-bang.** Por cena, decidir o caminho:
 
 Assim o pipeline nunca fica quebrado, e a cobertura cresce elemento por elemento.
 
-Ordem sugerida de cobertura (mais simples/comum primeiro):
-`background` sólido/imagem → `visual_elements` estáticos → zoom/fade → `border_radius`
-→ legendas ASS → transições `xfade`.
+Ordem de cobertura **revisada pela medição da fase 0** — por custo, não por simplicidade
+(ver "Resultado medido"): **legendas ASS** → **zoom/animação** → `background` sólido/imagem
+→ `visual_elements` estáticos → `border_radius` → transições `xfade`.
+
+Legenda e zoom vêm primeiro porque são os dois multiplicadores por frame que dominam o
+custo hoje. Cobri-los já deve render a maior parte do ganho, mesmo antes de o resto da
+composição migrar.
 
 ### 1.4 — Ganho estrutural além da velocidade
 
@@ -261,22 +335,29 @@ exatamente o requisito de 45+ min.
 
 ## Resumo e expectativa
 
-| | hoje | Fase 0 | Fase 0+1 |
+| | hoje | Fase 0 (medido) | Fase 0+1 (projeção) |
 |---|---|---|---|
-| passes de encode 1440p | 3–4 | 1 | 1 |
+| passes de encode | 3–4 | 1 | 1 |
 | preset de cena | `slow` | `ultrafast` crf12 | n/a (sem cena intermediária) |
-| composição | Python, ~4x overhead | Python, ~2x | C, streaming |
-| ganho acumulado | — | **~5–8x** | **~20–30x** |
+| composição | Python, por frame | Python, por frame | C, streaming |
+| ganho | — | **~3%** | **~5x** (estimado) |
 
-Se a Fase 0 entregar ~6x, 6 min sai de ~4,5 h para ~45 min, e 45 min fica na ordem de
-5–6 h. Isso já torna o pipeline utilizável. A Fase 1 é o que traz 45 min para a faixa
-de ~1 h.
+A fase 0 rendeu ~3% porque, no conteúdo real deste canal, o encoder já era ~3% do custo.
+O teto de ganho está inteiro na composição, ou seja, na fase 1. A projeção de ~5x vem do
+benchmark C→D (72,1 s vs 14,8 s, mesmo resultado visual) — é a melhor estimativa
+disponível, mas **é estimativa**: só um protótipo de cena real confirma.
 
-**Duas decisões que valem mais que qualquer otimização de código:**
+Aplicando ~5x ao caso medido (14,7 s de vídeo em 4m55s ≈ 20x realtime), 45 min de vídeo
+sairia da ordem de ~15 h para ~3 h. Chegar perto de 1 h provavelmente exige também
+paralelismo melhor (hoje limitado por RAM) ou máquina maior.
 
-1. **1080p em vez de 1440p** corta ~44% dos pixels (benchmark: 7,3 s vs 12,8 s no mesmo
-   encode). O YouTube re-encoda tudo de qualquer forma; a diferença percebida é pequena.
-   Os JSONs atuais já estão em `16:9` (1080p) — vale confirmar se 1440p é requisito real.
-2. **Se houver orçamento**, uma GPU NVIDIA ou uma VM com NVENC muda a equação de encode
-   por completo. O hardware atual não oferece nada nessa frente — e o `setup.sh` sugere
-   que isso já foi assumido como disponível quando não é.
+**Duas decisões que valem mais que otimização de código:**
+
+1. **Manter 1080p.** Os JSONs atuais já usam `16:9` (1080p); 1440p custa ~44% mais pixels
+   em todo o pipeline — inclusive na composição, que é o gargalo. Só subir para 2K se
+   houver requisito real.
+2. **Hardware.** Não há encoder de hardware utilizável nesta máquina (GPU AMD Vega, sem
+   NVENC/QSV). Mas, dado que o gargalo é composição em Python e não encode, **uma GPU
+   resolveria pouco** — o que ajuda aqui é mais CPU/RAM (mais workers em paralelo) ou a
+   fase 1. O `setup.sh` instalar PyTorch CUDA sugere uma suposição de hardware que não
+   corresponde a esta máquina.
