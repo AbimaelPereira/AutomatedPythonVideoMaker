@@ -1,10 +1,13 @@
 {
     "global_settings": {
         "tts": {
-            "provider": "edge",
-            "voice": "en-US-ChristopherNeural",
-            "rate": "+5%",
-            "pitch": "-8Hz"
+            "provider": "kokoro",
+            "voice": "pm_alex",
+            "lang_code": "a",
+            "silence_removal//": {
+                "enabled": true,
+                "preset": "relaxed"
+            }
         },
         "subtitle": {
             "enabled": true,
@@ -39,9 +42,11 @@
         "padding_top": 54,
         "padding_bottom": 160,
         "background": {
-            "audio/": {
-                "type": "directory",
-                "source": "./assets/audio/background/inspiration"
+            "audio": {
+                "ducking": {
+                    "enabled": true,
+                    "ducking_db": -10.0
+                }
             },
             "visual": {
                 "type": "color",

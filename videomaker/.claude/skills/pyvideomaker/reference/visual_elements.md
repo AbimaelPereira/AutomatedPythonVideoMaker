@@ -42,6 +42,21 @@ tamanho (width-only = teto com aspect ratio preservado; width+height = modo
 cover com crop). Sem `placement.anchor`, o elemento cai no **stack legado**
 (empilhado verticalmente, centralizado, com `layout.width`/`layout.position`).
 
+## `focus` (modo cover de `placement`)
+
+```jsonc
+{ "type": "image", "source": "...", "focus": "face",
+  "placement": { "anchor": ["right", "center"], "width": "58%", "height": "85%" } }
+```
+
+Chave direta no elemento (mesmo nível de `type`/`source`/`border_radius`), lida
+em `UnifiedVideoEngine._cover_crop_offset` — **só tem efeito em modo cover**
+(`placement.width` **e** `placement.height` presentes, fazendo `crop_height`/
+`crop_width` < tamanho redimensionado). `"face"` centra o crop no maior rosto
+detectado (com fallback silencioso pro centro); default `"center"`. Mesma
+mecânica de `background.visual` (ver [background.md](background.md#fit_mode-para-imagevideo)),
+mas é uma implementação separada — não documentada antes aqui.
+
 ## `opacity`
 
 ```jsonc

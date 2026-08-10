@@ -330,21 +330,28 @@ def _process_scene_worker(scene_data_bundle):
             )
 
         # 5. Composição
-        final_scene_clip = [background_clip]
-        if visual_clip:
-            final_scene_clip.append(visual_clip)
+        # visual_clip pode ser um único clip (sem fade) ou uma LISTA de clips
+        # posicionados (com fade — splatados direto p/ evitar dupla pré-multiplicação).
+        visual_clips = visual_clip if isinstance(visual_clip, list) else ([visual_clip] if visual_clip else [])
+        final_scene_clip = [background_clip] + visual_clips
         if subtitle_clip:
             final_scene_clip.append(subtitle_clip)
 
-        # 6. force_rgb
+        # 6. force_rgb — pula clips de visual com fade (máscara alpha necessária)
+        visual_set = set(id(c) for c in visual_clips)
+        visual_has_fade = any(
+            e.get('animation', {}).get('type') in ('fade_in', 'fade_zoom_in')
+            for e in scene.get('visual_elements', [])
+        )
         safe_clips = []
         for c in final_scene_clip:
-            try:
-                c = c.fl_image(force_rgb)
-                safe_clips.append(c)
-            except Exception as e:
-                print(f"[Worker-{scene_index}] Falha ao aplicar force_rgb: {e}")
-                safe_clips.append(c)
+            skip = (id(c) in visual_set and visual_has_fade)
+            if not skip:
+                try:
+                    c = c.fl_image(force_rgb)
+                except Exception as e:
+                    print(f"[Worker-{scene_index}] Falha ao aplicar force_rgb: {e}")
+            safe_clips.append(c)
 
         # 7. Compor cena final
         composed_clip = CompositeVideoClip(safe_clips, size=resolution_output).set_duration(scene_duration)
@@ -416,6 +423,28 @@ def _process_scene_worker(scene_data_bundle):
         import traceback
         traceback.print_exc()
         return (scene_index, None)
+
+
+def _wrap_visual_layer(positioned_clips, element_data_list, resolution_output, scene_duration):
+    """Empacota os clips de visual_elements já posicionados.
+
+    Sem fade: achata num único CompositeVideoClip opaco (force_rgb) — comportamento legado.
+
+    Com fade (fade_in/fade_zoom_in): retorna a LISTA de clips posicionados em vez de
+    aninhar num CompositeVideoClip transparente. O aninhamento pré-multiplica os clips
+    com fade sobre o fundo PRETO do composite interno e, ao compor sobre o fundo da cena,
+    aplica a máscara de novo (dupla pré-multiplicação) — o que escurece as regiões em
+    transição, fazendo o fade "começar preto". Splatados direto na composição da cena,
+    o blend acontece UMA vez, sobre o fundo real."""
+    has_fade = any(
+        e.get('animation', {}).get('type') in ('fade_in', 'fade_zoom_in')
+        for e in element_data_list
+    )
+    if has_fade:
+        return [c.set_duration(scene_duration) if c.duration is None else c
+                for c in positioned_clips]
+    composite = CompositeVideoClip(positioned_clips, size=resolution_output).set_duration(scene_duration)
+    return composite.fl_image(force_rgb)
 
 
 def _create_visual_elements_clip_worker(scene_data, scene_duration, scene_dir,
@@ -499,21 +528,24 @@ def _create_visual_elements_clip_worker(scene_data, scene_duration, scene_dir,
         if not final_clips:
             return None
 
-        return CompositeVideoClip(final_clips, size=resolution_output).set_duration(
-            scene_duration).fl_image(force_rgb)
+        return _wrap_visual_layer(final_clips, valid_element_data_for_layout,
+                                  resolution_output, scene_duration)
 
     except Exception as e:
         print(f"[Worker] Falha no LayoutEngine: {e}")
         centered_clips = []
-        for clip in valid_clips_info:
+        for i, clip in enumerate(valid_clips_info):
             try:
+                opacity = valid_element_data_for_layout[i].get('opacity')
+                if opacity is not None and float(opacity) < 1.0:
+                    clip = clip.set_opacity(float(opacity))
                 centered_clips.append(clip.set_position('center'))
             except:
                 pass
 
         if centered_clips:
-            return CompositeVideoClip(centered_clips, size=resolution_output).set_duration(
-                scene_duration).fl_image(force_rgb)
+            return _wrap_visual_layer(centered_clips, valid_element_data_for_layout,
+                                      resolution_output, scene_duration)
 
         return None
 
@@ -764,23 +796,26 @@ class UnifiedVideoEngine:
                 print("[UVE] Nenhum elemento posicionado corretamente")
                 return None
 
-            return CompositeVideoClip(final_clips, size=self.resolution_output).set_duration(
-                scene_duration).fl_image(force_rgb)
+            return _wrap_visual_layer(final_clips, valid_element_data_for_layout,
+                                      self.resolution_output, scene_duration)
 
         except Exception as e:
             print(f"[UVE] Falha no LayoutEngine: {e}")
             print("[UVE] Usando posicionamento centralizado como fallback")
 
             centered_clips = []
-            for clip in valid_clips_info:
+            for i, clip in enumerate(valid_clips_info):
                 try:
+                    opacity = valid_element_data_for_layout[i].get('opacity')
+                    if opacity is not None and float(opacity) < 1.0:
+                        clip = clip.set_opacity(float(opacity))
                     centered_clips.append(clip.set_position('center'))
                 except Exception as e:
                     print(f"[UVE] Falha no fallback: {e}")
 
             if centered_clips:
-                return CompositeVideoClip(centered_clips, size=self.resolution_output).set_duration(
-                    scene_duration).fl_image(force_rgb)
+                return _wrap_visual_layer(centered_clips, valid_element_data_for_layout,
+                                          self.resolution_output, scene_duration)
 
             return None
 
@@ -1391,21 +1426,29 @@ class UnifiedVideoEngine:
                         )
 
                     # 4. Composição
-                    final_scene_clip = [background_clip]
-                    if visual_clip:
-                        final_scene_clip.append(visual_clip)
+                    # visual_clip pode ser um único clip (sem fade) ou uma LISTA de
+                    # clips posicionados (com fade — splatados direto p/ evitar dupla
+                    # pré-multiplicação que faz o fade "começar preto").
+                    visual_clips = visual_clip if isinstance(visual_clip, list) else ([visual_clip] if visual_clip else [])
+                    final_scene_clip = [background_clip] + visual_clips
                     if subtitle_clip:
                         final_scene_clip.append(subtitle_clip)
 
-                    # 5. force_rgb
+                    # 5. force_rgb — pula clips de visual com fade (máscara alpha necessária)
+                    visual_set = set(id(c) for c in visual_clips)
+                    visual_has_fade = any(
+                        e.get('animation', {}).get('type') in ('fade_in', 'fade_zoom_in')
+                        for e in scene.get('visual_elements', [])
+                    )
                     safe_clips = []
                     for c in final_scene_clip:
-                        try:
-                            c = c.fl_image(force_rgb)
-                            safe_clips.append(c)
-                        except Exception as e:
-                            print(f"[UVE] Falha ao aplicar force_rgb: {e}")
-                            safe_clips.append(c)
+                        skip = (id(c) in visual_set and visual_has_fade)
+                        if not skip:
+                            try:
+                                c = c.fl_image(force_rgb)
+                            except Exception as e:
+                                print(f"[UVE] Falha ao aplicar force_rgb: {e}")
+                        safe_clips.append(c)
 
                     # 6. Compor cena final
                     composed_clip = CompositeVideoClip(safe_clips, size=self.resolution_output).set_duration(scene_duration)

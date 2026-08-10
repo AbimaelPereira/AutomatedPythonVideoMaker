@@ -179,9 +179,6 @@ class VisualClip:
 
         if not clip: return None
 
-        # Apply force_rgb to ALL clips to prevent shape errors
-        clip = clip.fl_image(force_rgb)
-
         layout = self.data.get("layout", {})
         if layout.get("rotation"): clip = clip.rotate(layout["rotation"])
 
@@ -197,8 +194,15 @@ class VisualClip:
             return clip  # animation + border_radius aplicados no worker pós-crop
 
         border_radius = self.data.get("border_radius", 0)
+        anim_type = anim.get("type", "none") if anim else "none"
+        uses_fade = anim_type in ("fade_in", "fade_zoom_in")
 
-        if anim and anim.get("type", "none") not in ("none", "fade_in"):
+        # force_rgb apenas quando não há fade — fade_in/fade_zoom_in dependem da
+        # máscara alpha para compor corretamente; removê-la antes causa fade sobre preto.
+        if not uses_fade:
+            clip = clip.fl_image(force_rgb)
+
+        if anim and anim_type not in ("none", "fade_in"):
             if border_radius and border_radius > 0:
                 clip = self._apply_zoom_in_window(clip, anim, int(border_radius))
             else:
@@ -223,26 +227,38 @@ class VisualClip:
         return clip.set_mask(mask_clip)
 
     @staticmethod
+    def _resolve_font(style, font_size):
+        """Resolve a fonte de um text_box: `style.font_path` (caminho direto ao
+        .ttf) tem prioridade; `style.font_family` é mantido como fallback legado
+        (lookup em fonts/{familia}/{familia}.ttf, raramente presente no projeto)."""
+        font_path = style.get("font_path")
+        if not font_path:
+            font_family = style.get("font_family", "Arial")
+            font_path = f"fonts/{font_family.split('-')[0]}/{font_family}.ttf"
+            if not os.path.exists(font_path):
+                font_path = "fonts/Lato/Lato-Bold.ttf"
+
+        try:
+            return ImageFont.truetype(font_path, font_size)
+        except Exception:
+            return ImageFont.load_default()
+
+    @staticmethod
     def calculate_text_box_size(data):
         # ... (mantido inalterado) ...
         content = data.get("content", "")
         style = data.get("style", {})
-        font_family = style.get("font_family", "Arial")
         font_size = style.get("font_size", 50)
-        
-        font_path = f"fonts/{font_family.split('-')[0]}/{font_family}.ttf"
-        if not os.path.exists(font_path): font_path = "fonts/Lato/Lato-Bold.ttf"
-        try: font = ImageFont.truetype(font_path, font_size)
-        except: font = ImageFont.load_default()
+        font = VisualClip._resolve_font(style, font_size)
 
         dummy = ImageDraw.Draw(Image.new("RGBA", (1,1)))
-        
+
         try:
             bbox = dummy.textbbox((0,0), content, font=font)
             w, h = bbox[2]-bbox[0], bbox[3]-bbox[1]
         except Exception:
             w, h = dummy.textsize(content, font=font)
-            
+
         pad = style.get("padding", [10, 20]) # [V_pad, H_pad]
         
         box_w, box_h = w + pad[1]*2, h + pad[0]*2
@@ -321,61 +337,75 @@ class VisualClip:
     def _create_text_box_clip(self):
         content = self.data.get("content", "")
         style = self.data.get("style", {})
-        font_family = style.get("font_family", "Arial")
         font_size = style.get("font_size", 50)
-        
-        font_path = f"fonts/{font_family.split('-')[0]}/{font_family}.ttf"
-        if not os.path.exists(font_path): font_path = "fonts/Lato/Lato-Bold.ttf"
-        try: font = ImageFont.truetype(font_path, font_size)
-        except: font = ImageFont.load_default()
+        pad = style.get("padding", [10, 20])  # [V_pad, H_pad]
 
-        dummy = ImageDraw.Draw(Image.new("RGBA", (1,1)))
-        
-        # 1. Calcular BBox e Dimensões
+        # Supersampling: o LayoutEngine redimensiona o clip para caber em
+        # `placement.width` (área segura), o que frequentemente faz UPSCALE do
+        # bitmap PIL → texto borrado. Renderizamos numa escala maior (SS) para
+        # que o resize do LayoutEngine seja sempre DOWNSCALE (nítido). O fator é
+        # limitado para a largura supersampleada não passar da largura da tela.
+        canvas_w = self.resolution[0]
+        ss = 4
+        # Estima a largura nativa para limitar o SS dentro do canvas
+        base_font = self._resolve_font(style, font_size)
+        dummy = ImageDraw.Draw(Image.new("RGBA", (1, 1)))
+        try:
+            bb = dummy.textbbox((0, 0), content, font=base_font)
+            native_w = (bb[2] - bb[0]) + pad[1] * 2
+        except Exception:
+            native_w = dummy.textsize(content, font=base_font)[0] + pad[1] * 2
+        if native_w > 0:
+            ss = max(1, min(ss, int(canvas_w / native_w)))
+
+        font_size_ss = font_size * ss
+        pad_ss = [pad[0] * ss, pad[1] * ss]
+        font = self._resolve_font(style, font_size_ss)
+
+        # 1. Calcular BBox e Dimensões (na escala SS)
         try:
             bbox = dummy.textbbox((0,0), content, font=font)
             w, h = bbox[2]-bbox[0], bbox[3]-bbox[1]
         except Exception:
             w, h = dummy.textsize(content, font=font)
-            bbox = (0, 0, w, h) 
-            
-        pad = style.get("padding", [10, 20]) 
-        box_w, box_h = w + pad[1]*2, h + pad[0]*2
-        
+            bbox = (0, 0, w, h)
+
+        box_w, box_h = w + pad_ss[1]*2, h + pad_ss[0]*2
+
         # 2. Criar Imagem e Desenhar Fundo
         img = Image.new("RGBA", (int(box_w), int(box_h)), (0,0,0,0))
         draw = ImageDraw.Draw(img)
-        
+
         background_color = style.get("background_color", "white")
-        
+
         if background_color != "transparent":
-            draw.rounded_rectangle([(0,0),(box_w,box_h)], radius=style.get("border_radius",0), fill=background_color)
-        
+            draw.rounded_rectangle([(0,0),(box_w,box_h)], radius=style.get("border_radius",0)*ss, fill=background_color)
+
         # 3. Desenhar Texto
         # bbox[1] é geralmente negativo ou pequeno, ajustamos para desenhar na linha correta
-        text_x_pos = pad[1]
-        text_y_pos = pad[0] - bbox[1] 
+        text_x_pos = pad_ss[1]
+        text_y_pos = pad_ss[0] - bbox[1]
 
         text_color = style.get("text_color","black")
         draw.text((text_x_pos, text_y_pos), content, font=font, fill=text_color)
-        
+
         # --- [NOVO] Lógica de Riscado (Strikethrough) ---
         if style.get("strikethrough", False):
             # Calcula a posição Y da linha (aproximadamente no meio da altura visual do texto)
             # O fator 0.6 costuma alinhar melhor visualmente com a 'cintura' das letras
-            line_y = pad[0] + (h * 0.6)
-            
+            line_y = pad_ss[0] + (h * 0.6)
+
             # Espessura da linha proporcional ao tamanho da fonte
-            line_width = max(2, int(font_size / 15))
-            
+            line_width = max(2, int(font_size_ss / 15))
+
             # Desenha a linha
             draw.line(
-                [(text_x_pos, line_y), (text_x_pos + w, line_y)], 
-                fill=text_color, 
+                [(text_x_pos, line_y), (text_x_pos + w, line_y)],
+                fill=text_color,
                 width=line_width
             )
         # -----------------------------------------------
-        
+
         temp_path = os.path.join(self.temp_dir, f"textbox_{id(self)}.png")
         img.save(temp_path)
         return ImageClip(temp_path).set_duration(self.duration)

@@ -34,9 +34,6 @@ pip install -r requirements.txt
 
 # Gerar vídeo a partir de um JSON
 python main.py caminho/para/video.json
-
-# Gerar assets de canal (thumbnails, intro, etc.)
-python generate_channel_assets.py
 ```
 
 ### Web (`web/`)
