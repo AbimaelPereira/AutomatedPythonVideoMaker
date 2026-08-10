@@ -7,11 +7,16 @@ import subprocess
 import shutil
 import gc
 import hashlib
+import time
 import multiprocessing
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from types import SimpleNamespace
 
-from libs.utils import deep_merge, load_channel_config, resolve_output_resolution, resolve_output_quality
+from libs.utils import (deep_merge, load_channel_config, resolve_output_resolution,
+                        resolve_output_quality, resolve_intermediate_quality,
+                        estimate_intermediate_size_gb, check_free_space,
+                        USE_INTERMEDIATE_ENCODE)
+from libs.Profiler import Profiler
 from libs.VisualClip import VisualClip, force_rgb, apply_border_radius_clip, apply_animation_in_window, apply_visual_filters
 from libs.Subtitle.SubtitleEngine import SubtitleEngine
 from libs.MediaDownloader import MediaDownloader
@@ -34,6 +39,25 @@ except ImportError as e:
     print(f"[UVE] Sistema de IA não disponível: {e}")
 
 MAX_PARALLEL_SCENES_DEFAULT = int(os.getenv("MAX_PARALLEL_SCENES", 2))
+
+
+def _scene_encode_threads() -> int:
+    """Threads do x264 no encode de cena.
+
+    O `threads=4` fixo anterior causava oversubscription no modo paralelo: N
+    workers × 4 threads em 8 CPUs. Aqui cada worker recebe uma fatia das CPUs,
+    e o modo sequencial recebe todas (threads=0 = auto do x264).
+
+    `_UVE_SCENE_WORKERS` é exportada pelo processo pai antes de abrir o pool.
+    """
+    try:
+        workers = int(os.getenv("_UVE_SCENE_WORKERS", "1"))
+    except ValueError:
+        workers = 1
+    if workers <= 1:
+        return 0                      # sequencial: x264 decide (usa todas as CPUs)
+    cpus = multiprocessing.cpu_count()
+    return max(1, cpus // workers)
 
 
 def hex_to_rgb(hex_value):
@@ -264,6 +288,9 @@ def _process_scene_worker(scene_data_bundle):
     output_dir = scene_data_bundle["output_dir"]
     resolution_output = scene_data_bundle["resolution_output"]
     output_quality = scene_data_bundle["output_quality"]
+    # Qualidade do encode DESTA cena (intermediária, rápida) — a qualidade final
+    # (output_quality) é aplicada só no encode de saída.
+    scene_quality = scene_data_bundle.get("scene_quality") or output_quality
     tts_config = scene_data_bundle["tts_config"]
     effective_gs = scene_data_bundle["effective_gs"]
     layout_params = scene_data_bundle["layout_params"]
@@ -338,20 +365,15 @@ def _process_scene_worker(scene_data_bundle):
             final_scene_clip.append(subtitle_clip)
 
         # 6. force_rgb — pula clips de visual com fade (máscara alpha necessária)
-        visual_set = set(id(c) for c in visual_clips)
-        visual_has_fade = any(
-            e.get('animation', {}).get('type') in ('fade_in', 'fade_zoom_in')
-            for e in scene.get('visual_elements', [])
-        )
-        safe_clips = []
-        for c in final_scene_clip:
-            skip = (id(c) in visual_set and visual_has_fade)
-            if not skip:
-                try:
-                    c = c.fl_image(force_rgb)
-                except Exception as e:
-                    print(f"[Worker-{scene_index}] Falha ao aplicar force_rgb: {e}")
-            safe_clips.append(c)
+        # PERF: force_rgb é aplicado UMA vez, no composto final (abaixo). Antes era
+        # aplicado também em cada camada — cada aplicação é um passe Python sobre
+        # todos os frames (medido: ~3,5x de overhead no encode da cena). O passe no
+        # composto já garante a saída em 3 canais, que é o objetivo.
+        #
+        # Camadas com máscara alpha (fade) NUNCA podem receber force_rgb antes do
+        # blend: remover a máscara faz o fade acontecer sobre preto. Não aplicar
+        # nada aqui preserva isso naturalmente.
+        safe_clips = final_scene_clip
 
         # 7. Compor cena final
         composed_clip = CompositeVideoClip(safe_clips, size=resolution_output).set_duration(scene_duration)
@@ -386,20 +408,22 @@ def _process_scene_worker(scene_data_bundle):
 
         print(f"[Worker-{scene_index}] Renderizando cena {scene_index + 1}/{total_scenes}...")
 
+        _t_encode = time.time()
         composed_clip.write_videofile(
             scene_clip_path,
             codec='libx264',
             audio_codec='aac',
             temp_audiofile=temp_audiofile,
             remove_temp=True,
-            fps=output_quality["fps"],
-            preset=output_quality["preset"],
-            threads=4,
+            fps=scene_quality["fps"],
+            preset=scene_quality["preset"],
+            threads=_scene_encode_threads(),
             verbose=False,
             logger=None,
-            ffmpeg_params=['-crf', str(output_quality["crf"]), '-pix_fmt', output_quality["pix_fmt"],
+            ffmpeg_params=['-crf', str(scene_quality["crf"]), '-pix_fmt', scene_quality["pix_fmt"],
                            '-vsync', 'cfr', '-g', '60', '-bf', '2']
         )
+        _encode_elapsed = time.time() - _t_encode
 
         print(f"[Worker-{scene_index}] Cena renderizada: {os.path.basename(scene_clip_path)}")
 
@@ -416,13 +440,15 @@ def _process_scene_worker(scene_data_bundle):
         del composed_clip
         gc.collect()
 
-        return (scene_index, scene_clip_path)
+        # 3º item: tempos p/ o Profiler do processo pai (ver Profiler.merge).
+        return (scene_index, scene_clip_path,
+                {"encode_cena": {"total": _encode_elapsed, "count": 1}})
 
     except Exception as e:
         print(f"[Worker-{scene_index}] Erro ao processar cena: {e}")
         import traceback
         traceback.print_exc()
-        return (scene_index, None)
+        return (scene_index, None, {})
 
 
 def _wrap_visual_layer(positioned_clips, element_data_list, resolution_output, scene_duration):
@@ -589,7 +615,13 @@ class UnifiedVideoEngine:
     def __init__(self, video_data: dict):
         self.video_data = video_data
 
-        self.video_data["debug"] = os.getenv("DEBUG", "0").lower() in ("true", "1", "t")
+        # debug: env DEBUG OU "debug": true no JSON.
+        # Antes o env sobrescrevia o JSON incondicionalmente, então `"debug": true`
+        # era silenciosamente ignorado — e o vídeo subia pro YouTube (o youtube_config
+        # pode vir do channels_config, mesmo sem bloco "youtube" no JSON do vídeo).
+        # Qualquer um dos dois liga o modo debug; nenhum caminho o desliga.
+        env_debug = os.getenv("DEBUG", "0").lower() in ("true", "1", "t")
+        self.video_data["debug"] = bool(env_debug or video_data.get("debug") is True)
 
         # 1. Carrega channel_config e faz merge de global_settings
         channel_name = video_data.get("channel_name")
@@ -612,6 +644,12 @@ class UnifiedVideoEngine:
         output_ratio = output_cfg.get("ratio") or video_data.get("output_ratio", "9:16")
         self.resolution_output = resolve_output_resolution(output_ratio)
         self.output_quality = resolve_output_quality(output_cfg.get("quality"))
+        # Cenas são artefato intermediário (concatenadas/re-encodadas depois):
+        # encoda rápido e quase-lossless, deixando output_quality só p/ a saída.
+        self.scene_quality = resolve_intermediate_quality(self.output_quality)
+
+        # Instrumentação: PROFILE=0 desliga.
+        self.profiler = Profiler(enabled=os.getenv("PROFILE", "1") not in ("0", "false", "False"))
 
         # 4. tts_config
         self.tts_config = self.global_settings.get("tts", {})
@@ -1010,17 +1048,20 @@ class UnifiedVideoEngine:
             mixed_seg = mixed_seg[:video_duration_ms]
             mixed_seg.export(temp_mixed, format="mp3", bitrate="192k")
 
-            # 6. Mescla áudio processado de volta ao vídeo
+            # 6. Mescla áudio processado de volta ao vídeo.
+            # `-c:v copy`: só o áudio muda, então re-encodar o vídeo aqui era um
+            # passe inteiro desperdiçado (antes usava _ffmpeg_video_args()).
             cmd_merge = [
                 "ffmpeg", "-y",
                 "-i", video_path, "-i", temp_mixed,
                 "-map", "0:v:0", "-map", "1:a:0",
-                *self._ffmpeg_video_args(),
+                "-c:v", "copy",
                 "-c:a", "aac", "-b:a", "192k", "-ar", "44100", "-ac", "2",
                 "-shortest", "-movflags", "+faststart",
                 output_path
             ]
-            subprocess.run(cmd_merge, check=True, capture_output=True)
+            with self.profiler.step("mix_audio_ducking"):
+                subprocess.run(cmd_merge, check=True, capture_output=True)
             print(f"[UVE] Vídeo final com ducking: {os.path.basename(output_path)}")
 
             return output_path
@@ -1053,56 +1094,116 @@ class UnifiedVideoEngine:
                         pass
 
     def _apply_background_audio_simple(self, video_path, output_path, audio_path, volume):
-        video_clip = VideoFileClip(video_path)
-        video_duration = video_clip.duration
+        """Mixa música de fundo SEM re-encodar o vídeo.
 
-        bg_audio = AudioFileClip(audio_path)
+        O stream de vídeo é idêntico na entrada e na saída — só o áudio muda —
+        então `-c:v copy` elimina um encode completo do vídeo inteiro (era o
+        passe mais caro do pipeline em vídeos longos).
 
-        if bg_audio.duration < video_duration:
-            loops_needed = int(video_duration / bg_audio.duration) + 1
-            bg_audio = concatenate_audioclips([bg_audio] * loops_needed)
+        `-stream_loop -1` repete a música até o fim do vídeo, substituindo o loop
+        manual via `concatenate_audioclips`; `duration=first` no amix corta no
+        tamanho do vídeo, e `-shortest` garante o fim junto com o stream mais curto.
+        """
+        print(f"[UVE] Aplicando áudio de fundo (sem re-encode de vídeo)...")
 
-        bg_audio = bg_audio.subclip(0, video_duration)
-        bg_audio = bg_audio.volumex(volume)
+        has_narration = _probe_has_audio(video_path)
 
-        if video_clip.audio:
-            final_audio = CompositeAudioClip([video_clip.audio, bg_audio])
+        if has_narration:
+            # amix normaliza por padrão (divide pelo nº de inputs), o que abaixaria
+            # a narração; normalize=0 preserva os volumes originais.
+            filter_complex = (
+                f"[1:a]volume={volume}[bg];"
+                f"[0:a][bg]amix=inputs=2:duration=first:dropout_transition=0:normalize=0[a]"
+            )
         else:
-            final_audio = bg_audio
+            filter_complex = f"[1:a]volume={volume}[a]"
 
-        final_video = video_clip.set_audio(final_audio)
-
-        print(f"[UVE] Renderizando vídeo com áudio de fundo...")
-
-        final_video.write_videofile(
+        cmd = [
+            "ffmpeg", "-y",
+            "-i", video_path,
+            "-stream_loop", "-1", "-i", audio_path,
+            "-filter_complex", filter_complex,
+            "-map", "0:v", "-map", "[a]",
+            "-c:v", "copy",
+            "-c:a", "aac", "-b:a", "192k", "-ar", "44100", "-ac", "2",
+            "-shortest", "-movflags", "+faststart",
             output_path,
-            codec='libx264',
-            audio_codec='aac',
-            fps=self.output_quality["fps"],
-            preset=self.output_quality["preset"],
-            threads=4,
-            verbose=False,
-            logger=None,
-            ffmpeg_params=['-crf', str(self.output_quality["crf"]), '-pix_fmt', self.output_quality["pix_fmt"],
-                           '-vsync', 'cfr']
-        )
+        ]
 
-        video_clip.close()
-        bg_audio.close()
-        final_video.close()
+        try:
+            with self.profiler.step("mix_audio_fundo"):
+                subprocess.run(cmd, check=True, capture_output=True, text=True)
+        except subprocess.CalledProcessError as e:
+            print(f"[UVE] Erro FFmpeg ao aplicar áudio de fundo:\n{e.stderr[-2000:]}")
+            return video_path
 
         print(f"[UVE] Áudio de fundo aplicado: {os.path.basename(output_path)}")
         return output_path
 
     def _ffmpeg_video_args(self):
-        """Args de encoding de vídeo (x264) derivados de self.output_quality,
-        usados nos re-encodes de concatenação via ffmpeg."""
+        """Args de encoding de vídeo (x264) derivados de self.output_quality.
+
+        Usado APENAS no encode final de saída — é o único ponto onde a qualidade
+        pedida no JSON precisa ser aplicada. Concatenações intermediárias usam
+        `_ffmpeg_concat_copy_args`.
+        """
         q = self.output_quality
         return [
             "-c:v", "libx264", "-preset", q["preset"], "-crf", str(q["crf"]),
             "-r", str(q["fps"]), "-vsync", "cfr", "-g", "60", "-bf", "2",
             "-pix_fmt", q["pix_fmt"],
         ]
+
+    @staticmethod
+    def _ffmpeg_concat_copy_args():
+        """Args de concatenação sem re-encode.
+
+        Todas as cenas saem do mesmo pipeline com parâmetros idênticos (mesma
+        resolução, fps, pix_fmt e codec), então o demuxer concat aceita `-c copy`.
+        Evita um encode completo por passe de concatenação.
+
+        O áudio também é copiado: as cenas já saem em AAC do write_videofile.
+        """
+        return ["-c", "copy"]
+
+    def _concat_scenes(self, paths: list, out_path: str, reencode: bool, label: str = "concat"):
+        """Concatena via demuxer concat. `reencode=True` aplica output_quality
+        (usar só quando o resultado é a saída final); caso contrário, `-c copy`."""
+        concat_list = out_path + ".concat.txt"
+        with open(concat_list, "w", encoding="utf-8") as f:
+            for p in paths:
+                f.write(f"file '{os.path.abspath(p)}'\n")
+
+        if reencode:
+            codec_args = [
+                *self._ffmpeg_video_args(),
+                "-keyint_min", "60", "-sc_threshold", "0",
+                # Keyframe a cada 2s: melhora seek/streaming no YouTube.
+                "-force_key_frames", "expr:gte(t,n_forced*2)",
+                "-c:a", "aac", "-b:a", "192k", "-ar", "44100", "-ac", "2",
+            ]
+        else:
+            codec_args = self._ffmpeg_concat_copy_args()
+
+        cmd = [
+            "ffmpeg", "-y",
+            "-f", "concat", "-safe", "0", "-i", concat_list,
+            *codec_args,
+            "-movflags", "+faststart",
+            out_path,
+        ]
+
+        step = f"{label}_{'reencode' if reencode else 'copy'}"
+        try:
+            with self.profiler.step(step):
+                subprocess.run(cmd, check=True, capture_output=True, text=True)
+        finally:
+            if os.path.exists(concat_list):
+                try:
+                    os.remove(concat_list)
+                except Exception:
+                    pass
+        return out_path
 
     # ------------------------------------------------------------------
     # RENDER SCENE
@@ -1114,20 +1215,21 @@ class UnifiedVideoEngine:
 
         print(f"[UVE] Renderizando cena {scene_index + 1}/{total_scenes}...")
 
-        composed_clip.write_videofile(
-            scene_clip_path,
-            codec='libx264',
-            audio_codec='aac',
-            temp_audiofile=temp_audiofile,
-            remove_temp=True,
-            fps=self.output_quality["fps"],
-            preset=self.output_quality["preset"],
-            threads=4,
-            verbose=False,
-            logger=None,
-            ffmpeg_params=['-crf', str(self.output_quality["crf"]), '-pix_fmt', self.output_quality["pix_fmt"],
-                           '-vsync', 'cfr', '-g', '60', '-bf', '2']
-        )
+        with self.profiler.step("encode_cena"):
+            composed_clip.write_videofile(
+                scene_clip_path,
+                codec='libx264',
+                audio_codec='aac',
+                temp_audiofile=temp_audiofile,
+                remove_temp=True,
+                fps=self.scene_quality["fps"],
+                preset=self.scene_quality["preset"],
+                threads=_scene_encode_threads(),
+                verbose=False,
+                logger=None,
+                ffmpeg_params=['-crf', str(self.scene_quality["crf"]), '-pix_fmt', self.scene_quality["pix_fmt"],
+                               '-vsync', 'cfr', '-g', '60', '-bf', '2']
+            )
 
         print(f"[UVE] Cena {scene_index + 1} renderizada: {os.path.basename(scene_clip_path)}")
 
@@ -1150,6 +1252,28 @@ class UnifiedVideoEngine:
     # CONCATENAÇÃO POR CHAPTER
     # ------------------------------------------------------------------
 
+    def _cleanup_scene_files(self, scene_files: list):
+        """Remove as cenas intermediárias já concatenadas (e seus diretórios).
+
+        Chamado logo após o concat, não só no fim do run: com cenas em crf12 o
+        pico de disco é o gargalo em vídeos longos.
+        """
+        freed = 0
+        for path in scene_files:
+            try:
+                if os.path.exists(path):
+                    freed += os.path.getsize(path)
+                    os.remove(path)
+                scene_dir = os.path.dirname(path)
+                # Só remove o diretório se ficou vazio (pode conter narração/SRT
+                # ainda úteis para diagnóstico).
+                if os.path.isdir(scene_dir) and not os.listdir(scene_dir):
+                    os.rmdir(scene_dir)
+            except Exception:
+                pass
+        if freed:
+            print(f"[UVE] Cenas intermediárias liberadas: {freed / (1024**3):.2f}GB")
+
     def _concat_and_apply_chapter_audio(self, scene_files: list, slug: str) -> str:
         chapter_groups = {}
         chapter_order  = []
@@ -1163,6 +1287,7 @@ class UnifiedVideoEngine:
             chapter_groups[chapter_id].append(path)
 
         segment_paths = []
+        single_chapter = len(chapter_order) == 1
 
         for chapter_id in chapter_order:
             paths = chapter_groups[chapter_id]
@@ -1171,21 +1296,15 @@ class UnifiedVideoEngine:
             segment_concat = os.path.join(self.output_dir, f"_segment_{chapter_id}_concat.mp4")
             segment_final  = os.path.join(self.output_dir, f"_segment_{chapter_id}_final.mp4")
 
-            concat_list = os.path.join(self.output_dir, f"_concat_{chapter_id}.txt")
-            with open(concat_list, "w", encoding="utf-8") as f:
-                for p in paths:
-                    f.write(f"file '{os.path.abspath(p)}'\n")
+            # Com um único capítulo, o segmento vira a saída final (o áudio de fundo
+            # depois é aplicado com -c:v copy) — então é AQUI que a qualidade final
+            # precisa ser aplicada. Com vários, o encode fica no concat final.
+            self._concat_scenes(paths, segment_concat,
+                                reencode=single_chapter, label=f"concat_cap")
 
-            ffmpeg_cmd = [
-                "ffmpeg", "-y",
-                "-f", "concat", "-safe", "0", "-i", concat_list,
-                *self._ffmpeg_video_args(),
-                "-keyint_min", "60", "-sc_threshold", "0",
-                "-c:a", "aac", "-b:a", "192k", "-ar", "44100", "-ac", "2",
-                "-movflags", "+faststart",
-                segment_concat
-            ]
-            subprocess.run(ffmpeg_cmd, check=True, capture_output=True, text=True)
+            # Libera as cenas deste capítulo já consumidas (pico de disco).
+            if self.video_data.get("debug") is not True:
+                self._cleanup_scene_files(paths)
 
             if audio_cfg and audio_cfg.get("source"):
                 result = self._apply_background_audio_to_video(segment_concat, segment_final, audio_cfg)
@@ -1198,23 +1317,12 @@ class UnifiedVideoEngine:
 
         final_path = os.path.join(self.output_dir, f"{slug}.mp4")
         if len(segment_paths) == 1:
+            # Já encodado na qualidade final acima (single_chapter=True).
             os.rename(segment_paths[0], final_path)
             return final_path
 
-        concat_final_list = os.path.join(self.output_dir, "_concat_final.txt")
-        with open(concat_final_list, "w", encoding="utf-8") as f:
-            for p in segment_paths:
-                f.write(f"file '{os.path.abspath(p)}'\n")
-
-        ffmpeg_final = [
-            "ffmpeg", "-y",
-            "-f", "concat", "-safe", "0", "-i", concat_final_list,
-            *self._ffmpeg_video_args(),
-            "-c:a", "aac", "-b:a", "192k", "-ar", "44100", "-ac", "2",
-            "-movflags", "+faststart",
-            final_path
-        ]
-        subprocess.run(ffmpeg_final, check=True, capture_output=True, text=True)
+        # Vários capítulos: este é o encode final único, na qualidade do JSON.
+        self._concat_scenes(segment_paths, final_path, reencode=True, label="concat_final")
 
         for p in segment_paths:
             if os.path.exists(p):
@@ -1326,6 +1434,16 @@ class UnifiedVideoEngine:
                 print(f"[UVE] Imagem IA salva: {file_path}")
 
     def run(self):
+        """Wrapper que garante o relatório do profiler mesmo em falha —
+        é justamente quando o diagnóstico de tempo interessa."""
+        try:
+            return self._run()
+        finally:
+            self.profiler.report(
+                total_video_duration=getattr(self, "_total_duration_estimate", None)
+            )
+
+    def _run(self):
         print("[UVE] Iniciando processamento do vídeo...")
 
         scenes = self._normalize_scenes()
@@ -1343,14 +1461,28 @@ class UnifiedVideoEngine:
 
         # PRÉ-PROCESSAMENTO
         try:
-            scenes = NarrationEngine.preprocess_scenes({
-                "provider": self.tts_config.get("provider", "edge"),
-                "tts_config": self.tts_config,
-                "scenes_data": scenes,
-                "output_base_dir": self.output_dir
-            })
+            with self.profiler.step("narracao_tts"):
+                scenes = NarrationEngine.preprocess_scenes({
+                    "provider": self.tts_config.get("provider", "edge"),
+                    "tts_config": self.tts_config,
+                    "scenes_data": scenes,
+                    "output_base_dir": self.output_dir
+                })
         except Exception as e:
             print(f"[UVE] Pré-processamento de narração falhou: {e}")
+
+        # Checagem de disco — depois do TTS, quando as durações são conhecidas.
+        # Um render longo que morre no meio por falta de espaço desperdiça horas.
+        self._total_duration_estimate = sum(float(s.get("duration") or 0) for s in scenes)
+        if self._total_duration_estimate > 0:
+            needed = estimate_intermediate_size_gb(self._total_duration_estimate, self.resolution_output)
+            ok, free_gb, _ = check_free_space(self.output_dir, needed)
+            print(f"[UVE] Disco: {free_gb:.1f}GB livres, "
+                  f"~{needed:.1f}GB estimados p/ cenas intermediárias "
+                  f"({self._total_duration_estimate / 60:.1f} min de vídeo)")
+            if not ok:
+                print(f"[UVE] ⚠️ Espaço em disco possivelmente insuficiente. "
+                      f"Libere espaço ou use INTERMEDIATE_ENCODE=0 (cenas menores, render mais lento).")
 
         # Determinar número de workers
         max_workers = min(self.max_parallel_scenes, multiprocessing.cpu_count(), len(scenes))
@@ -1359,7 +1491,11 @@ class UnifiedVideoEngine:
             import psutil
             available_ram_gb = psutil.virtual_memory().available / (1024**3)
             if available_ram_gb < 4 and max_workers > 1:
-                print(f"[UVE] RAM disponível baixa ({available_ram_gb:.1f}GB). Forçando modo sequencial.")
+                # Fica explícito: cair p/ sequencial muda muito o tempo total, e
+                # antes isso passava quase silencioso no log.
+                print(f"[UVE] ⚠️ RAM disponível baixa ({available_ram_gb:.1f}GB < 4GB). "
+                      f"Forçando modo SEQUENCIAL (era {max_workers} workers) — "
+                      f"o render vai demorar proporcionalmente mais.")
                 max_workers = 1
         except ImportError:
             pass
@@ -1434,21 +1570,8 @@ class UnifiedVideoEngine:
                     if subtitle_clip:
                         final_scene_clip.append(subtitle_clip)
 
-                    # 5. force_rgb — pula clips de visual com fade (máscara alpha necessária)
-                    visual_set = set(id(c) for c in visual_clips)
-                    visual_has_fade = any(
-                        e.get('animation', {}).get('type') in ('fade_in', 'fade_zoom_in')
-                        for e in scene.get('visual_elements', [])
-                    )
-                    safe_clips = []
-                    for c in final_scene_clip:
-                        skip = (id(c) in visual_set and visual_has_fade)
-                        if not skip:
-                            try:
-                                c = c.fl_image(force_rgb)
-                            except Exception as e:
-                                print(f"[UVE] Falha ao aplicar force_rgb: {e}")
-                        safe_clips.append(c)
+                    # 5. PERF: force_rgb só no composto (ver nota em _process_scene_worker).
+                    safe_clips = final_scene_clip
 
                     # 6. Compor cena final
                     composed_clip = CompositeVideoClip(safe_clips, size=self.resolution_output).set_duration(scene_duration)
@@ -1509,6 +1632,7 @@ class UnifiedVideoEngine:
                     "output_dir": self.output_dir,
                     "resolution_output": self.resolution_output,
                     "output_quality": self.output_quality,
+                    "scene_quality": self.scene_quality,
                     "tts_config": tts_config,
                     "effective_gs": effective_gs,
                     "layout_params": self.layout_params,
@@ -1518,6 +1642,15 @@ class UnifiedVideoEngine:
                 scene_bundles.append(bundle)
 
             results = []
+            # Informa aos workers quantos são, p/ dividirem as CPUs no x264
+            # (evita N workers × threads cheias na mesma máquina).
+            os.environ["_UVE_SCENE_WORKERS"] = str(max_workers)
+
+            # O timeout precisa acompanhar a duração da cena: 600s fixos estouram
+            # em cenas longas de vídeos de 45+ min. Usa a maior cena como base.
+            longest_scene = max((float(s.get("duration") or 0) for s in scenes), default=0)
+            scene_timeout = max(1800, longest_scene * 60)
+
             with ProcessPoolExecutor(max_workers=max_workers) as executor:
                 futures = {
                     executor.submit(_process_scene_worker, bundle): bundle["scene_index"]
@@ -1526,7 +1659,8 @@ class UnifiedVideoEngine:
 
                 for future in as_completed(futures):
                     try:
-                        scene_index, scene_path = future.result(timeout=600)
+                        scene_index, scene_path, worker_timings = future.result(timeout=scene_timeout)
+                        self.profiler.merge(worker_timings)
                         if scene_path:
                             results.append((scene_index, scene_path))
                             print(f"[UVE] Cena {scene_index + 1} concluída com sucesso")
@@ -1568,25 +1702,19 @@ class UnifiedVideoEngine:
             else:
                 intermediate_path = os.path.join(self.output_dir, f"{slug}_no_bg_audio.mp4")
 
-                concat_list_path = os.path.join(self.output_dir, "concat_list.txt")
-                with open(concat_list_path, "w", encoding="utf-8") as f:
-                    for p in scene_files:
-                        f.write(f"file '{os.path.abspath(p)}'\n")
-
-                print("[UVE] Concatenando com re-encoding e FPS constante...")
-                ffmpeg_cmd = [
-                    "ffmpeg", "-y",
-                    "-f", "concat", "-safe", "0", "-i", concat_list_path,
-                    *self._ffmpeg_video_args(),
-                    "-keyint_min", "60",
-                    "-sc_threshold", "0",
-                    "-force_key_frames", "expr:gte(t,n_forced*2)",
-                    "-c:a", "aac", "-b:a", "192k", "-ar", "44100", "-ac", "2",
-                    "-movflags", "+faststart",
-                    intermediate_path
-                ]
-                subprocess.run(ffmpeg_cmd, check=True, capture_output=True, text=True)
+                # Único encode na qualidade do JSON. O áudio de fundo aplicado
+                # depois usa -c:v copy, então este é o encode definitivo.
+                print(f"[UVE] Concatenando {len(scene_files)} cenas "
+                      f"(encode final: preset={self.output_quality['preset']}, "
+                      f"crf={self.output_quality['crf']})...")
+                self._concat_scenes(scene_files, intermediate_path,
+                                    reencode=True, label="concat_final")
                 print(f"[UVE] Vídeo concatenado: {intermediate_path}")
+
+                # As cenas já foram consumidas: liberar agora reduz o pico de disco
+                # (cenas em crf12 são grandes). Em debug ficam para inspeção.
+                if self.video_data.get("debug") is not True:
+                    self._cleanup_scene_files(scene_files)
 
                 if not _probe_has_audio(intermediate_path):
                     print("[UVE] ⚠️ Vídeo concatenado não tem stream de áudio!")

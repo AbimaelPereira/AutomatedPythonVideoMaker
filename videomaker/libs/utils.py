@@ -62,6 +62,68 @@ _X264_PRESETS = {
     "medium", "slow", "slower", "veryslow", "placebo",
 }
 
+# Qualidade de encoding das CENAS INTERMEDIÁRIAS.
+#
+# Cenas individuais são artefato descartável: são concatenadas e re-encodadas (ou
+# copiadas) no passe final. Gastar preset "slow"/crf18 nelas é desperdício — a
+# qualidade é jogada fora depois. Medido em 1440p (15s de fonte real):
+#   slow=60.3s  medium=23.8s  veryfast=11.9s  ultrafast=4.5s
+#
+# ultrafast + crf12 é visualmente ~lossless (a perda real acontece no encode final,
+# que é o único que usa output.quality) e ~13x mais rápido que slow.
+#
+# Custo: arquivos ~8-10x maiores em disco. `estimate_intermediate_size_gb` estima
+# a necessidade e `check_free_space` falha cedo se não couber.
+INTERMEDIATE_QUALITY = {"crf": 12, "preset": "ultrafast", "pix_fmt": "yuv420p"}
+
+# Permite forçar o comportamento antigo (encodar cenas na qualidade final) para
+# comparação A/B: INTERMEDIATE_ENCODE=0 python main.py ...
+USE_INTERMEDIATE_ENCODE = os.getenv("INTERMEDIATE_ENCODE", "1") not in ("0", "false", "False")
+
+
+def resolve_intermediate_quality(final_quality: dict) -> dict:
+    """Qualidade para render de cena intermediária.
+
+    Herda `fps` da qualidade final (mudar fps entre cena e saída causaria
+    resampling temporal) e substitui crf/preset pelo perfil rápido.
+    Com INTERMEDIATE_ENCODE=0, devolve a qualidade final inalterada.
+    """
+    if not USE_INTERMEDIATE_ENCODE:
+        return dict(final_quality)
+    q = dict(INTERMEDIATE_QUALITY)
+    q["fps"] = final_quality.get("fps", 30)
+    return q
+
+
+def estimate_intermediate_size_gb(total_duration_s: float, resolution: tuple) -> float:
+    """Estima o espaço em disco das cenas intermediárias (crf 12, ultrafast).
+
+    Baseado em bits-por-pixel MEDIDO nesse perfil: 1440p30 com movimento rendeu
+    ~0.39 bpp (~43 Mbps, ~13 GB para 45 min). Conteúdo mais estático (imagem +
+    zoom lento, o caso comum aqui) fica bem abaixo disso, então a estimativa é
+    conservadora de propósito — o objetivo é falhar cedo, não prever com precisão.
+    """
+    if not total_duration_s or total_duration_s <= 0:
+        return 0.0
+    w, h = resolution
+    bits_per_frame = w * h * 0.39
+    bytes_total = (bits_per_frame / 8) * 30 * total_duration_s
+    return bytes_total / (1024 ** 3)
+
+
+def check_free_space(path: str, needed_gb: float, label: str = "render") -> tuple:
+    """Verifica espaço livre em disco. Retorna (ok, free_gb, needed_gb).
+
+    Não levanta exceção — quem chama decide se aborta. Um render de 45 min que
+    morre no meio por falta de disco desperdiça horas; melhor avisar antes.
+    """
+    try:
+        import shutil as _shutil
+        free_gb = _shutil.disk_usage(path).free / (1024 ** 3)
+    except Exception:
+        return (True, 0.0, needed_gb)   # não conseguiu medir: não bloqueia
+    return (free_gb >= needed_gb, free_gb, needed_gb)
+
 
 def resolve_output_quality(quality) -> dict:
     """Resolve a config de qualidade de encoding a partir do JSON.
