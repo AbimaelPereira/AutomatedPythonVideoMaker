@@ -28,8 +28,8 @@ VAAPI funciona apenas em `/dev/dri/renderD129`, e **é mais lento que x264 `very
 | Item | Valor |
 |---|---|
 | CPU | 8 threads |
-| RAM | 17 GB total, **~5 GB disponível** |
-| Disco | **220G/234G usados — 1,5 GB livres (100%)** |
+| RAM | 17 GB total, ~5–8 GB disponível |
+| Disco | 185G/234G usados — **37 GB livres** (era 1,5 GB; liberado em 10/08/2026) |
 | GPU | AMD Vega integrada — sem encode útil |
 | moviepy | 1.0.3 (no Python do sistema, `~/.local`, sem venv em `videomaker/`) |
 
@@ -82,9 +82,9 @@ no encode de saída.
 - Introduzir `INTERMEDIATE_QUALITY = {"crf": 12, "preset": "ultrafast", "pix_fmt": "yuv420p"}`
   em [utils.py](../libs/utils.py) ao lado de `QUALITY_PRESETS`.
 - Usar nas 3 chamadas de cena; manter `self.output_quality` **apenas** no encode final.
-- ⚠️ **Restrição de disco:** crf 12 em 1440p gera ~8–10x mais bytes por cena. Com
-  **1,5 GB livres isso falha imediatamente** — ver 0.5, que é pré-requisito bloqueante
-  deste item.
+- ⚠️ **Custo de disco:** crf 12 em 1440p gera ~8–10x mais bytes por cena. Com 37 GB
+  livres há folga para vídeos curtos e médios, mas um render de 45 min precisa de
+  estimativa antes — ver 0.5.
 
 **Ganho esperado:** o maior item isolado da Fase 0.
 
@@ -146,18 +146,30 @@ Também: `threads=4` fixo nas 3 chamadas → `threads=0` (auto). Com `ProcessPoo
 de N workers × 4 threads em 8 CPUs há oversubscription; alinhar
 `max_parallel_scenes` ([:635](../libs/UnifiedVideoEngine.py#L635)) a `cpu_count//2`.
 
-### 0.5 — Disco (bloqueante) e RAM
+### 0.5 — Disco e RAM
 
-**1,5 GB livres em 234 GB.** Isto não é detalhe de infra: é causa provável de parte da
-lentidão atual (I/O em disco cheio degrada muito) e **impede 0.1**.
+**Resolvido (10/08/2026): 37 GB livres.** Eram 1,5 GB — disco a 100%, o que degradava I/O
+e impedia 0.1. O consumo não vinha do projeto (`assets` 547M, `output` 53M) e sim de
+snaps antigos (`~/snap` estava em 83 GB, hoje 48 GB).
 
-- Liberar espaço antes de tudo; `output/`, `temp/` e `cache/` são os suspeitos.
+Sobra estrutural: 37 GB é folga, não abundância, para renders de 45 min em crf 12.
+Itens que seguem valendo:
+
 - Adicionar checagem de espaço livre no início de `run()`, falhando cedo com mensagem
-  clara em vez de morrer no meio de um render de 45 min.
+  clara em vez de morrer no meio de um render de 45 min. Estimar a necessidade a partir
+  da duração total × bitrate do preset intermediário.
 - Limpar cenas intermediárias incrementalmente (após cada concat de capítulo), não só no fim.
+- **Se faltar espaço no futuro:** o segundo disco (`sda`, Kingston 447G, hoje 100% NTFS do
+  Windows) pode ceder uma partição. Encolher o NTFS **pelo Windows** (`diskmgmt.msc` →
+  Shrink Volume — ele respeita `pagefile.sys`/`hiberfil.sys`, o `ntfsresize` não) e formatar
+  a sobra como ext4. **Não** renderizar direto no NTFS: `ntfs-3g` (FUSE) é lento e consome
+  CPU, que é justamente o recurso escasso aqui, e o Fast Startup do Windows deixa o volume
+  sujo (risco de corrupção em escrita). Bônus: intermediários no `sda` + saída final no
+  `nvme` distribui o I/O entre dois dispositivos.
 - O guard de RAM ([:1358-1363](../libs/UnifiedVideoEngine.py#L1358)) força modo sequencial
-  abaixo de 4 GB livres. Com ~5 GB disponíveis, **um vídeo de 45 min provavelmente cai
-  para sequencial** — sozinho explicaria uma piora não-linear com a duração. Registrar
+  abaixo de 4 GB livres. Com 5–8 GB disponíveis (varia com o desktop aberto), **um vídeo
+  de 45 min pode cair para sequencial** — sozinho explicaria uma piora não-linear com a
+  duração. Continua valendo mesmo com o disco resolvido: é RAM, não disco. Registrar
   em log quando isso acontecer (hoje é silencioso demais para diagnóstico).
 
 ### 0.6 — Instrumentação (fazer **primeiro**)
@@ -170,8 +182,9 @@ ou Whisper sejam fatias relevantes em 45 min, e nenhuma delas é tocada pelas Fa
 
 ### Ordem de execução
 
-`0.5` (desbloqueia) → `0.6` (baseline) → `0.2` → `0.1` + `0.3` (juntos: só fazem sentido
-combinados) → `0.4` → medir de novo.
+`0.6` (baseline) → `0.2` → `0.1` + `0.3` (juntos: só fazem sentido combinados) → `0.4`
+→ medir de novo. O `0.5` deixou de ser bloqueante (disco liberado); resta só a checagem
+de espaço em `run()`, que pode entrar junto com `0.1`.
 
 ---
 
