@@ -193,6 +193,27 @@ class FilterGraphBuilder:
         self.add_chain(f"[{src}]{args}[{out}]")
         return out
 
+    def scene_fade(self, src: str, duration: float, fade_in: float,
+                   fade_out: float, color: str = "black") -> str:
+        """Fade in/out da CENA inteira, misturando com uma cor sólida.
+
+        Equivale ao `libs/Transitions/Fade.py`, que faz
+        `alpha*frame + (1-alpha)*color` frame a frame em Python. Aqui é o filtro
+        `fade` nativo, que aplica a mesma mistura linear — sem alpha, porque o
+        alvo é a cor, não transparência.
+        """
+        out = self._label("tf")
+        parts = []
+        if fade_in and fade_in > 0:
+            parts.append(f"fade=t=in:st=0:d={float(fade_in):.3f}:c={color}")
+        if fade_out and fade_out > 0:
+            st = max(0.0, float(duration) - float(fade_out))
+            parts.append(f"fade=t=out:st={st:.3f}:d={float(fade_out):.3f}:c={color}")
+        if not parts:
+            return src
+        self.add_chain(f"[{src}]{','.join(parts)}[{out}]")
+        return out
+
     def to_yuv(self, src: str) -> str:
         out = self._label("y")
         self.add_chain(f"[{src}]format=yuv420p[{out}]")

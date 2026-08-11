@@ -32,6 +32,32 @@ def _anim_type(element: dict) -> str:
     return (element.get("animation") or {}).get("type") or "none"
 
 
+def _resolve_transitions(effective_gs: dict, scene: dict):
+    """Config de transição efetiva — reusa o resolvedor do engine (import local
+    para evitar ciclo, já que o engine importa este módulo)."""
+    from libs.UnifiedVideoEngine import _resolve_scene_transitions
+    return _resolve_scene_transitions(effective_gs, scene)
+
+
+def _fade_params(trans: dict) -> tuple:
+    """(fade_in, fade_out, cor) da transição fade, com os defaults do Fade.py."""
+    visual = (trans or {}).get("visual") or {}
+    fi = float(visual.get("fade_in_duration", 0.5))
+    fo = float(visual.get("fade_out_duration", 0.5))
+    color = visual.get("color", [0, 0, 0])
+    if isinstance(color, str):
+        hexv = color.lstrip("#")
+        if len(hexv) == 6:
+            color = [int(hexv[i:i + 2], 16) for i in (0, 2, 4)]
+        else:
+            color = [0, 0, 0]
+    try:
+        r, g, b = (int(c) for c in list(color)[:3])
+    except Exception:
+        r, g, b = 0, 0, 0
+    return (fi, fo, f"0x{r:02x}{g:02x}{b:02x}")
+
+
 class FFmpegSceneRenderer:
     def __init__(self, resolution: tuple, quality: dict, profiler=None):
         self.resolution = (int(resolution[0]), int(resolution[1]))
@@ -71,10 +97,17 @@ class FFmpegSceneRenderer:
         if effective_gs.get("filters") or scene.get("filters"):
             return (False, "filters (overlay/modifier) não suportados")
 
-        # Transições exigem compor duas cenas — fora do escopo por-cena.
-        trans = scene.get("transitions") or effective_gs.get("transitions") or {}
-        if trans.get("enabled"):
-            return (False, "transições não suportadas")
+        # Transições aqui são INTRA-cena (aplicadas ao clipe da própria cena),
+        # não entre cenas. `fade` é mistura linear com uma cor → filtro `fade`.
+        # `zoom` faz zoom + shake amortecido com física própria (amplitude,
+        # frequência, decay) e não tem equivalente fiel.
+        trans = _resolve_transitions(effective_gs, scene)
+        if trans and trans.get("enabled"):
+            t_type = (trans.get("type") or "zoom").lower()
+            if t_type != "fade":
+                return (False, f"transição '{t_type}' não suportada")
+            if trans.get("audio"):
+                return (False, "transição com áudio (sfx) não suportada")
 
         for i, el in enumerate(scene.get("visual_elements") or []):
             el_type = el.get("type")
@@ -238,6 +271,14 @@ class FFmpegSceneRenderer:
         # --- legendas ---
         if ass_path and os.path.exists(ass_path):
             cur = g.subtitles(cur, ass_path, fontsdir)
+
+        # --- transição da cena ---
+        # No MoviePy o TransitionEngine embrulha a cena JÁ COMPOSTA (fundo +
+        # visuais + legenda), então o fade escurece tudo junto. Mesma ordem aqui.
+        trans = _resolve_transitions(effective_gs, scene)
+        if trans and trans.get("enabled") and (trans.get("type") or "").lower() == "fade":
+            fi, fo, color = _fade_params(trans)
+            cur = g.scene_fade(cur, duration, fi, fo, color)
 
         cur = g.to_yuv(cur)
 
