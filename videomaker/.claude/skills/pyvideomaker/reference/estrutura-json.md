@@ -28,6 +28,8 @@ O `main.py` aceita um JSON (objeto único ou lista de objetos) e instancia um
 | `scenes` | sim (xor `chapters`) | Lista plana de cenas. Ver [scenes.md](scenes.md). |
 | `chapters` | sim (xor `scenes`) | Cenas agrupadas em capítulos, cada um pode sobrescrever `global_settings` e `background.audio`. Ver seção "Capítulos" em [global_settings.md](global_settings.md). |
 | `youtube` | não | Configuração de upload. Ver [youtube_upload.md](youtube_upload.md). |
+| `debug` | não (default `false`) | `true` **pula o upload** e preserva os arquivos intermediários em `output/{slug}/`. Equivale a `DEBUG=1` na env; qualquer um dos dois liga. |
+| `ai_cache` | não (default `true`) | `false` desliga o cache de imagens de IA do `background.visual` (força regeração). Também pela env `AI_CACHE=0`. Ver [background.md](background.md#cache-do-type-ai). |
 
 ## `scenes` vs `chapters`
 

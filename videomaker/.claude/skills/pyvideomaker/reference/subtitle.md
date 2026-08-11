@@ -10,6 +10,16 @@ Ver [global_settings.md](global_settings.md) para a cadeia completa de merge.
 - Liga/desliga: **`subtitle.enabled`** (default **desligado** quando ausente).
 - Não existe mais `narration.subtitles` — foi removido.
 
+> **Nota de render:** no caminho rápido a legenda é gerada como arquivo ASS e
+> desenhada pelo libass dentro do ffmpeg, em vez de bitmap PIL por frame. Todos
+> os campos abaixo funcionam nos dois caminhos, **incluindo `shadow.blur`** (a
+> sombra borrada é desenhada numa camada própria, para não borrar o texto). O
+> texto sai vetorial, o que costuma render legenda mais nítida.
+>
+> Uma diferença esperada: PIL e libass rasterizam de formas ligeiramente
+> diferentes, então a legenda pode variar ~2-4 px de altura entre os caminhos.
+> Não é bug.
+
 O `SubtitleEngine` ([SubtitleEngine.py](../../../../libs/Subtitle/SubtitleEngine.py))
 despacha por **`subtitle.type`**:
 

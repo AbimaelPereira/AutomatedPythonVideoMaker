@@ -2,10 +2,19 @@
 
 > Visão geral da estrutura do JSON e ordem de leitura: [../SKILL.md](../SKILL.md).
 
-`transitions` controla o efeito aplicado entre cenas consecutivas, via
+`transitions` controla o efeito de entrada/saída de cada cena, via
 `TransitionEngine` ([TransitionEngine.py](../../../../libs/Transitions/TransitionEngine.py)).
 Definido em `global_settings.transitions`; cada cena pode sobrescrever ou
 desligar.
+
+> O efeito é aplicado **na própria cena** (o clipe já composto: fundo + visuais +
+> legenda), não numa mistura entre duas cenas. É por isso que ele aparece no
+> início e no fim de cada cena, e o resultado entre cortes é a soma dos dois.
+
+> **Performance:** `type: "fade"` roda no caminho rápido de render (filtro nativo
+> do ffmpeg). `type: "zoom"` e qualquer transição com `audio` (sfx) jogam a cena
+> no caminho MoviePy, ~10x mais lento — o shake amortecido do zoom não tem
+> equivalente em filtro. Ver a seção de velocidade no [../SKILL.md](../SKILL.md).
 
 ## Tipos (`type`)
 

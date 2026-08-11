@@ -27,6 +27,29 @@ Resolvidos em `BackgroundEngine.build_scene_background`
 | `"ai"` | `provider`, `content_type`, `prompt`, `parameters`, `cache_key` | Gera via `AIProviders` (Pollinations), com cache em disco. |
 | `"remote_asset"` | `source` (= slug), `register_remote_asset_as` | Resolve um slug via `RemoteAssetManager` — ver seção abaixo. |
 
+### Cache do `type: "ai"`
+
+A imagem gerada é guardada em `cache/ai_generated/` e reaproveitada nas próximas
+execuções (a chave vem de `cache_key` ou de um hash de `provider`+`prompt`+
+`parameters`). Isso evita chamar a IA de novo a cada render.
+
+Para **forçar regeração**, desligue o cache:
+
+```jsonc
+{ "slug": "...", "ai_cache": false }   // na raiz do JSON ou em global_settings
+```
+
+```bash
+AI_CACHE=0 python main.py meu.json     # aceita 0 / false / off / no
+```
+
+Os dois somam — qualquer um dos dois desligando já desliga. Com o cache off, o
+log avisa: `[AICache] ⚠️ Cache de IA DESATIVADO`.
+
+> Isso vale para `background.visual` com `type: "ai"`. Imagens de IA em
+> `visual_elements` (via `source: {type:"ai"}`) **não usam esse cache** — são
+> sempre regeradas, então o switch não muda nada lá.
+
 ### `fit_mode` (para `image`/`video`)
 
 | `fit_mode` | Comportamento |

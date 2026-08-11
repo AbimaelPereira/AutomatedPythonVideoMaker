@@ -33,6 +33,13 @@ da cena, processados por `VisualClip`
 > **`type: "ai"` não é suportado em `visual_elements`** — só em
 > `background.visual`. Tentar usar é silenciosamente ignorado (`clip` fica
 > `None` e o elemento não aparece).
+>
+> **Mas IA dentro de `source` funciona**: `{"type": "image", "source": {"type":
+> "ai", "prompt": "...", "model": "flux", "width": 576, "height": 1024}}`.
+> `_resolve_visual_elements_ai_sources` gera a imagem antes do pool de workers e
+> troca o `source` pelo caminho do arquivo. Diferente do `background.visual`,
+> esse caminho **não usa o AICache** — regenera a cada execução, e o
+> `ai_cache: false` não tem efeito sobre ele.
 
 ## `placement`
 

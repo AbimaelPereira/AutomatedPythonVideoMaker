@@ -38,6 +38,36 @@ e armadilhas conhecidas. Exemplos prontos e copiáveis ficam em `examples/`.
 | [examples/teste_chapters.json](examples/teste_chapters.json) | `chapters` com trilha de fundo diferente por capítulo. |
 | [examples/teste_canal_completo.json](examples/teste_canal_completo.json) | `output` 2K + `chapters` + `youtube` juntos num só JSON. |
 
+## Velocidade de render: o que o JSON decide
+
+O pipeline tem **dois caminhos** de render por cena, escolhidos automaticamente:
+
+- **rápido** — a cena inteira vira um filtergraph do ffmpeg (~7 s por cena em 1080p);
+- **MoviePy** — composição frame a frame em Python (~70 s por cena), usado quando
+  algum recurso da cena não tem equivalente fiel em filtro.
+
+Tudo funciona nos dois; a diferença é só tempo. O log diz qual foi usado
+(`renderizada (ffmpeg)` vs `Caminho ffmpeg não aplicável (motivo)`).
+
+**Recursos que jogam a cena no caminho lento** (evite se render longo importa):
+
+| Recurso | Alternativa rápida |
+|---|---|
+| `background.visual` `type: "directory"` ou `"video"` | `image`, `remote_asset`, `ai` ou `color` |
+| `background` `fit_mode: "contain-blur"` / `"contain"` | `cover` (default) |
+| `filters` (`light_leak`, `particles`, …) | remover, ou aceitar o custo |
+| `transitions` `type: "zoom"` | `type: "fade"` |
+| `transitions` com `audio` (sfx) | transição sem áudio |
+| `visual_elements` `type: "text_box"` ou vídeo | `image` / `remote_asset` / `color` |
+
+Já são rápidos: fundo `color`/`image`/`remote_asset`/`ai`, `cover` com
+`focus: "face"`, modo cover (`placement.width`+`height`), `zoom_in`, `zoom_out`,
+`zoom_pulse`, `fade_in`, `fade_zoom_in`, `border_radius`, `opacity`, legendas
+`classic` e `karaoke` (inclusive com `shadow.blur`) e transição `fade`.
+
+Para comparar os dois caminhos no mesmo JSON:
+`RENDER_BACKEND=moviepy|ffmpeg|auto python main.py meu.json`.
+
 ## Como usar esta skill
 
 1. Identifique o **canal** (`channel_name`) — a config base dele em
@@ -54,13 +84,33 @@ e armadilhas conhecidas. Exemplos prontos e copiáveis ficam em `examples/`.
 4. Comentários no JSON: qualquer chave terminada em `/` (ex.: `"tts/"`) é
    ignorada pelo pipeline. Use para manter alternativas desabilitadas no arquivo.
 
+## ⚠️ Antes de rodar um JSON de teste
+
+**O upload para o YouTube não depende de haver bloco `youtube` no JSON do
+vídeo** — o `youtube_config` pode vir inteiro do `channels_config/{canal}.json`.
+Ou seja: rodar um JSON de teste de um canal configurado **publica um vídeo**.
+
+Para testar sem publicar, use **qualquer um** dos dois:
+
+```bash
+DEBUG=1 python main.py meu.json
+```
+```jsonc
+{ "slug": "...", "debug": true }
+```
+
+O log confirma com `[UVE] Debug config: True`. Em debug o upload é pulado e os
+arquivos intermediários ficam em `output/{slug}/` para inspeção.
+
 ## Checklist ao entregar um JSON
 
 - [ ] `slug`, `channel_name`, `output`/`output_ratio` presentes (ou herdados do contexto).
+- [ ] **Se for teste: `debug: true` (ou `DEBUG=1`)** — senão pode subir pro YouTube.
 - [ ] `subtitle.enabled: true` quando se quer legenda (default é desligado).
 - [ ] Fontes referenciadas (`font_path`) existem em `assets/fonts/`.
 - [ ] Cores em formato válido (`"#RRGGBB"` ou nome CSS).
 - [ ] No karaokê com `palette`: lista completa (não fundirá com a global).
 - [ ] `placement` (se usado) coerente com `output_ratio`/`output.ratio` e com os visuais.
-- [ ] `visual_elements` não usa `type: "ai"` (só `image`/`video`/`text_box`/`color`).
+- [ ] `visual_elements` não usa `type: "ai"` (só `image`/`video`/`text_box`/`color`) — mas
+      IA dentro de `source` funciona, ver [reference/visual_elements.md](reference/visual_elements.md).
 - [ ] `chapters` (se usado) tem `background.audio` dentro de `global_settings` de cada capítulo, não fora.
