@@ -31,12 +31,17 @@ from libs.FaceDetector import detect_focus_point
 
 try:
     from libs.AIProviders import ai_manager
-    from libs.AIProviders.AICache import AICache
+    from libs.AIProviders.AICache import AICache, ai_cache_enabled_by_env
     AI_AVAILABLE = True
     print("[UVE] Sistema de IA carregado")
 except ImportError as e:
     AI_AVAILABLE = False
     print(f"[UVE] Sistema de IA não disponível: {e}")
+
+    def ai_cache_enabled_by_env() -> bool:
+        """Fallback: sem o módulo de IA o cache é irrelevante, mas a função
+        continua sendo chamada no __init__."""
+        return os.getenv("AI_CACHE", "1").strip().lower() not in ("0", "false", "off", "no")
 
 MAX_PARALLEL_SCENES_DEFAULT = int(os.getenv("MAX_PARALLEL_SCENES", 2))
 
@@ -452,7 +457,10 @@ def _process_scene_worker(scene_data_bundle):
         remote_asset_manager = RemoteAssetManager(config=remote_assets_config)
 
         if AI_AVAILABLE and ai_cache_dir:
-            ai_cache = AICache(ai_cache_dir)
+            # O worker é outro processo: o liga/desliga vem no bundle, porque a
+            # decisão do JSON não sobrevive à fronteira de processo.
+            ai_cache = AICache(ai_cache_dir,
+                               enabled=scene_data_bundle.get("ai_cache_enabled", True))
         else:
             ai_cache = None
 
@@ -844,9 +852,20 @@ class UnifiedVideoEngine:
         self.dir_media_index = {}
         self.max_parallel_scenes = int(os.getenv("MAX_PARALLEL_SCENES", MAX_PARALLEL_SCENES_DEFAULT))
 
+        # Cache de IA: `"ai_cache": false` na raiz do JSON (ou em global_settings)
+        # desliga; sem a chave, quem decide é a env AI_CACHE (default ligado).
+        # Env e JSON somam: qualquer um dos dois desligando já desliga.
+        json_ai_cache = video_data.get("ai_cache")
+        if json_ai_cache is None:
+            json_ai_cache = self.global_settings.get("ai_cache")
+        self.ai_cache_enabled = (
+            ai_cache_enabled_by_env() if json_ai_cache is None
+            else bool(json_ai_cache) and ai_cache_enabled_by_env()
+        )
+
         if AI_AVAILABLE:
             cache_dir = os.path.join(os.getcwd(), "cache", "ai_generated")
-            self.ai_cache = AICache(cache_dir)
+            self.ai_cache = AICache(cache_dir, enabled=self.ai_cache_enabled)
             self.ai_cache_dir = cache_dir
         else:
             self.ai_cache = None
@@ -1836,6 +1855,7 @@ class UnifiedVideoEngine:
                     "layout_params": self.layout_params,
                     "remote_assets_config": self.remote_assets_config,
                     "ai_cache_dir": self.ai_cache_dir,
+                    "ai_cache_enabled": self.ai_cache_enabled,
                 }
                 scene_bundles.append(bundle)
 

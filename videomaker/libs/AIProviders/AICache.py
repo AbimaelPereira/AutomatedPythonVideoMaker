@@ -6,29 +6,55 @@ from pathlib import Path
 from datetime import datetime, timedelta
 from typing import Dict, Optional, Any
 
+def ai_cache_enabled_by_env() -> bool:
+    """Lê o liga/desliga global do cache de IA na env `AI_CACHE`.
+
+    `AI_CACHE=0` (ou false/off/no) desliga. Ausente = ligado.
+    """
+    raw = os.getenv("AI_CACHE")
+    if raw is None:
+        return True
+    return str(raw).strip().lower() not in ("0", "false", "off", "no")
+
+
 class AICache:
     """
     Sistema de cache para conteúdo gerado por IA
     Evita regerar o mesmo conteúdo múltiplas vezes
+
+    Pode ser desligado por:
+      - env:  `AI_CACHE=0 python main.py ...`
+      - JSON: `"ai_cache": false` na raiz do vídeo (ou em global_settings)
+
+    Desligado, `get()` sempre devolve None (força regeração) e `store()` não
+    grava nada — o resto do pipeline funciona igual, só sem reaproveitamento.
     """
-    
-    def __init__(self, cache_dir: str, max_age_days: int = 30):
+
+    def __init__(self, cache_dir: str, max_age_days: int = 30, enabled: bool = None):
         """
         Inicializa o cache de IA
-        
+
         Args:
             cache_dir: Diretório onde armazenar arquivos em cache
             max_age_days:  Dias para manter arquivos no cache
+            enabled: força ligado/desligado. None = decide pela env `AI_CACHE`.
         """
+        # `enabled=False` explícito vence; None cai na env.
+        self.enabled = ai_cache_enabled_by_env() if enabled is None else bool(enabled)
+
         self.cache_dir = Path(cache_dir)
         self.cache_dir.mkdir(parents=True, exist_ok=True)
-        
+
         self.metadata_file = self.cache_dir / "cache_metadata.json"
         self.max_age_days = max_age_days
-        
+
         # Carregar ou criar metadata
         self.metadata = self._load_metadata()
-        
+
+        if not self.enabled:
+            print("[AICache] ⚠️ Cache de IA DESATIVADO — cada render vai regerar as imagens.")
+            return
+
         # Limpeza automática de arquivos antigos
         self._cleanup_old_files()
     
@@ -100,9 +126,12 @@ class AICache:
             cache_key: Chave única do conteúdo
             content_type:  Tipo do conteúdo (image/video)
             
-        Returns: 
+        Returns:
             Caminho do arquivo se encontrado, None caso contrário
         """
+        if not self.enabled:
+            return None
+
         entry = self.metadata.get("entries", {}).get(cache_key)
         if not entry:
             return None
@@ -138,6 +167,9 @@ class AICache:
         Returns:
             True se armazenado com sucesso
         """
+        if not self.enabled:
+            return False
+
         try:
             source_path = Path(source_file_path)
             if not source_path.exists():

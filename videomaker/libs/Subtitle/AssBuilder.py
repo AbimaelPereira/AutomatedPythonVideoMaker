@@ -289,18 +289,17 @@ class AssBuilder:
     def can_handle_style(style: dict) -> tuple:
         """(ok, motivo) — o estilo é reproduzível fielmente em ASS?
 
-        `shadow.blur` recusa de propósito. A tag `\\blur` do libass existe, mas
-        borra o GLIFO junto com a sombra, enquanto o caminho PIL borra apenas a
-        camada de sombra e mantém o texto nítido. Medido em Montserrat Black 140
-        (pixels de branco sólido no miolo do texto):
+        `shadow.blur` É suportado, mas por caminho indireto. A tag `\\blur`
+        sozinha borra o GLIFO junto com a sombra (medido em Montserrat Black 140,
+        pixels de branco sólido no miolo: blur=0 → 13261, blur=6 → 2598,
+        blur=9 → 164 — o texto praticamente desaparece).
 
-            blur=0 → 13261    blur=3 → 8062    blur=6 → 2598    blur=9 → 164
-
-        Com o blur=9 que o canal usa, o texto praticamente desaparece. Não há
-        equivalente fiel, então a cena vai para o MoviePy.
+        A solução é desenhar a sombra como um EVENTO SEPARADO numa camada abaixo:
+        o mesmo texto pintado na cor da sombra, deslocado e borrado, com o texto
+        nítido por cima. Resultado medido: núcleo branco 13259 (contra 13261 sem
+        blur) e sombra borrada presente, com o mesmo escurecimento máximo do PIL
+        (66,7). Ver `_shadow_style_name` e `add_text`.
         """
-        if float(style.get("blur_radius", 0) or 0) > 0 and style.get("shadow_enabled"):
-            return (False, "shadow.blur borra o glifo em ASS (só a sombra deveria borrar)")
         font_path = style.get("font_path")
         if font_path and not os.path.exists(font_path):
             return (False, f"fonte não encontrada: {font_path}")
@@ -359,9 +358,61 @@ class AssBuilder:
         # porque a posição vem de \pos por evento. Bold=-1: as fontes do projeto
         # já vêm no peso desejado no próprio arquivo (Black/Bold/…), então o
         # peso é do arquivo, não sintético.
+        #
+        # `shadow_depth` fica 0 quando a sombra é BORRADA: nesse caso ela é
+        # desenhada como um evento próprio numa camada abaixo (ver
+        # `_shadow_style_name` / `add_text`), porque a sombra nativa do ASS não
+        # aceita blur sem borrar o glifo junto.
+        native_shadow = 0 if self._blur_of(style) > 0 else shadow_depth
         line = (
             f"Style: {name},{font_name},{font_size},{primary},{primary},{outline},{back},"
-            f"0,{italic},0,0,100,100,0,0,1,{stroke_w},{shadow_depth},{_ALIGN_CENTER},0,0,0,1"
+            f"0,{italic},0,0,100,100,0,0,1,{stroke_w},{native_shadow},{_ALIGN_CENTER},0,0,0,1"
+        )
+        self._styles[key] = (name, line)
+        return name
+
+    @staticmethod
+    def _blur_of(style: dict) -> float:
+        """Raio de blur da sombra, 0 se não houver sombra borrada."""
+        if not style.get("shadow_enabled"):
+            return 0.0
+        try:
+            return max(0.0, float(style.get("blur_radius", 0) or 0))
+        except (TypeError, ValueError):
+            return 0.0
+
+    def _shadow_style_name(self, style: dict, raw_size: bool = False) -> str:
+        """Estilo da CAMADA DE SOMBRA (usada só quando há blur).
+
+        É o mesmo texto pintado na cor da sombra, sem contorno e sem sombra
+        nativa — o `\\blur` do evento então borra só essa camada, e o texto
+        nítido é desenhado por cima numa camada superior.
+        """
+        from libs.Subtitle.SubtitleUtils import resolve_color
+
+        font_path = style.get("font_path")
+        font_name = resolve_font_name(font_path) or "Sans"
+        base_size = int(style.get("font_size", 48))
+        scale = 1.0 if raw_size else ass_size_scale(font_path)
+        font_size = base_size if raw_size else max(1, int(round(base_size * scale)))
+
+        shadow_col = _to_ass_color(
+            resolve_color(style.get("shadow_color", "black")),
+            alpha_override=float(style.get("shadow_opacity", 0.8)),
+        )
+        italic = -1 if font_is_italic(font_path) else 0
+
+        key = ("shadow", font_name, font_size, shadow_col, italic)
+        existing = self._styles.get(key)
+        if existing:
+            return existing[0]
+
+        name = f"SH{len(self._styles)}"
+        # Outline e Shadow = 0: a única tinta é o preenchimento, que vira sombra.
+        line = (
+            f"Style: {name},{font_name},{font_size},{shadow_col},{shadow_col},"
+            f"{shadow_col},&HFF000000,0,{italic},0,0,100,100,0,0,1,0,0,"
+            f"{_ALIGN_CENTER},0,0,0,1"
         )
         self._styles[key] = (name, line)
         return name
@@ -373,13 +424,37 @@ class AssBuilder:
         """Adiciona uma palavra/linha posicionada pelo CENTRO em pixels."""
         if not text or end <= start:
             return
-        style_name = self._style_name(style, raw_size=_raw_size)
         cx, cy = int(round(center_xy[0])), int(round(center_xy[1]))
+        t0, t1 = _fmt_time(start), _fmt_time(end)
+        esc = _escape(text)
+
+        blur = self._blur_of(style)
+        if blur > 0:
+            # Camada 0: cópia do texto na cor da sombra, deslocada e borrada.
+            # Camada 1 (abaixo): o texto nítido. Assim o \blur atinge só a
+            # sombra — a tag borra o glifo junto, então a sombra precisa ser um
+            # glifo separado.
+            scale = 1.0 if _raw_size else ass_size_scale(style.get("font_path"))
+            off = style.get("shadow_offset") or (0, 0)
+            try:
+                dx = int(round(int(off[0]) * scale))
+                dy = int(round(int(off[1]) * scale))
+            except (TypeError, ValueError, IndexError):
+                dx = dy = 0
+            sh_name = self._shadow_style_name(style, raw_size=_raw_size)
+            sh_tags = (f"\\an{_ALIGN_CENTER}\\pos({cx + dx},{cy + dy})"
+                       f"\\blur{blur * scale:.1f}")
+            self._events.append(
+                f"Dialogue: 0,{t0},{t1},{sh_name},,0,0,0,,{{{sh_tags}}}{esc}"
+            )
+
+        style_name = self._style_name(style, raw_size=_raw_size)
         # \an5 = ancora no centro do texto; \pos posiciona esse centro.
+        # Layer 1 fica acima da camada de sombra (layer 0).
+        layer = 1 if blur > 0 else 0
         tags = f"\\an{_ALIGN_CENTER}\\pos({cx},{cy})"
-        payload = f"{{{tags}}}{_escape(text)}"
         self._events.append(
-            f"Dialogue: 0,{_fmt_time(start)},{_fmt_time(end)},{style_name},,0,0,0,,{payload}"
+            f"Dialogue: {layer},{t0},{t1},{style_name},,0,0,0,,{{{tags}}}{esc}"
         )
 
     # -- saída -------------------------------------------------------------

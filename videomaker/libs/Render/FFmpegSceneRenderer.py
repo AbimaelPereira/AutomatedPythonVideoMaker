@@ -124,16 +124,8 @@ class FFmpegSceneRenderer:
             sub_type = (subtitle_cfg.get("type") or "classic").lower()
             if sub_type not in ("classic", "karaoke"):
                 return (False, f"subtitle.type '{sub_type}' não suportado")
-            # `shadow.blur` borra o glifo em ASS, não só a sombra — recusa cedo
-            # aqui para nem baixar mídia (o motivo está em AssBuilder).
-            palette = subtitle_cfg.get("palette") or []
-            for item in palette:
-                shadow = item.get("shadow") or {}
-                if isinstance(shadow, dict) and float(shadow.get("blur", 0) or 0) > 0:
-                    return (False, "subtitle com shadow.blur não é fiel em ASS")
-            shadow = subtitle_cfg.get("shadow") or {}
-            if isinstance(shadow, dict) and float(shadow.get("blur", 0) or 0) > 0:
-                return (False, "subtitle com shadow.blur não é fiel em ASS")
+            # `shadow.blur` é suportado via camada de sombra separada — ver
+            # AssBuilder._shadow_style_name.
 
         return (True, "")
 
