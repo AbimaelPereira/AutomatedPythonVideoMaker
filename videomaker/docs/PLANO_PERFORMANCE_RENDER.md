@@ -260,7 +260,10 @@ Prioridade dentro da fase 1, revisada pela medição — atacar primeiro o que d
 
 ## Fase 1 — composição via filtergraph ffmpeg
 
-Alvo: **~5x adicional**. A ideia: **Python deixa de tocar frames e passa a compilar
+> **STATUS: IMPLEMENTADA** (commit `1919098`). Alvo era ~5x; **o medido foi ~10x**
+> nas cenas cobertas. Ver "Resultado medido da Fase 1".
+
+Alvo original: ~5x adicional. A ideia: **Python deixa de tocar frames e passa a compilar
 o JSON para um filtergraph**, que o ffmpeg executa em C, multi-thread, em streaming.
 
 Benchmark D vs C já prova a ordem de grandeza (14,8 s vs 72,1 s) num caso real do pipeline.
@@ -333,23 +336,93 @@ exatamente o requisito de 45+ min.
 
 ---
 
+## Resultado medido da Fase 1
+
+No pipeline real (cena 1080p: fundo sólido com zoom, 2 imagens com `zoom_in` +
+`border_radius`, karaokê):
+
+| caminho | tempo por cena |
+|---|---|
+| MoviePy (`RENDER_BACKEND=moviepy`) | **76 s** |
+| filtergraph (`auto`) | **7,7 s** |
+
+Teste isolado equivalente: 47,1 s → 5,2 s (9x). Probe mínimo (fundo+zoom+ASS,
+sem imagens): 47,6 s → 2,0 s (23x).
+
+### Fidelidade visual (validada, não assumida)
+
+Comparando o mesmo frame nos dois backends:
+
+- **posicionamento idêntico** — bounding boxes iguais (`(96,158,941,815)` nos dois);
+  1px de diferença num elemento, por arredondamento;
+- **zoom equivalente** — largura do elemento animado ao longo do tempo:
+  1501/1522/1545/1567 (ffmpeg) contra 1503/1523/1547/1570 (MoviePy) — no máximo
+  3px em ~1500 (0,2%);
+- os **3,6% de pixels divergentes** são antialiasing nas bordas de alto contraste,
+  não erro de layout.
+
+### Duas descobertas que exigiram solução
+
+**1. PIL e libass dimensionam fonte diferente.** Com o mesmo `font_size`, o texto
+ASS saía ~1,7x menor. Tentei derivar o fator de `unitsPerEm`/`hhea` — previa 1,22
+contra 1,70 reais, porque o libass aplica normalização própria. Solução: calibrar
+empiricamente por fonte (uma chamada de ffmpeg, ~0,2 s) e cachear em disco. Depois
+da correção: largura 283 vs 292 px (3%), centros a 2px.
+
+**2. Nome de família é ambíguo.** `Montserrat-Black.ttf` e `Montserrat-BlackItalic.ttf`
+declaram a MESMA família. Por isso o estilo carrega o flag de itálico (lido do
+nameID 17/2) e o filtro recebe `fontsdir` apontando para a pasta da fonte.
+
+### Cobertura atual
+
+Coberto: fundo `color`/`file`/`remote_asset` (imagem), zoom de fundo,
+`visual_elements` imagem/remote_asset, `zoom_in`, `fade_in`, `border_radius`,
+`opacity`, legendas classic e karaokê.
+
+**Cai no MoviePy** (e continua funcionando): fundo de vídeo, `directory`, `ai`,
+`contain-blur`, filtros (light_leak/partículas), transições, `text_box`,
+`focus: "face"`, modo cover (`placement.width`+`height`) e legenda com
+`shadow.blur`.
+
+> O JSON de produção do `the_touchline_record` usa `focus: "face"` e modo cover em
+> quase todas as cenas — **hoje ele cai inteiro no MoviePy**. Para colher o ganho
+> nesse canal, os dois próximos itens de cobertura são justamente esses (ver abaixo).
+
+### Próximos passos de cobertura (ordem por retorno)
+
+1. **modo cover + `focus: "face"`** — desbloqueia o canal principal. O crop com foco
+   é `crop=w:h:x:y` com x/y vindos do `FaceDetector` (que roda 1x por imagem, fora
+   do loop de frames) — viável.
+2. **fundo de vídeo / `directory`** — `movie` + `scale`/`crop`; o clipe já é um
+   arquivo, então é input direto.
+3. **transições** — `xfade` entre cenas, no passe de concatenação (não por cena).
+4. **`text_box`** — desenhar via `drawtext` ou gerar PNG 1x e usar `overlay`.
+
+---
+
 ## Resumo e expectativa
 
-| | hoje | Fase 0 (medido) | Fase 0+1 (projeção) |
+| | hoje | Fase 0 (medido) | Fase 1 (medido) |
 |---|---|---|---|
 | passes de encode | 3–4 | 1 | 1 |
-| preset de cena | `slow` | `ultrafast` crf12 | n/a (sem cena intermediária) |
-| composição | Python, por frame | Python, por frame | C, streaming |
-| ganho | — | **~3%** | **~5x** (estimado) |
+| preset de cena | `slow` | `ultrafast` crf12 | `ultrafast` crf12 |
+| composição | Python, por frame | Python, por frame | **C, streaming** |
+| tempo por cena | ~76 s | ~74 s | **~7,7 s** |
+| ganho | — | ~3% | **~10x** (cenas cobertas) |
 
-A fase 0 rendeu ~3% porque, no conteúdo real deste canal, o encoder já era ~3% do custo.
-O teto de ganho está inteiro na composição, ou seja, na fase 1. A projeção de ~5x vem do
-benchmark C→D (72,1 s vs 14,8 s, mesmo resultado visual) — é a melhor estimativa
-disponível, mas **é estimativa**: só um protótipo de cena real confirma.
+A fase 0 rendeu ~3% porque, no conteúdo real, o encoder já era ~3% do custo — o teto
+estava inteiro na composição. A fase 1 atacou exatamente isso e entregou ~10x, acima
+dos ~5x projetados.
 
-Aplicando ~5x ao caso medido (14,7 s de vídeo em 4m55s ≈ 20x realtime), 45 min de vídeo
-sairia da ordem de ~15 h para ~3 h. Chegar perto de 1 h provavelmente exige também
-paralelismo melhor (hoje limitado por RAM) ou máquina maior.
+**Ressalva importante sobre o ganho de ponta a ponta:** os ~10x valem para cenas que o
+caminho rápido cobre. O JSON de produção do canal principal usa `focus: "face"` e modo
+cover, que ainda caem no MoviePy — nele o ganho hoje é ~0. Os dois primeiros itens de
+"Próximos passos de cobertura" são o que converte esse ganho para a produção real.
+
+Com cobertura completa, 45 min de vídeo sairia da ordem de ~15 h para ~1,5 h. Reduzir
+mais depende de paralelismo (hoje limitado por RAM) ou máquina maior — e vale notar que,
+com o ffmpeg em streaming, o consumo de RAM por cena cai muito, o que deve permitir
+subir `MAX_PARALLEL_SCENES` sem bater no guard de 4 GB.
 
 **Duas decisões que valem mais que otimização de código:**
 
