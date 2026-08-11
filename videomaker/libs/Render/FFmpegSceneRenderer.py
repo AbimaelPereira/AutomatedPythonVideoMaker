@@ -52,9 +52,10 @@ class FFmpegSceneRenderer:
             return (False, f"background fit_mode '{bg.get('fit_mode')}' não suportado")
 
         # `focus` só tem efeito em crop de mídia; num fundo de cor sólida é
-        # inócuo. "center" é o default e também não muda nada.
-        if bg_type != "color" and bg.get("focus") not in (None, "center"):
-            return (False, f"background.focus '{bg.get('focus')}' não suportado (crop por detecção)")
+        # inócuo. "center" é o default; "face" é suportado (detecção 1x na
+        # imagem, fora do loop de frames).
+        if bg_type != "color" and bg.get("focus") not in (None, "center", "face"):
+            return (False, f"background.focus '{bg.get('focus')}' não suportado")
 
         # Filtros visuais (light_leak, partículas…) não têm equivalente.
         if effective_gs.get("filters") or scene.get("filters"):
@@ -72,21 +73,23 @@ class FFmpegSceneRenderer:
             anim = _anim_type(el)
             if anim not in _SUPPORTED_ANIMATIONS:
                 return (False, f"visual_elements[{i}].animation '{anim}' não suportado")
-            if el.get("focus") == "face":
-                return (False, f"visual_elements[{i}].focus 'face' não suportado")
+            focus = el.get("focus")
+            if focus not in (None, "center", "face"):
+                return (False, f"visual_elements[{i}].focus '{focus}' não suportado")
 
         if subtitle_cfg and subtitle_cfg.get("enabled"):
             sub_type = (subtitle_cfg.get("type") or "classic").lower()
             if sub_type not in ("classic", "karaoke"):
                 return (False, f"subtitle.type '{sub_type}' não suportado")
-            # Sombra borrada não existe em ASS.
+            # `shadow.blur` borra o glifo em ASS, não só a sombra — recusa cedo
+            # aqui para nem baixar mídia (o motivo está em AssBuilder).
             palette = subtitle_cfg.get("palette") or []
             for item in palette:
                 shadow = item.get("shadow") or {}
-                if float(shadow.get("blur", 0) or 0) > 0:
+                if isinstance(shadow, dict) and float(shadow.get("blur", 0) or 0) > 0:
                     return (False, "subtitle com shadow.blur não é fiel em ASS")
             shadow = subtitle_cfg.get("shadow") or {}
-            if float(shadow.get("blur", 0) or 0) > 0:
+            if isinstance(shadow, dict) and float(shadow.get("blur", 0) or 0) > 0:
                 return (False, "subtitle com shadow.blur não é fiel em ASS")
 
         return (True, "")
@@ -121,7 +124,15 @@ class FFmpegSceneRenderer:
             if not path or not os.path.exists(path):
                 raise Unsupported(f"fundo sem arquivo resolvido: {path}")
             cur = g.background_image(path, duration)
-            cur = g.cover(cur, duration)
+            bg_crop = bg.get("_crop")
+            if bg_crop:
+                # cover com focus point: escala cobrindo a tela e recorta
+                rw, rh, cx, cy = bg_crop
+                cur = g.scale_to(cur, rw, rh)
+                cur = g.crop_to(cur, cx, cy, w, h)
+                cur = g.set_sar(cur)
+            else:
+                cur = g.cover(cur, duration)
 
         anim = (bg.get("animation") or {})
         if anim.get("type") == "zoom":
@@ -145,11 +156,23 @@ class FFmpegSceneRenderer:
 
             idx = g.add_input(["-loop", "1", "-t", f"{duration:.3f}",
                                "-r", str(fps), "-i", path])
-            lbl = g.scale_to(f"{idx}:v", bw, bh)
+
+            # Modo cover: redimensiona cobrindo a caixa e recorta o excesso a
+            # partir do focus point (mesma ordem do worker MoviePy:
+            # resize → crop → animation → border_radius).
+            resize_to = el.get("_resize_to") or (bw, bh)
+            lbl = g.scale_to(f"{idx}:v", resize_to[0], resize_to[1])
+
+            crop = el.get("_crop")
+            if crop:
+                cx, cy, cw, ch = crop
+                lbl = g.crop_to(lbl, cx, cy, cw, ch)
 
             el_anim = _anim_type(el)
             if el_anim == "zoom_in":
                 a = el.get("animation") or {}
+                # Zoom em janela fixa: transborda e volta ao tamanho da caixa,
+                # preservando o layout quadro a quadro.
                 lbl = g.zoom(lbl, float(a.get("start_scale", 1.0)),
                              float(a.get("end_scale", 1.1)), duration, bw, bh)
 

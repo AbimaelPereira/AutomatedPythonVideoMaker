@@ -343,10 +343,16 @@ def _try_ffmpeg_scene(*, scene, effective_gs, scene_dir, scene_id, scene_duratio
         bg_type = bg_cfg.get("type", "color")
         bg_resolved = dict(bg_cfg)
         if bg_type != "color":
-            bg_resolved["_path"] = SceneBridge.resolve_element_path(
+            bg_path = SceneBridge.resolve_element_path(
                 {"type": "image" if bg_type in ("file", "image") else bg_type,
                  "source": bg_cfg.get("source")},
                 scene_dir, remote_asset_manager,
+            )
+            if os.path.splitext(bg_path)[1].lower() in SceneBridge._VIDEO_EXTS:
+                raise Unsupported("fundo de vídeo não suportado")
+            bg_resolved["_path"] = bg_path
+            bg_resolved["_crop"] = SceneBridge.resolve_background_cover(
+                bg_path, resolution_output, bg_cfg.get("focus", "center")
             )
 
         # --- visuais ---
@@ -358,15 +364,22 @@ def _try_ffmpeg_scene(*, scene, effective_gs, scene_dir, scene_id, scene_duratio
             if os.path.splitext(p)[1].lower() in SceneBridge._VIDEO_EXTS:
                 raise Unsupported("visual_element de vídeo não suportado")
 
-        boxes = SceneBridge.resolve_visual_boxes(elements, paths, scene_layout)
+        plans = SceneBridge.resolve_visual_boxes(elements, paths, scene_layout)
 
         prepared = []
-        for el, path, box in zip(elements, paths, boxes):
+        for el, path, plan in zip(elements, paths, plans):
             item = dict(el)
             item["_path"] = path
-            item["_box"] = box
+            item["_box"] = plan["box"]
+            item["_resize_to"] = plan["resize_to"]
+            item["_crop"] = plan["crop"]
+            # No modo cover o LayoutEngine adia a animação p/ depois do crop; o
+            # renderer aplica na mesma ordem, então basta garantir que ela exista.
+            if plan.get("deferred_animation") and not item.get("animation"):
+                item["animation"] = plan["deferred_animation"]
             radius = int(el.get("border_radius") or 0)
             if radius > 0:
+                box = plan["box"]
                 item["_mask_png"] = SceneBridge.build_corner_mask(
                     box[2], box[3], radius, scene_dir
                 )

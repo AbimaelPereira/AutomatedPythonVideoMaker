@@ -12,14 +12,19 @@ que o bitmap PIL redimensionado.
 Escopo: este módulo só CONSTRÓI o arquivo .ass. Quem o aplica é o
 `FFmpegSceneRenderer`, via filtro `ass=`.
 
-Limitações conhecidas (fazem a cena cair no caminho MoviePy — ver
-`AssBuilder.can_handle`):
+Dois detalhes que exigiram cuidado (ambos já resolvidos, mas fáceis de reintroduzir):
 
-  - `shadow.blur` (sombra borrada por gaussiana): o ASS tem sombra sólida
-    deslocada, não borrada. Com blur > 0 o visual mudaria de forma perceptível.
-  - fontes: o ASS referencia a fonte por NOME de família, não por caminho. É
-    preciso que o nome real do TTF seja resolvível pelo fontconfig; o builder
-    extrai o nome do arquivo e valida (ver `resolve_font_name`).
+  - **nome da fonte**: o ASS referencia a fonte por NOME, não por caminho. É
+    obrigatório usar a família legada (nameID 1 = "Montserrat Black"), e não o
+    Typographic Family (nameID 16 = "Montserrat"), senão o fontconfig resolve
+    para o peso 400 e a legenda sai em Regular no lugar de Black. Ver
+    `resolve_font_name`.
+  - **tamanho**: PIL e libass interpretam `font_size` de formas diferentes; o
+    fator é calibrado por fonte em `ass_size_scale` e vale também para stroke,
+    sombra e blur.
+
+Sombra borrada (`shadow.blur`) e estilos sem fonte legível caem no caminho
+MoviePy — ver `can_handle_style` para o porquê (medido, não suposto).
 """
 
 import os
@@ -103,14 +108,17 @@ def _read_name_records(font_path: str) -> dict:
 def resolve_font_name(font_path: str) -> str | None:
     """Nome de família de um TTF/OTF, para referência no ASS.
 
-    Usa o **Typographic Family** (nameID 16) quando existe e, senão, a família
-    legada (nameID 1). Retorna None se não conseguir ler — nesse caso a cena cai
-    no caminho MoviePy em vez de renderizar com a fonte errada.
+    Usa a **família legada (nameID 1)**, que inclui o peso no nome
+    ("Montserrat Black"), e NÃO o Typographic Family (nameID 16), que o remove
+    ("Montserrat"). A distinção é crítica: com "Montserrat" no estilo, o
+    fontconfig resolve para o peso 400 e o libass renderiza Montserrat-Regular
+    no lugar de Montserrat-Black — a legenda sai visivelmente mais fina.
 
-    Atenção: o nome de família sozinho é ambíguo — `Montserrat-Black.ttf` e
-    `Montserrat-BlackItalic.ttf` declaram a MESMA família ("Montserrat Black").
-    Por isso o renderer passa `fontsdir` ao libass e o estilo carrega os flags
-    de itálico/peso (ver `font_is_italic`), em vez de confiar só no nome.
+    Retorna None se não conseguir ler; nesse caso a cena cai no caminho MoviePy
+    em vez de renderizar com a fonte errada.
+
+    Itálico continua vindo do flag no estilo (ver `font_is_italic`), porque
+    `X-Black.ttf` e `X-BlackItalic.ttf` compartilham o nameID 1.
     """
     if not font_path:
         return None
@@ -119,7 +127,7 @@ def resolve_font_name(font_path: str) -> str | None:
         return _font_name_cache[key]
 
     records = _read_name_records(font_path)
-    name = records.get(16) or records.get(1)
+    name = records.get(1) or records.get(16)
     _font_name_cache[key] = name
     return name
 
@@ -279,9 +287,20 @@ class AssBuilder:
 
     @staticmethod
     def can_handle_style(style: dict) -> tuple:
-        """(ok, motivo) — o estilo é reproduzível fielmente em ASS?"""
+        """(ok, motivo) — o estilo é reproduzível fielmente em ASS?
+
+        `shadow.blur` recusa de propósito. A tag `\\blur` do libass existe, mas
+        borra o GLIFO junto com a sombra, enquanto o caminho PIL borra apenas a
+        camada de sombra e mantém o texto nítido. Medido em Montserrat Black 140
+        (pixels de branco sólido no miolo do texto):
+
+            blur=0 → 13261    blur=3 → 8062    blur=6 → 2598    blur=9 → 164
+
+        Com o blur=9 que o canal usa, o texto praticamente desaparece. Não há
+        equivalente fiel, então a cena vai para o MoviePy.
+        """
         if float(style.get("blur_radius", 0) or 0) > 0 and style.get("shadow_enabled"):
-            return (False, "shadow.blur (sombra borrada) não tem equivalente fiel em ASS")
+            return (False, "shadow.blur borra o glifo em ASS (só a sombra deveria borrar)")
         font_path = style.get("font_path")
         if font_path and not os.path.exists(font_path):
             return (False, f"fonte não encontrada: {font_path}")
@@ -357,7 +376,8 @@ class AssBuilder:
         style_name = self._style_name(style, raw_size=_raw_size)
         cx, cy = int(round(center_xy[0])), int(round(center_xy[1]))
         # \an5 = ancora no centro do texto; \pos posiciona esse centro.
-        payload = f"{{\\an{_ALIGN_CENTER}\\pos({cx},{cy})}}{_escape(text)}"
+        tags = f"\\an{_ALIGN_CENTER}\\pos({cx},{cy})"
+        payload = f"{{{tags}}}{_escape(text)}"
         self._events.append(
             f"Dialogue: 0,{_fmt_time(start)},{_fmt_time(end)},{style_name},,0,0,0,,{payload}"
         )

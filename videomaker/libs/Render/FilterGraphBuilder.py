@@ -128,6 +128,17 @@ class FilterGraphBuilder:
         self.add_chain(f"[{src}]scale={int(w)}:{int(h)},setsar=1[{out}]")
         return out
 
+    def set_sar(self, src: str) -> str:
+        out = self._label("sar")
+        self.add_chain(f"[{src}]setsar=1,format=rgba[{out}]")
+        return out
+
+    def crop_to(self, src: str, x: int, y: int, w: int, h: int) -> str:
+        """Recorte com origem explícita (modo cover + focus point)."""
+        out = self._label("c")
+        self.add_chain(f"[{src}]crop={int(w)}:{int(h)}:{int(x)}:{int(y)}[{out}]")
+        return out
+
     def opacity(self, src: str, value: float) -> str:
         out = self._label("a")
         self.add_chain(f"[{src}]format=rgba,colorchannelmixer=aa={float(value):.3f}[{out}]")

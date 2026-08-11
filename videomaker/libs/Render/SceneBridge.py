@@ -49,6 +49,7 @@ def resolve_element_path(element: dict, scene_dir: str, remote_asset_manager) ->
         if not remote_asset_manager:
             raise Unsupported("remote_asset sem RemoteAssetManager")
         slug = element.get("source")
+        last_error = None
         for _ in range(3):
             url = remote_asset_manager.select_url(slug)
             if not url:
@@ -56,14 +57,16 @@ def resolve_element_path(element: dict, scene_dir: str, remote_asset_manager) ->
             try:
                 path = MediaDownloader.resolve_source_path(
                     url, scene_dir,
-                    on_success=lambda u: remote_asset_manager.mark_download_success(u),
-                    on_fail=lambda u: remote_asset_manager.mark_download_failed(u),
+                    on_success_callback=remote_asset_manager.mark_download_success,
+                    on_fail_callback=remote_asset_manager.mark_download_failed,
                 )
                 if path and os.path.exists(path):
                     return path
-            except Exception:
+            except Exception as e:
+                last_error = e
                 continue
-        raise Unsupported(f"remote_asset '{slug}' não resolvido")
+        suffix = f" ({last_error})" if last_error else ""
+        raise Unsupported(f"remote_asset '{slug}' não resolvido{suffix}")
 
     raise Unsupported(f"tipo de elemento não suportado: {el_type}")
 
@@ -78,11 +81,15 @@ def _image_size(path: str) -> tuple:
 # ---------------------------------------------------------------------------
 
 def resolve_visual_boxes(elements: list, paths: list, layout_params: dict) -> list:
-    """Calcula (x, y, w, h) de cada elemento reusando o LayoutEngine.
+    """Resolve o plano de composição de cada elemento reusando o LayoutEngine.
 
-    Retorna lista alinhada com `elements`. Levanta Unsupported se o layout
-    devolver algo que o caminho rápido não sabe reproduzir (ex.: crop cover, que
-    exige a mesma semântica de recorte do worker).
+    Retorna lista de dicts alinhada com `elements`:
+        {box: (x,y,w,h), resize_to: (w,h), crop: (x1,y1,w,h)|None,
+         deferred_animation: dict|None}
+
+    `resize_to`/`crop` reproduzem o modo cover do worker MoviePy: a imagem é
+    redimensionada para cobrir a caixa e o excesso é recortado — com o início do
+    recorte vindo do focus point (centro ou rosto).
     """
     if not elements:
         return []
@@ -98,21 +105,118 @@ def resolve_visual_boxes(elements: list, paths: list, layout_params: dict) -> li
             "animation": el.get("animation"),
         })
 
-    config = type("Cfg", (), dict(layout_params))()
+    # O LayoutEngine lê atributos do config; completa com os mesmos defaults do
+    # engine para não estourar AttributeError se algum vier ausente.
+    cfg_dict = {
+        "width": 1920, "height": 1080,
+        "padding_top": 54, "padding_bottom": 160, "padding_side": 96,
+        "stack_gap_percent": 0.02,
+    }
+    cfg_dict.update(layout_params or {})
+    config = type("Cfg", (), cfg_dict)()
     results = LayoutEngine.process_stack_layout(items, config)
 
-    boxes = []
+    plans = []
     for i, res in enumerate(results):
         if not res:
             raise Unsupported(f"layout não resolvido p/ visual_elements[{i}]")
-        # Crop cover tem semântica própria (resize maior + recorte centrado com
-        # foco); não replicamos aqui para não divergir do MoviePy.
-        if res.get("crop_height") is not None or res.get("crop_width") is not None:
-            raise Unsupported("modo cover (placement.width+height) não suportado")
+
         (fw, fh) = res["final_size"]
         (fx, fy) = res["final_position"]
-        boxes.append((int(fx), int(fy), int(fw), int(fh)))
-    return boxes
+        resize_to = tuple(res.get("_resize_to") or res["final_size"])
+
+        crop = None
+        crop_h = res.get("crop_height")
+        crop_w = res.get("crop_width")
+        if crop_h or crop_w:
+            rw, rh = int(resize_to[0]), int(resize_to[1])
+            focus = elements[i].get("focus", "center")
+            # Ordem idêntica ao worker: crop vertical e depois horizontal, cada
+            # um com offset resolvido pelo focus point.
+            ch = int(crop_h) if (crop_h and crop_h < rh) else rh
+            cw = int(crop_w) if (crop_w and crop_w < rw) else rw
+            y1 = _crop_offset(paths[i], (rw, rh), rh, ch, focus, "y")
+            x1 = _crop_offset(paths[i], (rw, rh), rw, cw, focus, "x")
+            crop = (x1, y1, cw, ch)
+
+        plans.append({
+            "box": (int(fx), int(fy), int(fw), int(fh)),
+            "resize_to": (int(resize_to[0]), int(resize_to[1])),
+            "crop": crop,
+            "deferred_animation": res.get("deferred_animation"),
+        })
+    return plans
+
+
+def _crop_offset(path: str, resized_size: tuple, axis_size: int, crop_size: int,
+                 focus: str, axis: str) -> int:
+    """Início do crop no eixo, replicando `_cover_crop_offset` do engine.
+
+    Diferença de implementação: lá o focus point é detectado no frame do clip
+    MoviePy já redimensionado; aqui detectamos na imagem redimensionada com PIL.
+    O resultado é o mesmo ponto, em pixels da imagem redimensionada.
+    """
+    center = axis_size / 2
+    if focus == "face":
+        point = _detect_face_center(path, resized_size)
+        if point:
+            center = point[0] if axis == "x" else point[1]
+    offset = int(center - crop_size / 2)
+    return min(max(offset, 0), max(0, axis_size - crop_size))
+
+
+_face_cache: dict = {}
+
+
+def _detect_face_center(path: str, resized_size: tuple):
+    """Centro do maior rosto, em pixels da imagem REDIMENSIONADA (ou None).
+
+    Roda uma vez por (arquivo, tamanho) — fora de qualquer loop de frames, que é
+    o que torna `focus: "face"` viável no caminho rápido.
+    """
+    key = (os.path.abspath(path), int(resized_size[0]), int(resized_size[1]))
+    if key in _face_cache:
+        return _face_cache[key]
+
+    result = None
+    try:
+        import numpy as np
+        from libs.FaceDetector import detect_focus_point
+
+        with Image.open(path) as im:
+            im = im.convert("RGB").resize(
+                (int(resized_size[0]), int(resized_size[1])), Image.LANCZOS
+            )
+            result = detect_focus_point(np.asarray(im))
+    except Exception as e:
+        print(f"[SceneBridge] Detecção de rosto falhou ({e}); usando centro.")
+        result = None
+
+    _face_cache[key] = result
+    return result
+
+
+def resolve_background_cover(path: str, target: tuple, focus: str = "center") -> tuple:
+    """Plano de cover do fundo: (resize_w, resize_h, crop_x, crop_y).
+
+    Replica `BackgroundEngine._apply_cover` — escala pelo maior fator para cobrir
+    o alvo e recorta centrado no focus point, com o mesmo clamp de bordas.
+    """
+    target_w, target_h = int(target[0]), int(target[1])
+    w, h = _image_size(path)
+    scale = max(target_w / w, target_h / h)
+    new_w, new_h = int(w * scale), int(h * scale)
+
+    cx, cy = new_w / 2, new_h / 2
+    if focus == "face":
+        point = _detect_face_center(path, (new_w, new_h))
+        if point:
+            cx, cy = point[0], point[1]
+
+    # Mesmo clamp do BackgroundEngine: a janela nunca sai do clipe redimensionado.
+    cx = min(max(cx, target_w / 2), new_w - target_w / 2)
+    cy = min(max(cy, target_h / 2), new_h - target_h / 2)
+    return (new_w, new_h, int(cx - target_w / 2), int(cy - target_h / 2))
 
 
 def build_corner_mask(width: int, height: int, radius: int, out_dir: str) -> str:
