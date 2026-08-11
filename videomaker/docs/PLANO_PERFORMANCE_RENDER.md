@@ -373,30 +373,58 @@ da correção: largura 283 vs 292 px (3%), centros a 2px.
 declaram a MESMA família. Por isso o estilo carrega o flag de itálico (lido do
 nameID 17/2) e o filtro recebe `fontsdir` apontando para a pasta da fonte.
 
-### Cobertura atual
+### Cobertura atual (commit `a7c69bc`)
 
-Coberto: fundo `color`/`file`/`remote_asset` (imagem), zoom de fundo,
-`visual_elements` imagem/remote_asset, `zoom_in`, `fade_in`, `border_radius`,
-`opacity`, legendas classic e karaokê.
+Coberto: fundo `color`/`file`/`remote_asset` (imagem) com cover e `focus`,
+zoom de fundo, `visual_elements` imagem/remote_asset, **modo cover
+(`placement.width`+`height`)**, **`focus: "face"`**, `zoom_in`, `fade_in`,
+`border_radius`, `opacity`, legendas classic e karaokê.
 
 **Cai no MoviePy** (e continua funcionando): fundo de vídeo, `directory`, `ai`,
 `contain-blur`, filtros (light_leak/partículas), transições, `text_box`,
-`focus: "face"`, modo cover (`placement.width`+`height`) e legenda com
-`shadow.blur`.
+`visual_element` de vídeo e legenda com `shadow.blur`.
 
-> O JSON de produção do `the_touchline_record` usa `focus: "face"` e modo cover em
-> quase todas as cenas — **hoje ele cai inteiro no MoviePy**. Para colher o ganho
-> nesse canal, os dois próximos itens de cobertura são justamente esses (ver abaixo).
+Com isso o JSON de produção do `the_touchline_record` **passou a usar o caminho
+rápido**: 2 de 3 cenas a 5,9 s/cena contra 53 s. A cena restante cai por causa do
+`shadow.blur` no `palette` do canal.
+
+#### Validação do crop com foco
+
+O crop foi conferido número a número contra o MoviePy, inclusive num caso em que os
+dois caminhos **divergem entre si** — o que prova que a detecção realmente decide:
+
+| | `focus: "face"` | `focus: "center"` |
+|---|---|---|
+| crop_y ffmpeg | 0 | 449 |
+| crop_y MoviePy | 0 | 449 |
+
+(No caso `face`, o rosto está no alto e o offset bate no clamp de borda.)
+
+#### Por que `shadow.blur` continua recusado
+
+Cheguei a implementar via tag `\blur` e **revertí**: no ASS o `\blur` borra o
+GLIFO junto com a sombra, enquanto o caminho PIL borra apenas a camada de sombra.
+Pixels de branco sólido no miolo do texto (Montserrat Black 140):
+
+| blur | 0 | 3 | 6 | 9 |
+|---|---|---|---|---|
+| núcleo branco | 13261 | 8062 | 2598 | **164** |
+
+Com o `blur: 9` que o canal usa, o texto praticamente desaparece. Não há
+equivalente fiel — a recusa é a decisão correta.
+
+**Para colher o ganho na cena que falta**, a opção mais simples é editar o canal:
+trocar `shadow: {blur: 9}` por um stroke ou por sombra sólida (`blur: 0`) deixa a
+cena elegível. É uma decisão de estética, então fica com você.
 
 ### Próximos passos de cobertura (ordem por retorno)
 
-1. **modo cover + `focus: "face"`** — desbloqueia o canal principal. O crop com foco
-   é `crop=w:h:x:y` com x/y vindos do `FaceDetector` (que roda 1x por imagem, fora
-   do loop de frames) — viável.
-2. **fundo de vídeo / `directory`** — `movie` + `scale`/`crop`; o clipe já é um
-   arquivo, então é input direto.
-3. **transições** — `xfade` entre cenas, no passe de concatenação (não por cena).
-4. **`text_box`** — desenhar via `drawtext` ou gerar PNG 1x e usar `overlay`.
+1. **fundo de vídeo / `directory`** — `movie` + `scale`/`crop`; o clipe já é um
+   arquivo, então é input direto. É o maior bloco ainda descoberto.
+2. **transições** — `xfade` entre cenas, no passe de concatenação (não por cena).
+3. **`text_box`** — gerar o PNG 1x (como já se faz) e usar `overlay`, em vez de
+   compor por frame.
+4. **`contain-blur`** — `split` + `boxblur` + `overlay`, viável mas menos comum.
 
 ---
 
@@ -414,10 +442,11 @@ A fase 0 rendeu ~3% porque, no conteúdo real, o encoder já era ~3% do custo �
 estava inteiro na composição. A fase 1 atacou exatamente isso e entregou ~10x, acima
 dos ~5x projetados.
 
-**Ressalva importante sobre o ganho de ponta a ponta:** os ~10x valem para cenas que o
-caminho rápido cobre. O JSON de produção do canal principal usa `focus: "face"` e modo
-cover, que ainda caem no MoviePy — nele o ganho hoje é ~0. Os dois primeiros itens de
-"Próximos passos de cobertura" são o que converte esse ganho para a produção real.
+**Ganho de ponta a ponta (atualizado no commit `a7c69bc`):** com modo cover e
+`focus: "face"` cobertos, o JSON de produção já usa o caminho rápido — o wall clock
+do teste de 3 cenas caiu de ~4m57s para ~2m40s, limitado pela única cena que ainda
+cai no MoviePy (por `shadow.blur`). Ajustando esse detalhe no canal, o teste inteiro
+roda em ~2 min.
 
 Com cobertura completa, 45 min de vídeo sairia da ordem de ~15 h para ~1,5 h. Reduzir
 mais depende de paralelismo (hoje limitado por RAM) ou máquina maior — e vale notar que,
