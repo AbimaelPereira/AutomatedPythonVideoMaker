@@ -280,6 +280,128 @@ def _resolve_scene_layout_params(layout_params: dict, scene: dict) -> dict:
     return merged
 
 
+def _render_backend() -> str:
+    """'auto' (default) | 'ffmpeg' | 'moviepy' — via env RENDER_BACKEND.
+
+    - auto:    tenta o filtergraph e cai no MoviePy quando a cena não é coberta
+    - ffmpeg:  falha explicitamente se a cena não for coberta (p/ diagnóstico)
+    - moviepy: desliga o caminho rápido (comparação A/B)
+    """
+    return os.getenv("RENDER_BACKEND", "auto").strip().lower()
+
+
+def _try_ffmpeg_scene(*, scene, effective_gs, scene_dir, scene_id, scene_duration,
+                      resolution_output, scene_quality, layout_params,
+                      subtitle_file, remote_asset_manager, narration_path,
+                      out_path, log_prefix="[UVE]"):
+    """Tenta renderizar a cena via filtergraph. Retorna (tempo, path) ou None.
+
+    Nunca levanta: qualquer recusa/erro devolve None e quem chama segue no
+    caminho MoviePy. Um vídeo mais lento é melhor que um vídeo errado.
+    """
+    backend = _render_backend()
+    if backend == "moviepy":
+        return None
+
+    try:
+        from libs.Render.FFmpegSceneRenderer import FFmpegSceneRenderer
+        from libs.Render.FilterGraphBuilder import Unsupported
+        from libs.Render import SceneBridge
+    except Exception as e:
+        print(f"{log_prefix} Caminho ffmpeg indisponível: {e}")
+        return None
+
+    scene_layout = _resolve_scene_layout_params(layout_params, scene)
+
+    subtitle_cfg = None
+    if _subtitles_enabled(effective_gs, scene) and subtitle_file:
+        # Mesma base e mesmo merge do `_create_subtitle_clip_worker`, para o
+        # posicionamento do ASS bater com o do caminho MoviePy.
+        base_subtitle_config = {
+            "subtitle_narration_file": subtitle_file,
+            "resolution_output": resolution_output,
+            "padding_bottom": scene_layout.get("padding_bottom", 200),
+            "padding_side":   scene_layout.get("padding_side", 50),
+            "padding_top":    scene_layout.get("padding_top", 200),
+            "has_visual_elements": True,
+        }
+        subtitle_cfg = dict(_resolve_scene_subtitle(base_subtitle_config, effective_gs, scene) or {})
+        subtitle_cfg["enabled"] = True
+
+    ok, why = FFmpegSceneRenderer.can_handle(scene, effective_gs, subtitle_cfg)
+    if not ok:
+        msg = f"{log_prefix} Caminho ffmpeg não aplicável ({why}) — usando MoviePy"
+        if backend == "ffmpeg":
+            raise RuntimeError(f"RENDER_BACKEND=ffmpeg mas a cena não é suportada: {why}")
+        print(msg)
+        return None
+
+    try:
+        # --- fundo ---
+        bg_cfg = dict((effective_gs.get("background") or {}).get("visual") or {})
+        bg_cfg.update((scene.get("background") or {}).get("visual") or {})
+        bg_type = bg_cfg.get("type", "color")
+        bg_resolved = dict(bg_cfg)
+        if bg_type != "color":
+            bg_resolved["_path"] = SceneBridge.resolve_element_path(
+                {"type": "image" if bg_type in ("file", "image") else bg_type,
+                 "source": bg_cfg.get("source")},
+                scene_dir, remote_asset_manager,
+            )
+
+        # --- visuais ---
+        elements = list(scene.get("visual_elements") or [])
+        paths = [SceneBridge.resolve_element_path(el, scene_dir, remote_asset_manager)
+                 for el in elements]
+        # Vídeo como visual_element ainda não é coberto (só imagem).
+        for p in paths:
+            if os.path.splitext(p)[1].lower() in SceneBridge._VIDEO_EXTS:
+                raise Unsupported("visual_element de vídeo não suportado")
+
+        boxes = SceneBridge.resolve_visual_boxes(elements, paths, scene_layout)
+
+        prepared = []
+        for el, path, box in zip(elements, paths, boxes):
+            item = dict(el)
+            item["_path"] = path
+            item["_box"] = box
+            radius = int(el.get("border_radius") or 0)
+            if radius > 0:
+                item["_mask_png"] = SceneBridge.build_corner_mask(
+                    box[2], box[3], radius, scene_dir
+                )
+            prepared.append(item)
+
+        # --- legendas ---
+        ass_path = fontsdir = None
+        if subtitle_cfg:
+            ass_path, fontsdir = SceneBridge.build_ass_from_subtitle_config(
+                subtitle_cfg, subtitle_file, resolution_output,
+                os.path.join(scene_dir, f"{scene_id}.ass"),
+            )
+
+        renderer = FFmpegSceneRenderer(resolution_output, scene_quality)
+        t0 = time.time()
+        renderer.render(
+            scene=scene, effective_gs=effective_gs, duration=scene_duration,
+            out_path=out_path, audio_path=narration_path,
+            ass_path=ass_path, fontsdir=fontsdir,
+            bg_resolved=bg_resolved, visual_elements=prepared,
+        )
+        return (time.time() - t0, out_path)
+
+    except Unsupported as e:
+        if backend == "ffmpeg":
+            raise RuntimeError(f"RENDER_BACKEND=ffmpeg mas a cena falhou: {e}")
+        print(f"{log_prefix} Caminho ffmpeg recusou a cena ({e}) — usando MoviePy")
+        return None
+    except Exception as e:
+        if backend == "ffmpeg":
+            raise
+        print(f"{log_prefix} Caminho ffmpeg falhou ({type(e).__name__}: {e}) — usando MoviePy")
+        return None
+
+
 def _process_scene_worker(scene_data_bundle):
     """Worker isolado para processar uma cena em paralelo."""
     scene_index = scene_data_bundle["scene_index"]
@@ -332,6 +454,34 @@ def _process_scene_worker(scene_data_bundle):
             print(f"[Worker-{scene_index}] Usando duração padrão: {scene_duration}s")
         else:
             print(f"[Worker-{scene_index}] Duração da cena: {scene_duration}s")
+
+        # 3.5 CAMINHO RÁPIDO (fase 1): compõe a cena inteira em um único
+        # filtergraph ffmpeg, sem frames passando pelo Python. Só entra quando
+        # TODOS os elementos da cena têm equivalente fiel em filtro; caso
+        # contrário segue no caminho MoviePy abaixo, sem perda de recurso.
+        scene_clip_path = os.path.join(scene_dir, f"{scene_id}.mp4")
+        fast = _try_ffmpeg_scene(
+            scene=scene, effective_gs=effective_gs, scene_dir=scene_dir,
+            scene_id=scene_id, scene_duration=float(scene_duration),
+            resolution_output=resolution_output, scene_quality=scene_quality,
+            layout_params=layout_params, subtitle_file=subtitle_file,
+            remote_asset_manager=remote_asset_manager,
+            # AudioFileClip guarda o arquivo de origem em .filename — o caminho
+            # rápido usa o mp3 direto, sem passar o áudio pelo MoviePy.
+            narration_path=getattr(narration_clip, "filename", None),
+            out_path=scene_clip_path, log_prefix=f"[Worker-{scene_index}]",
+        )
+        if fast:
+            elapsed, path = fast
+            print(f"[Worker-{scene_index}] Cena renderizada (ffmpeg): {os.path.basename(path)}")
+            try:
+                if narration_clip:
+                    narration_clip.close()
+            except Exception:
+                pass
+            gc.collect()
+            return (scene_index, _ensure_audio_stream(path, scene_dir, scene_id),
+                    {"encode_cena_ffmpeg": {"total": elapsed, "count": 1}})
 
         # 4. Componentes
         bg_engine = BackgroundEngine(
@@ -1532,6 +1682,32 @@ class UnifiedVideoEngine:
                 # 2. Duração
                 scene_duration = scene.get("duration", duration_from_tts)
                 print(f"[UVE] Duração da cena: {scene_duration}s")
+
+                # 2.5 CAMINHO RÁPIDO (fase 1) — ver nota em _process_scene_worker.
+                _fast_out = os.path.join(scene_dir, f"{scene_id}.mp4")
+                _fast = _try_ffmpeg_scene(
+                    scene=scene, effective_gs=effective_gs, scene_dir=scene_dir,
+                    scene_id=scene_id, scene_duration=float(scene_duration),
+                    resolution_output=self.resolution_output,
+                    scene_quality=self.scene_quality,
+                    layout_params=self.layout_params, subtitle_file=subtitle_file,
+                    remote_asset_manager=self.remote_asset_manager,
+                    narration_path=getattr(narration_clip, "filename", None),
+                    out_path=_fast_out,
+                )
+                if _fast:
+                    _elapsed, _path = _fast
+                    self.profiler.add("encode_cena_ffmpeg", _elapsed)
+                    print(f"[UVE] Cena {scene_index + 1} renderizada (ffmpeg): "
+                          f"{os.path.basename(_path)}")
+                    try:
+                        if narration_clip:
+                            narration_clip.close()
+                    except Exception:
+                        pass
+                    scene_files.append(_ensure_audio_stream(_path, scene_dir, scene_id))
+                    gc.collect()
+                    continue
 
                 # 3. Componentes
                 try:
