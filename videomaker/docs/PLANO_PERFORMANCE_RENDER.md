@@ -417,14 +417,42 @@ equivalente fiel — a recusa é a decisão correta.
 trocar `shadow: {blur: 9}` por um stroke ou por sombra sólida (`blur: 0`) deixa a
 cena elegível. É uma decisão de estética, então fica com você.
 
-### Próximos passos de cobertura (ordem por retorno)
+### Cobertura ampliada — 91% (commits `34dee95`, `ed73ffe`)
 
-1. **fundo de vídeo / `directory`** — `movie` + `scale`/`crop`; o clipe já é um
-   arquivo, então é input direto. É o maior bloco ainda descoberto.
-2. **transições** — `xfade` entre cenas, no passe de concatenação (não por cena).
-3. **`text_box`** — gerar o PNG 1x (como já se faz) e usar `overlay`, em vez de
-   compor por frame.
-4. **`contain-blur`** — `split` + `boxblur` + `overlay`, viável mas menos comum.
+Medido varrendo `jsons/` (327 cenas): **296 no caminho rápido (91%)**, contra ~50%
+na primeira versão da fase 1. O que entrou:
+
+| Item | Cenas | Como |
+|---|---|---|
+| `background type: "ai"` | 130 | Já termina como arquivo em disco; `_stretch` replica o resize puro do `_build_ai` (sem cover) |
+| `zoom_out` / `zoom_pulse` / `fade_zoom_in` | 43 | `_zoom_expr` generaliza o zoom por expressão em `t` |
+| Transição `fade` | 59 | Filtro `fade` com `c=` — as transições são **intra-cena**, não entre cenas |
+| `visual_element type: "color"` | 3 | lavfi `color` no tamanho da caixa |
+
+Validações (medidas, não presumidas):
+
+- **zoom_out, zoom_pulse, zoom_in**: largura real do conteúdo por frame, **0px de
+  diferença** contra o MoviePy em todos os pontos amostrados.
+- **fade_zoom_in**: brilho 16→55→135→255 em 0,6 s, contra 0→43→126→255 do
+  `crossfadein`.
+- **transição fade**: brilho médio idêntico em brilho cheio e em t=0; máximo de
+  5/255 (2%) no meio da transição.
+
+> Uma correção de brinde: `_build_ai` consultava `ai_cache.get()` mas **ninguém no
+> projeto chamava `store()`** — o cache de IA ficava sempre vazio e cada render
+> regerava a imagem. O caminho rápido agora grava, e a segunda execução acusa
+> `Cache hit`. Vale para os dois caminhos.
+
+### O que ainda cai no MoviePy
+
+**31 cenas, todas por `subtitle shadow.blur`** — e isso é decisão de estética, não
+limitação técnica (ver a seção sobre `\blur` acima). Trocar por stroke ou sombra
+sólida no `channels_config` levaria a cobertura a ~100%.
+
+Sem ocorrências nos JSONs atuais, mas ainda descobertos: fundo de vídeo /
+`directory`, `contain-blur`, filtros (light_leak/partículas), `text_box`,
+`visual_element` de vídeo, transição `zoom` (shake amortecido, sem equivalente
+fiel) e fade com sfx.
 
 ---
 
