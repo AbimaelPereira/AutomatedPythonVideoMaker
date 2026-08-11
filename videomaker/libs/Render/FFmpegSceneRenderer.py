@@ -16,11 +16,16 @@ from libs.Render.FilterGraphBuilder import FilterGraphBuilder, Unsupported
 from libs.Subtitle.AssBuilder import AssBuilder
 
 
-# Animações com equivalente fiel em filtro.
-_SUPPORTED_ANIMATIONS = {"none", None, "zoom_in", "fade_in"}
+# Animações com equivalente fiel em filtro. Cada uma espelha uma cláusula de
+# `_zoom_resize`/`apply_animation_in_window` do VisualClip.
+_SUPPORTED_ANIMATIONS = {
+    "none", None,
+    "zoom_in", "zoom_out", "zoom_pulse", "fade_zoom_in",
+    "fade_in",
+}
 
 # Tipos de elemento visual suportados.
-_SUPPORTED_VISUAL_TYPES = {"image", "remote_asset"}
+_SUPPORTED_VISUAL_TYPES = {"image", "remote_asset", "color"}
 
 
 def _anim_type(element: dict) -> str:
@@ -45,8 +50,13 @@ class FFmpegSceneRenderer:
         bg = {**bg, **bg_scene}
 
         bg_type = bg.get("type")
-        if bg_type not in ("color", "file", "remote_asset", "image", None):
+        if bg_type not in ("color", "file", "remote_asset", "image", "ai", None):
             return (False, f"background.visual.type '{bg_type}' não suportado")
+
+        # IA de vídeo continua no MoviePy (loop/subclip de clipe); imagem é
+        # arquivo em disco e entra como qualquer outra.
+        if bg_type == "ai" and bg.get("content_type", "image") != "image":
+            return (False, "background ai content_type 'video' não suportado")
 
         if bg.get("fit_mode") in ("contain-blur", "contain"):
             return (False, f"background fit_mode '{bg.get('fit_mode')}' não suportado")
@@ -124,7 +134,15 @@ class FFmpegSceneRenderer:
             if not path or not os.path.exists(path):
                 raise Unsupported(f"fundo sem arquivo resolvido: {path}")
             cur = g.background_image(path, duration)
-            bg_crop = bg.get("_crop")
+            if bg.get("_stretch"):
+                # `type: "ai"` no BackgroundEngine faz resize puro para a
+                # resolução de saída, sem preservar aspect ratio — replica isso
+                # em vez de aplicar cover, senão o enquadramento diverge.
+                cur = g.scale_to(cur, w, h)
+                cur = g.set_sar(cur)
+                bg_crop = None
+            else:
+                bg_crop = bg.get("_crop")
             if bg_crop:
                 # cover com focus point: escala cobrindo a tela e recorta
                 rw, rh, cx, cy = bg_crop
@@ -145,36 +163,56 @@ class FFmpegSceneRenderer:
 
         # --- elementos visuais ---
         for el in (visual_elements or []):
-            path = el.get("_path")
-            if not path or not os.path.exists(path):
-                raise Unsupported("visual_element sem arquivo resolvido")
-
             box = el.get("_box")          # (x, y, w, h) já calculado pelo layout
             if not box:
                 raise Unsupported("visual_element sem caixa de layout")
             bx, by, bw, bh = box
 
-            idx = g.add_input(["-loop", "1", "-t", f"{duration:.3f}",
-                               "-r", str(fps), "-i", path])
+            if el.get("type") == "color":
+                # Cor sólida: gerada por lavfi no tamanho da caixa, sem arquivo.
+                color = el.get("color", "#000000")
+                color = color if str(color).startswith("#") else f"#{color}"
+                idx = g.add_input([
+                    "-f", "lavfi", "-t", f"{duration:.3f}",
+                    "-i", f"color=c={color.replace('#', '0x')}:s={bw}x{bh}:r={fps}",
+                ])
+                lbl = g.set_sar(f"{idx}:v")
+            else:
+                path = el.get("_path")
+                if not path or not os.path.exists(path):
+                    raise Unsupported("visual_element sem arquivo resolvido")
 
-            # Modo cover: redimensiona cobrindo a caixa e recorta o excesso a
-            # partir do focus point (mesma ordem do worker MoviePy:
-            # resize → crop → animation → border_radius).
-            resize_to = el.get("_resize_to") or (bw, bh)
-            lbl = g.scale_to(f"{idx}:v", resize_to[0], resize_to[1])
+                idx = g.add_input(["-loop", "1", "-t", f"{duration:.3f}",
+                                   "-r", str(fps), "-i", path])
 
-            crop = el.get("_crop")
-            if crop:
-                cx, cy, cw, ch = crop
-                lbl = g.crop_to(lbl, cx, cy, cw, ch)
+                # Modo cover: redimensiona cobrindo a caixa e recorta o excesso a
+                # partir do focus point (mesma ordem do worker MoviePy:
+                # resize → crop → animation → border_radius).
+                resize_to = el.get("_resize_to") or (bw, bh)
+                lbl = g.scale_to(f"{idx}:v", resize_to[0], resize_to[1])
+
+                crop = el.get("_crop")
+                if crop:
+                    cx, cy, cw, ch = crop
+                    lbl = g.crop_to(lbl, cx, cy, cw, ch)
 
             el_anim = _anim_type(el)
+            a = el.get("animation") or {}
+            # Zoom em janela fixa: transborda e volta ao tamanho da caixa,
+            # preservando o layout quadro a quadro. Os defaults abaixo são os
+            # mesmos de `_zoom_resize` (VisualClip), para não divergir.
             if el_anim == "zoom_in":
-                a = el.get("animation") or {}
-                # Zoom em janela fixa: transborda e volta ao tamanho da caixa,
-                # preservando o layout quadro a quadro.
                 lbl = g.zoom(lbl, float(a.get("start_scale", 1.0)),
-                             float(a.get("end_scale", 1.1)), duration, bw, bh)
+                             float(a.get("end_scale", 1.15)), duration, bw, bh)
+            elif el_anim == "zoom_out":
+                lbl = g.zoom(lbl, float(a.get("start_scale", 1.15)),
+                             float(a.get("end_scale", 1.0)), duration, bw, bh)
+            elif el_anim == "zoom_pulse":
+                lbl = g.zoom_pulse(lbl, float(a.get("intensity", 0.06)),
+                                   duration, bw, bh)
+            elif el_anim == "fade_zoom_in":
+                lbl = g.zoom(lbl, float(a.get("start_scale", 1.0)),
+                             float(a.get("end_scale", 1.12)), duration, bw, bh)
 
             radius = int(el.get("border_radius") or 0)
             if radius > 0:
@@ -188,8 +226,11 @@ class FFmpegSceneRenderer:
                 lbl = g.opacity(lbl, float(opacity))
 
             if el_anim == "fade_in":
-                a = el.get("animation") or {}
                 lbl = g.fade_in(lbl, float(a.get("duration", 1.0)),
+                                float(a.get("start_at", 0.0)))
+            elif el_anim == "fade_zoom_in":
+                # crossfadein(fade_duration) no MoviePy — o zoom já foi aplicado.
+                lbl = g.fade_in(lbl, float(a.get("fade_duration", 0.6)),
                                 float(a.get("start_at", 0.0)))
 
             cur = g.overlay(cur, lbl, bx, by)

@@ -293,7 +293,7 @@ def _render_backend() -> str:
 def _try_ffmpeg_scene(*, scene, effective_gs, scene_dir, scene_id, scene_duration,
                       resolution_output, scene_quality, layout_params,
                       subtitle_file, remote_asset_manager, narration_path,
-                      out_path, log_prefix="[UVE]"):
+                      out_path, ai_cache=None, log_prefix="[UVE]"):
     """Tenta renderizar a cena via filtergraph. Retorna (tempo, path) ou None.
 
     Nunca levanta: qualquer recusa/erro devolve None e quem chama segue no
@@ -342,7 +342,14 @@ def _try_ffmpeg_scene(*, scene, effective_gs, scene_dir, scene_id, scene_duratio
         bg_cfg.update((scene.get("background") or {}).get("visual") or {})
         bg_type = bg_cfg.get("type", "color")
         bg_resolved = dict(bg_cfg)
-        if bg_type != "color":
+        if bg_type == "ai":
+            # A imagem de IA já é (ou vira) um arquivo em disco; o cache é o
+            # mesmo do BackgroundEngine, então não há geração duplicada.
+            bg_resolved["_path"] = SceneBridge.resolve_ai_background(
+                bg_cfg, resolution_output, ai_cache, scene_dir
+            )
+            bg_resolved["_stretch"] = True
+        elif bg_type != "color":
             bg_path = SceneBridge.resolve_element_path(
                 {"type": "image" if bg_type in ("file", "image") else bg_type,
                  "source": bg_cfg.get("source")},
@@ -360,8 +367,9 @@ def _try_ffmpeg_scene(*, scene, effective_gs, scene_dir, scene_id, scene_duratio
         paths = [SceneBridge.resolve_element_path(el, scene_dir, remote_asset_manager)
                  for el in elements]
         # Vídeo como visual_element ainda não é coberto (só imagem).
+        # `type: "color"` devolve None (não tem arquivo) e é gerado por lavfi.
         for p in paths:
-            if os.path.splitext(p)[1].lower() in SceneBridge._VIDEO_EXTS:
+            if p and os.path.splitext(p)[1].lower() in SceneBridge._VIDEO_EXTS:
                 raise Unsupported("visual_element de vídeo não suportado")
 
         plans = SceneBridge.resolve_visual_boxes(elements, paths, scene_layout)
@@ -482,7 +490,8 @@ def _process_scene_worker(scene_data_bundle):
             # AudioFileClip guarda o arquivo de origem em .filename — o caminho
             # rápido usa o mp3 direto, sem passar o áudio pelo MoviePy.
             narration_path=getattr(narration_clip, "filename", None),
-            out_path=scene_clip_path, log_prefix=f"[Worker-{scene_index}]",
+            out_path=scene_clip_path, ai_cache=ai_cache,
+            log_prefix=f"[Worker-{scene_index}]",
         )
         if fast:
             elapsed, path = fast
@@ -1706,7 +1715,7 @@ class UnifiedVideoEngine:
                     layout_params=self.layout_params, subtitle_file=subtitle_file,
                     remote_asset_manager=self.remote_asset_manager,
                     narration_path=getattr(narration_clip, "filename", None),
-                    out_path=_fast_out,
+                    out_path=_fast_out, ai_cache=self.ai_cache,
                 )
                 if _fast:
                     _elapsed, _path = _fast

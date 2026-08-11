@@ -45,6 +45,11 @@ def resolve_element_path(element: dict, scene_dir: str, remote_asset_manager) ->
             return MediaDownloader.resolve_source_path(path, scene_dir)
         raise Unsupported(f"imagem não encontrada: {path}")
 
+    if el_type == "color":
+        # Não há arquivo: o clip é uma cor sólida dimensionada pelo placement.
+        # Quem chama detecta isso pelo retorno None e usa lavfi `color`.
+        return None
+
     if el_type == "remote_asset":
         if not remote_asset_manager:
             raise Unsupported("remote_asset sem RemoteAssetManager")
@@ -96,7 +101,14 @@ def resolve_visual_boxes(elements: list, paths: list, layout_params: dict) -> li
 
     items = []
     for el, path in zip(elements, paths):
-        w, h = _image_size(path)
+        if path is None:
+            # `type: "color"` não tem arquivo. O ColorClip do caminho MoviePy usa
+            # um tamanho placeholder que o placement sobrescreve; 1:1 aqui deixa
+            # o LayoutEngine decidir a caixa pelo placement, sem aspect ratio
+            # herdado de imagem nenhuma.
+            w = h = 1000
+        else:
+            w, h = _image_size(path)
         items.append({
             "original_size": (w, h),
             "placement": el.get("placement"),
@@ -157,7 +169,7 @@ def _crop_offset(path: str, resized_size: tuple, axis_size: int, crop_size: int,
     O resultado é o mesmo ponto, em pixels da imagem redimensionada.
     """
     center = axis_size / 2
-    if focus == "face":
+    if focus == "face" and path:
         point = _detect_face_center(path, resized_size)
         if point:
             center = point[0] if axis == "x" else point[1]
@@ -194,6 +206,78 @@ def _detect_face_center(path: str, resized_size: tuple):
 
     _face_cache[key] = result
     return result
+
+
+def resolve_ai_background(cfg: dict, resolution: tuple, ai_cache, storage_dir: str) -> str:
+    """Caminho local da imagem de fundo gerada por IA.
+
+    `type: "ai"` termina como arquivo em disco (via AICache) e, no
+    BackgroundEngine, é apenas redimensionado para a resolução de saída — sem
+    cover/crop. Aqui só resolvemos o CAMINHO: se estiver em cache, usa; se não,
+    gera pelo mesmo `ai_manager` e grava com o mesmo nome, para os dois caminhos
+    compartilharem o cache.
+
+    Levanta Unsupported se a IA não estiver disponível ou o content_type for
+    vídeo (aí a cena vai para o MoviePy).
+    """
+    content_type = cfg.get("content_type", "image")
+    if content_type != "image":
+        raise Unsupported(f"background ai content_type '{content_type}' não suportado")
+    if ai_cache is None:
+        raise Unsupported("AICache indisponível no worker")
+
+    prompt = cfg.get("prompt", "")
+    if not prompt:
+        raise Unsupported("background ai sem prompt")
+
+    provider = cfg.get("provider", "pollinations")
+    parameters = dict(cfg.get("parameters", {}))
+    cache_key = cfg.get("cache_key")
+    if not cache_key:
+        import hashlib
+        import json as _json
+        cache_data = {"provider": provider, "type": content_type,
+                      "prompt": prompt, "parameters": cfg.get("parameters", {})}
+        cache_key = hashlib.md5(
+            _json.dumps(cache_data, sort_keys=True).encode()
+        ).hexdigest()[:12]
+
+    cached = ai_cache.get(cache_key, content_type)
+    if cached and os.path.exists(cached):
+        return cached
+
+    # Não está em cache: gera pelo mesmo caminho do BackgroundEngine.
+    try:
+        from libs.AIProviders import ai_manager
+    except Exception as e:
+        raise Unsupported(f"sistema de IA indisponível: {e}")
+
+    parameters["width"] = int(resolution[0])
+    parameters["height"] = int(resolution[1])
+    result = ai_manager.generate_image(prompt=prompt, provider=provider, **parameters)
+    if not result.get("success"):
+        raise Unsupported(f"geração IA falhou: {result.get('error')}")
+
+    os.makedirs(storage_dir, exist_ok=True)
+    file_path = os.path.join(storage_dir, f"ai_bg_{cache_key}.png")
+    with open(file_path, "wb") as f:
+        f.write(result["content"])
+
+    # Popula o AICache. O `_build_ai` do BackgroundEngine consulta `get()` mas
+    # nunca chama `store()` — então o cache ficava sempre vazio e cada render
+    # regerava a imagem. Gravando aqui, as próximas execuções (nos DOIS
+    # caminhos) reaproveitam o arquivo em vez de chamar a IA de novo.
+    try:
+        stored = ai_cache.store(cache_key, file_path, content_type,
+                                {"provider": provider, "prompt": prompt})
+        if stored:
+            cached = ai_cache.get(cache_key, content_type)
+            if cached and os.path.exists(cached):
+                return cached
+    except Exception as e:
+        print(f"[SceneBridge] Falha ao gravar imagem IA no cache: {e}")
+
+    return file_path
 
 
 def resolve_background_cover(path: str, target: tuple, focus: str = "center") -> tuple:

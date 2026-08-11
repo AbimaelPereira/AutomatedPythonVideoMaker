@@ -96,15 +96,40 @@ class FilterGraphBuilder:
         Diferente do `zoompan` (que trabalha em passos de frame e costuma
         tremer), `scale` com expressão dá o mesmo resultado do
         `resize(lambda t)` do MoviePy: interpolação contínua.
+
+        Serve zoom_in e zoom_out — a direção é só a ordem de start/end.
+        """
+        d = max(0.001, float(duration))
+        s0, s1 = float(start_scale), float(end_scale)
+        return self._zoom_expr(src, f"({s0}+({s1}-{s0})*min(t/{d}\\,1))",
+                               out_w, out_h)
+
+    def zoom_pulse(self, src: str, intensity: float, duration: float,
+                   out_w: int = None, out_h: int = None) -> str:
+        """Zoom pulsante: escala = 1 + intensity*sin(pi*t/total).
+
+        Espelha `_zoom_resize` do VisualClip para `zoom_pulse`. `PI` é constante
+        reconhecida pelo avaliador de expressões do ffmpeg.
+        """
+        d = max(0.001, float(duration))
+        return self._zoom_expr(src, f"(1.0+{float(intensity)}*sin((t/{d})*PI))",
+                               out_w, out_h)
+
+    def _zoom_expr(self, src: str, scale_expr: str,
+                   out_w: int = None, out_h: int = None) -> str:
+        """Aplica uma expressão de escala e recorta de volta à janela fixa.
+
+        A escala transborda e o `crop` centralizado devolve o tamanho original —
+        é a mesma semântica de `apply_animation_in_window` (o layout do elemento
+        não muda quadro a quadro).
         """
         w = int(out_w or self.width)
         h = int(out_h or self.height)
         out = self._label("z")
-        d = max(0.001, float(duration))
-        s0, s1 = float(start_scale), float(end_scale)
-        # Escala cresce de s0 a s1 ao longo da cena; depois corta de volta ao
-        # tamanho de saída, mantendo o centro (mesma semântica do MoviePy).
-        expr_w = f"{w}*({s0}+({s1}-{s0})*min(t/{d}\\,1))"
+        # A escala pode ficar < 1 (zoom_out terminando em 1.0 vindo de cima, ou
+        # o pulse com intensity negativa). `max(...)` garante que a imagem nunca
+        # fique menor que a janela, senão o crop falharia por falta de pixels.
+        expr_w = f"max({w}*{scale_expr}\\,{w})"
         self.add_chain(
             f"[{src}]scale=w='{expr_w}':h=-2:eval=frame,"
             f"crop={w}:{h},setsar=1[{out}]"
