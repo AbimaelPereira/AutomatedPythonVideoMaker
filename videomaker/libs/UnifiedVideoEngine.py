@@ -110,16 +110,24 @@ def _probe_has_audio(video_path: str) -> bool:
         return False
 
 
-def _probe_duration(video_path: str) -> float:
-    """Retorna duração do vídeo em segundos via ffprobe."""
-    cmd = [
-        "ffprobe", "-v", "error",
-        "-show_entries", "format=duration",
-        "-of", "default=noprint_wrappers=1:nokey=1",
-        video_path
-    ]
-    result = subprocess.run(cmd, check=True, capture_output=True, text=True)
-    return float(result.stdout.strip())
+def _probe_duration(video_path: str):
+    """Duração do vídeo em segundos via ffprobe, ou None se não der para medir.
+
+    Não levanta: é chamada também no relatório do profiler, que roda num
+    `finally` — uma exceção ali mascararia o erro original do render.
+    """
+    if not video_path or not os.path.exists(video_path):
+        return None
+    try:
+        result = subprocess.run(
+            ["ffprobe", "-v", "error", "-show_entries", "format=duration",
+             "-of", "default=noprint_wrappers=1:nokey=1", video_path],
+            check=True, capture_output=True, text=True,
+        )
+        out = result.stdout.strip()
+        return float(out) if out else None
+    except Exception:
+        return None
 
 
 def _add_silent_audio_track(video_path: str, output_path: str) -> str:
@@ -1183,6 +1191,8 @@ class UnifiedVideoEngine:
         try:
             # 1. Duração do vídeo
             video_duration_s  = _probe_duration(video_path)
+            if not video_duration_s:
+                raise ValueError(f"não foi possível medir a duração de {video_path}")
             video_duration_ms = int(video_duration_s * 1000)
             print(f"[UVE] Duração do vídeo: {video_duration_s:.2f}s")
 
@@ -1478,7 +1488,6 @@ class UnifiedVideoEngine:
             chapter_groups[chapter_id].append(path)
 
         segment_paths = []
-        single_chapter = len(chapter_order) == 1
 
         for chapter_id in chapter_order:
             paths = chapter_groups[chapter_id]
@@ -1487,11 +1496,13 @@ class UnifiedVideoEngine:
             segment_concat = os.path.join(self.output_dir, f"_segment_{chapter_id}_concat.mp4")
             segment_final  = os.path.join(self.output_dir, f"_segment_{chapter_id}_final.mp4")
 
-            # Com um único capítulo, o segmento vira a saída final (o áudio de fundo
-            # depois é aplicado com -c:v copy) — então é AQUI que a qualidade final
-            # precisa ser aplicada. Com vários, o encode fica no concat final.
+            # A qualidade final é aplicada AQUI, por capítulo, e não no concat
+            # final. Os dois caminhos encodam o mesmo número de pixels, mas
+            # encodar por capítulo permite que o concat final seja `-c copy` —
+            # antes ele re-encodava o vídeo inteiro de novo (medido: 13m24s num
+            # vídeo de ~10 min, contra ~4s de concat por cópia).
             self._concat_scenes(paths, segment_concat,
-                                reencode=single_chapter, label=f"concat_cap")
+                                reencode=True, label="concat_cap")
 
             # Libera as cenas deste capítulo já consumidas (pico de disco).
             if self.video_data.get("debug") is not True:
@@ -1508,12 +1519,13 @@ class UnifiedVideoEngine:
 
         final_path = os.path.join(self.output_dir, f"{slug}.mp4")
         if len(segment_paths) == 1:
-            # Já encodado na qualidade final acima (single_chapter=True).
             os.rename(segment_paths[0], final_path)
             return final_path
 
-        # Vários capítulos: este é o encode final único, na qualidade do JSON.
-        self._concat_scenes(segment_paths, final_path, reencode=True, label="concat_final")
+        # Todos os segmentos já estão na qualidade final e com os mesmos
+        # parâmetros (mesmo pipeline, mesmo encoder), então o demuxer concat
+        # aceita `-c copy` e a junção é praticamente instantânea.
+        self._concat_scenes(segment_paths, final_path, reencode=False, label="concat_final")
 
         for p in segment_paths:
             if os.path.exists(p):
@@ -1627,11 +1639,19 @@ class UnifiedVideoEngine:
     def run(self):
         """Wrapper que garante o relatório do profiler mesmo em falha —
         é justamente quando o diagnóstico de tempo interessa."""
+        result = None
         try:
-            return self._run()
+            result = self._run()
+            return result
         finally:
+            # Duração REAL medida no arquivo pronto. A soma dos `duration` do JSON
+            # não serve: costuma vir ausente (a duração sai do TTS), e reportar
+            # "20s" para um vídeo de 10 min tornava a razão vs realtime — e a
+            # projeção para 45 min — completamente enganosas.
+            measured = _probe_duration(result) if result else None
             self.profiler.report(
-                total_video_duration=getattr(self, "_total_duration_estimate", None)
+                total_video_duration=measured
+                or getattr(self, "_total_duration_estimate", None)
             )
 
     def _run(self):
@@ -1662,15 +1682,21 @@ class UnifiedVideoEngine:
         except Exception as e:
             print(f"[UVE] Pré-processamento de narração falhou: {e}")
 
-        # Checagem de disco — depois do TTS, quando as durações são conhecidas.
-        # Um render longo que morre no meio por falta de espaço desperdiça horas.
+        # Checagem de disco — depois do TTS.
+        # ATENÇÃO: `duration` costuma vir ausente/None no JSON (a duração real sai
+        # do TTS, dentro do worker), então esta soma é só uma ESTIMATIVA MÍNIMA.
+        # Num JSON com 24 cenas sem duração explícita ela deu 20s para um vídeo de
+        # ~10 min. O número usado no relatório final é medido com ffprobe no
+        # arquivo pronto (ver `_probe_duration`); este aqui serve apenas para a
+        # checagem de espaço, e por isso o texto abaixo diz "≥".
         self._total_duration_estimate = sum(float(s.get("duration") or 0) for s in scenes)
         if self._total_duration_estimate > 0:
             needed = estimate_intermediate_size_gb(self._total_duration_estimate, self.resolution_output)
             ok, free_gb, _ = check_free_space(self.output_dir, needed)
             print(f"[UVE] Disco: {free_gb:.1f}GB livres, "
                   f"~{needed:.1f}GB estimados p/ cenas intermediárias "
-                  f"({self._total_duration_estimate / 60:.1f} min de vídeo)")
+                  f"(≥{self._total_duration_estimate / 60:.1f} min de vídeo — "
+                  f"cenas sem 'duration' no JSON só são medidas após o TTS)")
             if not ok:
                 print(f"[UVE] ⚠️ Espaço em disco possivelmente insuficiente. "
                       f"Libere espaço ou use INTERMEDIATE_ENCODE=0 (cenas menores, render mais lento).")
