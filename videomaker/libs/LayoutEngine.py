@@ -220,8 +220,18 @@ class LayoutEngine:
 
             req_width  = placement.get('width')
             req_height = placement.get('height')
-            safe_h = safe_rect[3]
-            safe_w = safe_rect[2]
+
+            # Base de referência das dimensões/âncoras. Default "safe" (área
+            # segura) preserva o comportamento histórico. "screen" mede contra a
+            # TELA INTEIRA — é o que layouts de tela dividida precisam: um painel
+            # `width:"50%", height:"100%"` deve ocupar metade exata do quadro e
+            # encostar nas bordas. Medido contra a área segura, os mesmos 50%/100%
+            # viram 864×972 num 1920×1080 e sobra a moldura do padding em volta.
+            rel = str(placement.get('relative_to', 'safe')).lower()
+            box_rect = (0, 0, W, H) if rel == 'screen' else safe_rect
+
+            safe_h = box_rect[3]
+            safe_w = box_rect[2]
             crop_height = None  # altura de crop cover (None = sem crop)
 
             if req_width is not None and req_height is not None:
@@ -274,8 +284,11 @@ class LayoutEngine:
                 resize_to   = (target_w, target_h)
                 anchor_size = (target_w, target_h)
 
+            # A âncora usa a MESMA base das dimensões: um painel medido contra a
+            # tela precisa ser ancorado contra a tela, senão "right" o encostaria
+            # na borda interna do padding e reabriria a moldura.
             fx, fy = LayoutEngine.resolve_anchor(
-                placement, anchor_size, (W, H), safe_rect
+                placement, anchor_size, (W, H), box_rect
             )
 
             final_results[idx] = {

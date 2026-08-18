@@ -257,8 +257,21 @@ def _resolve_scene_subtitle(base_subtitle_config: dict, effective_gs: dict, scen
     Resolve a config de legenda efetiva para uma cena.
 
     Prioridade: scene.subtitle > effective_gs.subtitle > base defaults
+
+    EXCEÇÃO — `padding_top/bottom/side`: esses definem a ÁREA SEGURA, que é
+    resolvida por orientação de tela em `_default_safe_paddings` e vem pronta no
+    `base_subtitle_config` via `layout_params`. Paddings escritos dentro do bloco
+    `subtitle` de um canal foram calibrados para a resolução daquele canal na
+    época (ex.: 960/960 num 9:16 legado) e, aplicados a outro formato, colapsam a
+    caixa da legenda. A área segura é uma propriedade do CANVAS, não do estilo de
+    legenda; quem a sobrescreve é `global_settings.padding_*` (já refletido no
+    `layout_params`) ou os `padding_*` da própria cena.
     """
-    merged = deep_merge(base_subtitle_config, effective_gs.get("subtitle", {}))
+    _SAFE_AREA_KEYS = ("padding_top", "padding_bottom", "padding_side")
+
+    gs_subtitle = {k: v for k, v in effective_gs.get("subtitle", {}).items()
+                   if k not in _SAFE_AREA_KEYS}
+    merged = deep_merge(base_subtitle_config, gs_subtitle)
     scene_subtitle = scene.get("subtitle", {})
     if scene_subtitle:
         merged = deep_merge(merged, scene_subtitle)
@@ -362,6 +375,13 @@ def _try_ffmpeg_scene(*, scene, effective_gs, scene_dir, scene_id, scene_duratio
                 bg_cfg, resolution_output, ai_cache, scene_dir
             )
             bg_resolved["_stretch"] = True
+        elif bg_type == "directory":
+            # A escolha dos arquivos é a MESMA do caminho MoviePy (mesmo
+            # DirectorySelector, mesmo histórico em disco) — só a materialização
+            # muda: aqui vira concat de inputs em vez de clips MoviePy.
+            bg_resolved["_segments"] = SceneBridge.resolve_directory_segments(
+                bg_cfg, scene_duration
+            )
         elif bg_type != "color":
             bg_path = SceneBridge.resolve_element_path(
                 {"type": "image" if bg_type in ("file", "image") else bg_type,
@@ -369,28 +389,48 @@ def _try_ffmpeg_scene(*, scene, effective_gs, scene_dir, scene_id, scene_duratio
                 scene_dir, remote_asset_manager,
             )
             if os.path.splitext(bg_path)[1].lower() in SceneBridge._VIDEO_EXTS:
-                raise Unsupported("fundo de vídeo não suportado")
-            bg_resolved["_path"] = bg_path
-            bg_resolved["_crop"] = SceneBridge.resolve_background_cover(
-                bg_path, resolution_output, bg_cfg.get("focus", "center")
-            )
+                # Vídeo único: um plano de um segmento só, para reusar exatamente
+                # o mesmo caminho de normalização/cover da pasta.
+                bg_resolved["_segments"] = SceneBridge.video_segment(
+                    bg_path, scene_duration
+                )
+            else:
+                bg_resolved["_path"] = bg_path
+                bg_resolved["_crop"] = SceneBridge.resolve_background_cover(
+                    bg_path, resolution_output, bg_cfg.get("focus", "center")
+                )
 
         # --- visuais ---
         elements = list(scene.get("visual_elements") or [])
-        paths = [SceneBridge.resolve_element_path(el, scene_dir, remote_asset_manager)
-                 for el in elements]
-        # Vídeo como visual_element ainda não é coberto (só imagem).
-        # `type: "color"` devolve None (não tem arquivo) e é gerado por lavfi.
-        for p in paths:
-            if p and os.path.splitext(p)[1].lower() in SceneBridge._VIDEO_EXTS:
-                raise Unsupported("visual_element de vídeo não suportado")
+        paths = []
+        el_segments = []
+        for el in elements:
+            if el.get("type") == "directory":
+                # Pasta: plano de segmentos (mesmo selector do fundo). O layout
+                # precisa de um tamanho nativo para calcular a caixa — usa o do
+                # primeiro segmento, que é quem define o aspect ratio do
+                # elemento (os demais são normalizados para ele).
+                segments = SceneBridge.resolve_directory_segments(el, scene_duration)
+                el_segments.append(segments)
+                paths.append(segments[0]["path"])
+            else:
+                el_segments.append(None)
+                paths.append(SceneBridge.resolve_element_path(
+                    el, scene_dir, remote_asset_manager))
 
-        plans = SceneBridge.resolve_visual_boxes(elements, paths, scene_layout)
+        plans = SceneBridge.resolve_visual_boxes(elements, paths, scene_layout,
+                                                 segments=el_segments)
 
         prepared = []
-        for el, path, plan in zip(elements, paths, plans):
+        for el, path, plan, segments in zip(elements, paths, plans, el_segments):
             item = dict(el)
             item["_path"] = path
+            if segments:
+                item["_segments"] = segments
+            elif path and os.path.splitext(path)[1].lower() in SceneBridge._VIDEO_EXTS:
+                # Vídeo avulso (inclusive remote_asset que baixou um .mp4):
+                # vira um plano de um segmento só, reusando o mesmo caminho.
+                item["_segments"] = SceneBridge.video_segment(path, scene_duration)
             item["_box"] = plan["box"]
             item["_resize_to"] = plan["resize_to"]
             item["_crop"] = plan["crop"]
@@ -826,9 +866,15 @@ class UnifiedVideoEngine:
         )
 
         # 3. Resolução + qualidade
-        # Novo formato: objeto raiz "output" = {"ratio": ..., "quality": ...}.
+        # Novo formato: objeto raiz "output" = {"ratio": ..., "quality": ..., "dir": ...}.
         # Retrocompat: "output_ratio" solto na raiz ainda funciona.
-        output_cfg = video_data.get("output", {}) or {}
+        # O bloco "output" do canal serve de base (o do vídeo vence campo a campo),
+        # para que um canal possa fixar seu próprio "dir" sem repetir em cada JSON.
+        output_cfg = deep_merge(
+            channel_config.get("output", {}) or {},
+            video_data.get("output", {}) or {}
+        )
+        self.output_config = output_cfg
         output_ratio = output_cfg.get("ratio") or video_data.get("output_ratio", "9:16")
         self.resolution_output = resolve_output_resolution(output_ratio)
         self.output_quality = resolve_output_quality(output_cfg.get("quality"))
@@ -890,9 +936,19 @@ class UnifiedVideoEngine:
             print(f"[UVE] Remote Assets: {stats['total_slugs']} slugs, {stats['valid_media']} URLs válidas")
 
         slug = video_data.get("slug", "video_sem_slug")
-        base_output_dir = os.path.join(os.getcwd(), "output")
+        # "output.dir" (JSON do vídeo ou do canal) redireciona a saída; relativo
+        # resolve a partir de videomaker/ (o main.py faz chdir pra cá) e "~" expande.
+        # Ausente → "output/" ao lado do main.py, como sempre foi.
+        configured_dir = output_cfg.get("dir")
+        base_output_dir = (
+            os.path.abspath(os.path.expanduser(str(configured_dir)))
+            if configured_dir else os.path.join(os.getcwd(), "output")
+        )
+        self.base_output_dir = base_output_dir
         self.output_dir = os.path.join(base_output_dir, slug)
         os.makedirs(self.output_dir, exist_ok=True)
+        if configured_dir:
+            print(f"[UVE] Diretório de saída: {base_output_dir}")
 
         self.final_clips = []
         self.total_duration = 0.0
