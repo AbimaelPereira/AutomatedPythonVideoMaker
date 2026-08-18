@@ -81,11 +81,67 @@ def _image_size(path: str) -> tuple:
         return im.size
 
 
+def _video_size(path: str) -> tuple:
+    """Dimensões de um vídeo via ffprobe (PIL não abre vídeo)."""
+    from libs.Background.MediaProbe import MediaProbe
+
+    info = MediaProbe().probe(path)
+    w, h = int(info.get("width") or 0), int(info.get("height") or 0)
+    if w <= 0 or h <= 0:
+        raise Unsupported(f"dimensões ilegíveis em {path}")
+    return (w, h)
+
+
+def resolve_directory_segments(cfg: dict, scene_duration: float) -> list:
+    """Plano de preenchimento de um `type: "directory"`.
+
+    Delega ao mesmo `DirectorySelector` que o BackgroundEngine usa, para que os
+    dois caminhos de render escolham os mesmos arquivos e compartilhem o
+    histórico anti-repetição. Aqui não se abre mídia nenhuma — só metadados.
+    """
+    from libs.Background.DirectorySelector import DirectorySelector
+
+    segments = DirectorySelector().build_plan(cfg, float(scene_duration))
+    if not segments:
+        raise Unsupported(f"diretório sem mídia utilizável: {cfg.get('source')}")
+    return segments
+
+
+def video_segment(path: str, scene_duration: float) -> list:
+    """Plano de um segmento só, para um arquivo de vídeo avulso.
+
+    Deixa o vídeo único percorrer o mesmo código de normalização/concat da
+    pasta, em vez de ter um caminho paralelo só para ele.
+    """
+    from libs.Background.MediaProbe import MediaProbe
+
+    probe = MediaProbe()
+    info = probe.probe(path)
+    probe.save()
+
+    file_duration = info.get("duration")
+    if not file_duration or file_duration <= 0:
+        raise Unsupported(f"vídeo sem duração legível: {path}")
+
+    # Mais curto que a cena → loop; mais longo → corta no início (mesmo
+    # comportamento do `_build_video` no BackgroundEngine).
+    return [{
+        "path": path,
+        "start": 0.0,
+        "duration": float(scene_duration),
+        "is_video": True,
+        "width": info.get("width", 0),
+        "height": info.get("height", 0),
+        "loop": file_duration < float(scene_duration),
+    }]
+
+
 # ---------------------------------------------------------------------------
 # LAYOUT
 # ---------------------------------------------------------------------------
 
-def resolve_visual_boxes(elements: list, paths: list, layout_params: dict) -> list:
+def resolve_visual_boxes(elements: list, paths: list, layout_params: dict,
+                         segments: list = None) -> list:
     """Resolve o plano de composição de cada elemento reusando o LayoutEngine.
 
     Retorna lista de dicts alinhada com `elements`:
@@ -100,13 +156,22 @@ def resolve_visual_boxes(elements: list, paths: list, layout_params: dict) -> li
         return []
 
     items = []
-    for el, path in zip(elements, paths):
+    segments = segments or [None] * len(elements)
+    for el, path, segs in zip(elements, paths, segments):
         if path is None:
             # `type: "color"` não tem arquivo. O ColorClip do caminho MoviePy usa
             # um tamanho placeholder que o placement sobrescreve; 1:1 aqui deixa
             # o LayoutEngine decidir a caixa pelo placement, sem aspect ratio
             # herdado de imagem nenhuma.
             w = h = 1000
+        elif segs:
+            # Pasta: dimensões já vêm do ffprobe (o primeiro segmento define o
+            # aspect ratio). Abrir com PIL falharia em arquivo de vídeo.
+            w, h = int(segs[0].get("width") or 0), int(segs[0].get("height") or 0)
+            if w <= 0 or h <= 0:
+                raise Unsupported(f"dimensões ilegíveis em {segs[0].get('path')}")
+        elif os.path.splitext(path)[1].lower() in _VIDEO_EXTS:
+            w, h = _video_size(path)
         else:
             w, h = _image_size(path)
         items.append({
@@ -169,7 +234,9 @@ def _crop_offset(path: str, resized_size: tuple, axis_size: int, crop_size: int,
     O resultado é o mesmo ponto, em pixels da imagem redimensionada.
     """
     center = axis_size / 2
-    if focus == "face" and path:
+    # `focus: "face"` só vale para imagem: a detecção roda uma vez no arquivo,
+    # e um vídeo teria um rosto diferente a cada frame. Em vídeo, cai no centro.
+    if focus == "face" and path and os.path.splitext(path)[1].lower() not in _VIDEO_EXTS:
         point = _detect_face_center(path, resized_size)
         if point:
             center = point[0] if axis == "x" else point[1]
@@ -422,9 +489,23 @@ def _ass_from_karaoke(subtitle_cfg: dict, srt_path: str, resolution: tuple,
             if ink is None:
                 continue
             ix0, iy0, ix1, iy1 = ink
-            # Centro da TINTA em coordenadas de tela (o array tem padding).
+            # X: centro da tinta real (a largura do glifo é o que importa).
             cx = x + (ix0 + ix1) / 2.0
-            cy = y + (iy0 + iy1) / 2.0
+            # Y: o \an5 do ASS ancora no centro da caixa de linha do libass, que
+            # é `ascent + descent` da fonte — NÃO a tinta do glifo. Então:
+            #   1. converte-se a posição do layout para a BASELINE em tela;
+            #   2. a baseline vira o centro daquela caixa.
+            # Usar o centro da tinta (como antes) deslocava toda palavra
+            # acentuada, porque o acento estica a tinta só para cima; e usar a
+            # caixa alta desalinhava linhas de tamanhos diferentes, já que a
+            # relação caixa-alta/ascent varia com o font_size.
+            baseline_y = item.get("baseline_y")
+            if baseline_y is not None:
+                font = utils.load_font(style["font_path"], style["font_size"])
+                ascent, descent = font.getmetrics()
+                cy = baseline_y - ascent + (ascent + descent) / 2.0
+            else:
+                cy = y + (iy0 + iy1) / 2.0
 
             text = kar._cased(item["word"]["word"], style.get("_palette_item", {}))
             builder.add_text(text, style, (cx, cy), item["word"]["start"], group_end)
@@ -531,7 +612,20 @@ def _ass_from_classic(subtitle_cfg: dict, srt_path: str, resolution: tuple,
 
     builder = AssBuilder(resolution)
     cx = box["x"] + box["width"] // 2
-    cy = box["y"] + box["height"] // 2
+
+    # `anchor_y` diz onde o texto se alinha DENTRO da caixa; ignorá-lo fazia
+    # `placement.anchor: [_, "bottom"]` (e "top") renderizar sempre no meio
+    # vertical. O ASS ancora pelo centro (\an5), então convertemos o alinhamento
+    # da caixa no centro da linha, reservando metade da altura do texto para ele
+    # não sair pela borda.
+    anchor_y = box.get("anchor_y", "center")
+    line_h = int(style["font_size"] * 1.2)
+    if anchor_y == "top":
+        cy = box["y"] + line_h // 2
+    elif anchor_y == "bottom":
+        cy = box["y"] + box["height"] - line_h // 2
+    else:
+        cy = box["y"] + box["height"] // 2
 
     for entry in entries:
         text = entry.content.replace("\n", " ").strip()

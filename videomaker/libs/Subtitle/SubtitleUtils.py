@@ -162,6 +162,83 @@ def _style_cache_key(text: str, style: dict) -> str:
     return hashlib.md5(str(params).encode()).hexdigest()
 
 
+# Amostras p/ medir as métricas verticais de uma linha, por papel:
+#   CAP    → caixa alta sem acento: define o topo "normal" e a baseline.
+#   ACCENT → acento alto: o quanto a tinta pode subir acima do CAP.
+#   BELOW  → o quanto pode descer abaixo da baseline (cedilha e descendentes).
+# Fontes display (ex.: BebasNeue) não têm todos os glifos; por isso cada papel é
+# uma união de amostras — o que faltar simplesmente não contribui.
+_REF_CAP = ("HXEM", "ABCO")
+_REF_ACCENT = ("ÁÀÂÃÉÊÍÓÔÕÚ", "ÇÃO")
+_REF_BELOW = ("ÇÃO", "çãgy", "Ppgy Qj")
+
+
+def _ink_span(text: str, style: dict):
+    """(top, bottom) da tinta de `text`, ou None se não houver tinta."""
+    arr = render_text(text, style)
+    rows = np.where(arr[:, :, 3].any(axis=1))[0]
+    if len(rows) == 0:
+        return None
+    return int(rows[0]), int(rows[-1])
+
+
+def _union_span(samples, style: dict):
+    top = bottom = None
+    for s in samples:
+        span = _ink_span(s, style)
+        if span is None:
+            continue
+        t, b = span
+        top = t if top is None else min(top, t)
+        bottom = b if bottom is None else max(bottom, b)
+    return top, bottom
+
+
+def line_vertical_metrics(style: dict) -> dict:
+    """Métricas verticais de uma linha renderizada com `fixed_line_box`, todas
+    medidas sobre textos de REFERÊNCIA fixos (nunca sobre o texto real).
+
+    Retorna um dict com offsets DENTRO do array de `render_text`:
+
+      cap_top    → topo da caixa alta (onde uma linha sem acento começa)
+      baseline   → base da caixa alta (onde os glifos assentam)
+      accent_rise→ quanto a tinta sobe acima de `cap_top` num acento
+      below_drop → quanto a tinta desce abaixo de `baseline` (cedilha etc.)
+      cap_height → baseline - cap_top
+
+    Por que referência fixa: medir a tinta real fazia `É`/`À` reportarem um topo
+    ~18px acima do de uma palavra sem acento, e como o layout posicionava por
+    "topo da tinta", a linha acentuada saía deslocada.
+
+    Por que separar `accent_rise` de `cap_height`: o avanço entre linhas deve
+    seguir a caixa alta (o que o olho lê como altura da linha); o acento é folga
+    que só precisa caber no gap, não somar ao passo de todas as linhas.
+    """
+    ref = dict(style)
+    ref["fixed_line_box"] = True
+
+    cap_top, cap_bottom = _union_span(_REF_CAP, ref)
+    if cap_top is None:
+        arr = render_text(_REF_CAP[0], ref)
+        h = arr.shape[0]
+        return {"cap_top": 0, "baseline": h, "cap_height": h,
+                "accent_rise": 0, "below_drop": 0}
+
+    acc_top, _ = _union_span(_REF_ACCENT, ref)
+    _, below_bottom = _union_span(_REF_BELOW, ref)
+
+    accent_rise = max(0, cap_top - acc_top) if acc_top is not None else 0
+    below_drop = max(0, below_bottom - cap_bottom) if below_bottom is not None else 0
+
+    return {
+        "cap_top": cap_top,
+        "baseline": cap_bottom,
+        "cap_height": cap_bottom - cap_top + 1,
+        "accent_rise": accent_rise,
+        "below_drop": below_drop,
+    }
+
+
 def render_text(text: str, style: dict) -> np.ndarray:
     """
     Renderiza uma string como imagem RGBA usando PIL puro, a partir de um dict
@@ -273,6 +350,16 @@ def resolve_subtitle_box(style: dict, resolution: tuple) -> dict:
       1. NOVO — `style["placement"]` = {"anchor":[x,y], "region": "30%"}:
          a caixa é uma faixa de largura `region` (default = área segura inteira),
          ancorada via `anchor[0]`; o `anchor[1]` define anchor_y.
+
+         Campos opcionais do placement:
+           relative_to: "safe" (default) | "screen" — base de medida de
+             `region`/`height` e das âncoras. "screen" mede contra a TELA
+             INTEIRA, que é o que layouts de tela dividida precisam: a metade
+             livre é uma fração da tela, não da área segura, então percentuais
+             medidos contra a área segura caem assimétricos dentro dela.
+           height: altura da caixa (fração ou px). Sem ele a caixa usa a altura
+             inteira da base, e o texto pode descer até a borda inferior.
+
       2. LEGADO — sem `placement`: usa `subtitle_position` (top/center/bottom) +
          paddings, replicando o comportamento histórico.
     """
@@ -280,6 +367,24 @@ def resolve_subtitle_box(style: dict, resolution: tuple) -> dict:
     pad_side = int(style.get("padding_side", 50))
     pad_top = int(style.get("padding_top", 100))
     pad_bot = int(style.get("padding_bottom", 850))
+
+    # Paddings verticais que somam >= altura da tela colapsam a área segura para
+    # 1px (`safe_area` faz max(1, ...)), e o bloco de texto passa a ser desenhado
+    # a partir desse ponto — a 1ª linha nasce colada no fundo do espaço e as
+    # seguintes descem para fora do quadro. Isso acontece quando paddings
+    # calibrados para outra resolução (ex.: 960/960, de um canal 9:16 legado)
+    # chegam num render onde não cabem. Nesse caso os paddings verticais não
+    # descrevem uma faixa utilizável, então caem para os defaults de ~5%.
+    if pad_top + pad_bot >= screen_h:
+        fallback = int(screen_h * 0.05)
+        print(
+            f"⚠️  [Subtitle] padding_top({pad_top}) + padding_bottom({pad_bot}) "
+            f">= altura da tela ({screen_h}); área da legenda seria nula. "
+            f"Usando {fallback}px em cima/embaixo."
+        )
+        pad_top = pad_bot = fallback
+    if pad_side * 2 >= screen_w:
+        pad_side = int(screen_w * 0.05)
 
     safe_rect = LayoutEngine.safe_area(
         (screen_w, screen_h),
@@ -296,26 +401,51 @@ def resolve_subtitle_box(style: dict, resolution: tuple) -> dict:
             ax = anchor[0] if len(anchor) > 0 else "center"
             ay = anchor[1] if len(anchor) > 1 else "center"
 
-        region = placement.get("region")
-        box_w = LayoutEngine.calculate_dimension(region, sw) if region is not None else sw
-        box_w = max(1, min(box_w, sw))
-
-        # X da faixa dentro da área segura, conforme anchor horizontal.
-        if ax == "left":
-            box_x = sx
-        elif ax == "right":
-            box_x = sx + sw - box_w
-        elif ax == "center":
-            box_x = sx + (sw - box_w) // 2
-        elif isinstance(ax, str) and "%" in ax:
-            box_x = sx + int(sw * (float(ax.strip("%")) / 100.0))
+        # Base de medida: área segura (default) ou tela inteira. Espelha o
+        # `relative_to` do LayoutEngine, para que legenda e visual possam ser
+        # ancorados na MESMA referência num layout de tela dividida.
+        rel = str(placement.get("relative_to", "safe")).lower()
+        if rel == "screen":
+            bx, by, bw, bh = 0, 0, screen_w, screen_h
         else:
-            box_x = sx + LayoutEngine.calculate_dimension(ax, sw)
+            bx, by, bw, bh = sx, sy, sw, sh
 
+        region = placement.get("region")
+        box_w = LayoutEngine.calculate_dimension(region, bw) if region is not None else bw
+        box_w = max(1, min(box_w, bw))
+
+        req_h = placement.get("height")
+        box_h = LayoutEngine.calculate_dimension(req_h, bh) if req_h is not None else bh
+        box_h = max(1, min(box_h, bh))
+
+        # X da faixa dentro da base, conforme anchor horizontal.
+        if ax == "left":
+            box_x = bx
+        elif ax == "right":
+            box_x = bx + bw - box_w
+        elif ax == "center":
+            box_x = bx + (bw - box_w) // 2
+        elif isinstance(ax, str) and "%" in ax:
+            box_x = bx + int(bw * (float(ax.strip("%")) / 100.0))
+        else:
+            box_x = bx + LayoutEngine.calculate_dimension(ax, bw)
+
+        # Y da faixa: só entra em jogo quando `height` encolhe a caixa. Sem
+        # `height` a caixa cobre a base inteira e `box_y` é o topo dela, como
+        # antes — `anchor_y` segue alinhando o TEXTO dentro da caixa.
         anchor_y = ay if ay in ("top", "center", "bottom") else "center"
+        if ay == "top":
+            box_y = by
+        elif ay == "bottom":
+            box_y = by + bh - box_h
+        elif isinstance(ay, str) and "%" in ay:
+            box_y = by + int(bh * (float(ay.strip("%")) / 100.0))
+        else:  # center
+            box_y = by + (bh - box_h) // 2
+
         return {
-            "x": int(box_x), "y": int(sy), "width": int(box_w),
-            "height": int(sh), "anchor_y": anchor_y,
+            "x": int(box_x), "y": int(box_y), "width": int(box_w),
+            "height": int(box_h), "anchor_y": anchor_y,
         }
 
     # --- Modo legado (subtitle_position + paddings) ---

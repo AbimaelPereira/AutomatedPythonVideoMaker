@@ -32,7 +32,6 @@ Em ambos os modos o timing é word-by-word: cada palavra aparece no seu start
 do SRT e some quando o bloco limpa. Sem animação de entrada.
 """
 
-import numpy as np
 from moviepy.editor import ImageClip, CompositeVideoClip, ColorClip
 
 from libs.Subtitle import SubtitleUtils as utils
@@ -336,10 +335,17 @@ class KaraokeSubtitle:
         # compartilham baseline → ficam alinhadas ao serem empilhadas lado a lado.
         style["fixed_line_box"] = True
 
+        # Métricas verticais de referência — constantes para a linha toda, então
+        # É/À não deslocam nada e o acento tem folga reservada no gap.
+        vm = utils.line_vertical_metrics(style)
+
         rendered = []
         for w in line:
             arr = utils.render_text(self._cased(w["word"], palette_item), style)
-            rendered.append({"word": w, "arr": arr, "h": arr.shape[0], "w": arr.shape[1]})
+            rendered.append({
+                "word": w, "arr": arr, "h": arr.shape[0], "w": arr.shape[1],
+                "vm": vm,
+            })
         return rendered
 
     def _render_line_per_word(self, line: list, safe_w: int) -> list:
@@ -360,13 +366,59 @@ class KaraokeSubtitle:
             )
             style = self._build_style(palette_item, font_size)
             style["stroke_width"] = eff_stroke
+            style["fixed_line_box"] = True
+            vm = utils.line_vertical_metrics(style)
             arr = utils.render_text(cased, style)
-            rendered.append({"word": w, "arr": arr, "h": arr.shape[0], "w": arr.shape[1]})
+            rendered.append({
+                "word": w, "arr": arr, "h": arr.shape[0], "w": arr.shape[1],
+                "vm": vm,
+            })
         return rendered
 
     # ------------------------------------------------------------------
     # LAYOUT
     # ------------------------------------------------------------------
+
+    def _reference_cap_height(self, safe_w: int) -> int:
+        """Caixa alta de referência da CENA — base do passo entre linhas.
+
+        Medida uma vez sobre uma linha de REFERÊNCIA construída com o mesmo
+        número de caracteres que o agrupamento tende a produzir
+        (`min_chars_per_line`, o piso que define o comprimento típico), e
+        dimensionada pela mesma regra das linhas reais (fit na largura da
+        faixa). Não depende do texto de nenhum grupo — então o ritmo vertical é
+        idêntico em todos os blocos — mas acompanha faixa, fonte e configuração
+        de quebra da cena.
+
+        Nem `max_font_size` (teto que as linhas reais raramente alcançam, passo
+        grande demais) nem uma frase longa fixa (fit pequeno, linhas curtas se
+        sobrepondo) servem de base.
+        """
+        cached = getattr(self, "_ref_cap_cache", None)
+        if cached is not None and cached[0] == safe_w:
+            return cached[1]
+
+        n_chars = int(self.min_chars_per_line or 10)
+        ref_line = "M" * max(4, n_chars)
+
+        caps = []
+        for palette_item in self.palette:
+            font_path = palette_item.get("font_path", _DEFAULT_PALETTE[0]["font_path"])
+            stroke_width = int(palette_item.get("stroke_width", 0))
+            eff_stroke = stroke_width * 2 if stroke_width > 0 else 0
+            font_size = utils.fit_font_size(
+                ref_line, font_path, max_width=safe_w,
+                stroke_width=eff_stroke,
+                max_size=int(self.max_font_size), min_size=int(self.min_font_size),
+            )
+            style = self._build_style(palette_item, font_size)
+            style["stroke_width"] = eff_stroke
+            style["fixed_line_box"] = True
+            caps.append(utils.line_vertical_metrics(style)["cap_height"])
+
+        ref = max(caps) if caps else int(self.min_font_size)
+        self._ref_cap_cache = (safe_w, ref)
+        return ref
 
     def _block_y(self, total_h: int, box: dict) -> int:
         """Posição Y do topo do bloco de legenda, alinhado dentro da caixa."""
@@ -411,55 +463,76 @@ class KaraokeSubtitle:
         """
         safe_w = box["width"]
         lines = self._visual_lines(rendered_lines, safe_w)
+        if not lines:
+            return []
 
-        # Altura/limites da TINTA por linha (pixels realmente visíveis), não a
-        # altura cheia do array. O array inclui o padding do render e — no modo
-        # linha — a caixa cheia da fonte (ascent+descent), o que inflava muito o
-        # espaço entre linhas. Avançar pela tinta faz `line_gap_ratio` controlar
-        # o gap visível de verdade. `ink_top` por linha alinha as palavras (que
-        # compartilham baseline no modo linha) ao topo da tinta.
-        line_bounds = [self._line_ink_bounds(line) for line in lines]   # (top, height)
-        visible_heights = [h for (_, h) in line_bounds]
+        # Métricas verticais por linha, medidas sobre textos de REFERÊNCIA (nunca
+        # sobre os glifos reais) — ver `SubtitleUtils.line_vertical_metrics`.
+        metrics = [self._line_metrics(line) for line in lines]
 
-        gap = int(max(visible_heights) * float(self.line_gap_ratio)) if visible_heights else 0
-        total_h = sum(visible_heights) + gap * (len(lines) - 1)
+        # O avanço entre linhas é de BASELINE a BASELINE (o "leading" da
+        # tipografia). Cada linha tem seu próprio font_size (fit por largura) —
+        # e isso é PROPOSITAL, é o efeito visual do template. O que não pode
+        # variar é o RITMO vertical.
+        #
+        # O passo é derivado de `max_font_size`, uma constante da cena, e não do
+        # `max(cap_height)` do grupo. Com o máximo do grupo, um bloco que por
+        # acaso tinha uma linha curta/enorme abria o passo de todas as linhas
+        # dele, enquanto o bloco seguinte (sem essa linha) usava um passo menor
+        # — daí o espaçamento parecer maior num momento e menor no outro, mesmo
+        # com o passo já sendo constante DENTRO de cada grupo. Ancorado numa
+        # referência da cena, o ritmo é o mesmo em todos os grupos.
+        ref_cap = self._reference_cap_height(safe_w)
+        step = ref_cap + int(ref_cap * float(self.line_gap_ratio))
 
+        # Bloco medido na MESMA referência do passo: `n-1` passos mais uma caixa
+        # alta de referência. Usar a cap_height real da 1ª/última linha aqui
+        # faria o topo do bloco subir/descer conforme o tamanho sorteado por
+        # elas — justamente a variação que se quer eliminar.
+        total_h = step * (len(lines) - 1) + ref_cap + metrics[-1]["below_drop"]
         block_top = self._block_y(total_h, box)
 
         out = []
-        y = block_top
-        for line, (ink_top, vh) in zip(lines, line_bounds):
+        # `y` percorre a BASELINE de cada linha, com passo constante. Ancorar
+        # pela baseline (e não pelo topo) é o que mantém o ritmo vertical
+        # uniforme mesmo com linhas de tamanhos bem diferentes; o acento sobe
+        # para dentro do leading sem deslocar nada, porque o posicionamento não
+        # depende da tinta real da palavra.
+        baseline = block_top + ref_cap
+        for line, m in zip(lines, metrics):
             line_w = sum(it["w"] for it in line)
             x = box["x"] + max(0, (safe_w - line_w) // 2)
+            # `baseline` (tela) → origem do array: a baseline fica em
+            # `cap_top + cap_height` dentro dele.
+            wy = baseline - (m["cap_top"] + m["cap_height"])
             for it in line:
-                # Desloca a palavra p/ que a tinta da linha comece exatamente em y
-                # (preserva o baseline compartilhado dentro da linha).
-                wy = y - ink_top
+                # A baseline em tela vai junto: renderers que posicionam por
+                # métrica de fonte (o ASS/libass ancora pelo centro de
+                # ascent+descent) precisam dela, e reconstruí-la a partir de
+                # `wy` exigiria refazer a mesma conta com métricas que divergem
+                # entre fontes.
+                it["baseline_y"] = baseline
                 out.append((it, (x, wy)))
                 x += it["w"]
-            y += vh + gap
+            baseline += step
 
         return out
 
     @staticmethod
-    def _line_ink_bounds(line: list) -> tuple:
-        """Retorna (ink_top, ink_height) da linha — a faixa de linhas de pixel
-        com alguma opacidade, considerando todas as palavras da linha juntas.
-        Fallback para a altura cheia do array se a linha estiver vazia/transparente."""
-        top = None
-        bottom = None
-        for it in line:
-            arr = it["arr"]
-            if arr.shape[2] < 4:
-                rows = np.where(arr.any(axis=(1, 2)))[0]
-            else:
-                rows = np.where(arr[:, :, 3].any(axis=1))[0]
-            if len(rows) == 0:
-                continue
-            t, b = int(rows[0]), int(rows[-1])
-            top = t if top is None else min(top, t)
-            bottom = b if bottom is None else max(bottom, b)
-        if top is None:
+    def _line_metrics(line: list) -> dict:
+        """Métricas verticais da linha. No modo linhas todas as palavras
+        compartilham o mesmo estilo; no legado o font_size varia por palavra,
+        então agrega o pior caso de cada componente."""
+        vms = [it["vm"] for it in line if it.get("vm")]
+        if not vms:
             h = max((it["h"] for it in line), default=1)
-            return 0, h
-        return top, (bottom - top + 1)
+            return {"cap_top": 0, "baseline": h, "cap_height": h,
+                    "accent_rise": 0, "below_drop": 0}
+        return {
+            "cap_top": min(m["cap_top"] for m in vms),
+            "baseline": max(m["baseline"] for m in vms),
+            "cap_height": max(m["cap_height"] for m in vms),
+            "accent_rise": max(m["accent_rise"] for m in vms),
+            "below_drop": max(m["below_drop"] for m in vms),
+        }
+
