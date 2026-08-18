@@ -9,7 +9,7 @@ O `main.py` aceita um JSON (objeto único ou lista de objetos) e instancia um
 {
   "slug": "meu_video",            // nome da pasta/arquivo de saída em output/{slug}/
   "channel_name": "hacker_patriota", // carrega channels_config/{channel_name}.json (base)
-  "output": { "ratio": "9:16", "quality": "high" }, // ver output_quality.md
+  "output": { "ratio": "9:16", "quality": "high" }, // + "dir" opcional — ver output_quality.md
   "global_settings": { /* ... */ },  // ver global_settings.md
   "scenes": [ /* ... */ ],           // OU "chapters" — ver abaixo
   "youtube": { /* ... */ }           // ver youtube_upload.md
@@ -20,9 +20,9 @@ O `main.py` aceita um JSON (objeto único ou lista de objetos) e instancia um
 
 | Campo | Obrigatório | Descrição |
 |-------|--------------|-----------|
-| `slug` | sim | Nome da pasta em `output/{slug}/` e do arquivo final. |
+| `slug` | sim | Nome da pasta em `{output.dir}/{slug}/` e do arquivo final. |
 | `channel_name` | sim | Carrega `channels_config/{channel_name}.json` como base via `deep_merge`. Ver [channels_config.md](channels_config.md). |
-| `output` | não (default `{"ratio": "9:16", "quality": "high"}`) | Resolução + encoding. Ver [output_quality.md](output_quality.md). |
+| `output` | não (default `{"ratio": "9:16", "quality": "high"}`) | Resolução + encoding + `dir` (pasta de saída). Ver [output_quality.md](output_quality.md). |
 | `output_ratio` | não | Retrocompat: equivale a `output.ratio` quando solto na raiz. |
 | `global_settings` | não | Overrides de `tts`, `subtitle`, `background`, `transitions`, `padding_*`. Ver [global_settings.md](global_settings.md). |
 | `scenes` | sim (xor `chapters`) | Lista plana de cenas. Ver [scenes.md](scenes.md). |

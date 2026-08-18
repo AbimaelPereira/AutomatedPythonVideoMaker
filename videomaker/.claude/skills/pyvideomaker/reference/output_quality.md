@@ -5,12 +5,17 @@
 ```jsonc
 "output": {
   "ratio": "16:9-2k",   // "9:16" | "16:9" | "16:9-2k" (2560x1440) | "9:16-2k" (1440x2560)
-  "quality": "high"      // preset OU objeto de override fino
+  "quality": "high",     // preset OU objeto de override fino
+  "dir": "/mnt/videos"   // opcional: onde salvar (default: videomaker/output/)
 }
 ```
 
 Resolvido por `resolve_output_resolution` e `resolve_output_quality`
 ([utils.py](../../../../libs/utils.py)).
+
+O bloco `output` também pode vir do `channels_config/{canal}.json` — o do vídeo
+vence **campo a campo** (`deep_merge`). Útil para fixar `dir` por canal sem
+repetir em cada JSON.
 
 ## `output.ratio`
 
@@ -59,6 +64,38 @@ Controla o encoding x264 do **arquivo final**.
   do intervalo).
 - `preset` x264 final é validado contra a lista oficial
   (`ultrafast, superfast, veryfast, faster, fast, medium, slow, slower, veryslow, placebo`).
+
+## `output.dir` — salvar em outro lugar
+
+Por padrão a saída vai para `videomaker/output/{slug}/`, e o arquivo final acaba
+em `videomaker/output/{slug}.mp4`. `output.dir` troca essa **pasta base**;
+o `{slug}` continua sendo acrescentado por baixo dela.
+
+```jsonc
+"output": { "dir": "/mnt/hd-externo/renders" }
+// → /mnt/hd-externo/renders/{slug}/  durante o render
+// → /mnt/hd-externo/renders/{slug}.mp4  no final (fora do debug)
+```
+
+- **Absoluto** (`/mnt/videos`) → usado como está.
+- **Relativo** (`../renders`) → resolve a partir de `videomaker/` (o `main.py`
+  faz `chdir` para lá antes de rodar), **não** da pasta onde você invocou o
+  comando.
+- **`~`** (`~/videos/renders`) → expandido para o home.
+- A pasta é criada se não existir (`makedirs`).
+- Ausente → comportamento de sempre (`videomaker/output/`).
+
+Quando `dir` está setado, o log confirma com `[UVE] Diretório de saída: ...`.
+
+Fixar por canal, para todos os vídeos dele:
+
+```jsonc
+// channels_config/meu_canal.json
+{ "output": { "dir": "/mnt/videos/meu_canal" }, "global_settings": { /* ... */ } }
+```
+
+> Só muda **onde** os arquivos são gravados. Cache (`cache/`), tokens
+> (`tokens/`) e assets continuam relativos a `videomaker/`.
 
 ## Recomendação prática
 

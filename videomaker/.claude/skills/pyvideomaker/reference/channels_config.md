@@ -28,9 +28,15 @@ YouTube (categoria, token do canal). Estrutura típica:
     "token_file_name": "meu_canal.json",
     "privacy_status": "private",
     "category_id": "22"
-  }
+  },
+  "output": { "ratio": "9:16", "quality": "high", "dir": "/mnt/videos/meu_canal" }
 }
 ```
+
+Os três blocos de topo mesclados a partir do canal são **`global_settings`**,
+**`youtube`** e **`output`** — cada um com o do vídeo vencendo campo a campo.
+`output` no canal é útil para fixar `dir` (pasta de saída) e `ratio` de todos os
+vídeos daquele canal; ver [output_quality.md](output_quality.md).
 
 Canais reais de referência: `channels_config/hacker_patriota.json` (legenda
 estilo "glow" verde), `channels_config/devocional_com_jesus.json`,

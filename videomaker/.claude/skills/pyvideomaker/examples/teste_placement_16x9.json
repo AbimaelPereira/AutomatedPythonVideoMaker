@@ -1,6 +1,7 @@
 {
   "slug": "teste_placement_16x9",
   "channel_name": "exemplo",
+  "debug": true,
   "output_ratio": "16:9",
   "scenes": [
     {

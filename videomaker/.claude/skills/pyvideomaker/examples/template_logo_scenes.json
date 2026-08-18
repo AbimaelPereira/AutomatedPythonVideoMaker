@@ -1,0 +1,104 @@
+{
+  "slug": "template_logo_scenes",
+  "channel_name": "pyvideomaker",
+  "debug": true,
+  "output": {
+    "ratio": "16:9",
+    "quality": "draft"
+  },
+  "global_settings": {
+    "tts": {
+      "provider": "edge",
+      "voice": "en-US-AndrewNeural"
+    },
+    "padding_top": 0,
+    "padding_bottom": 0,
+    "padding_side": 0
+  },
+  "scenes": [
+    {
+      "id": "logo_center_title_below",
+      "_uso/": "Réplica fiel da cena 'introducao' de biblia-falada-ilustrada-template-final.json: logo (10%, width 34%), título grande (70%, width 45%, ExtraBold, font_size 100), subtítulo/tagline (80%, width 25%, LightItalic, font_size 100). Uso: abertura/intro.",
+      "narration": {
+        "text": "PyVideoMaker. {{TITULO_OU_TEMA}}."
+      },
+      "background": {
+        "visual": {
+          "type": "color",
+          "source": "#1A0F05"
+        }
+      },
+      "visual_elements": [
+        {
+          "type": "image",
+          "source": "./assets/image/pyvideomaker_logo.png",
+          "placement": { "anchor": ["center", "10%"], "width": "34%" }
+        },
+        {
+          "type": "text_box",
+          "content": "{{TITULO_OU_TEMA}}",
+          "style": {
+            "font_size": 100,
+            "text_color": "#FF8C32",
+            "font_path": "./assets/fonts/Montserrat/Montserrat-ExtraBold.ttf",
+            "background_color": "transparent"
+          },
+          "placement": { "anchor": ["center", "70%"], "width": "45%" }
+        },
+        {
+          "type": "text_box",
+          "content": "PyVideoMaker",
+          "style": {
+            "font_size": 100,
+            "text_color": "#FF8C32",
+            "font_path": "./assets/fonts/Montserrat/Montserrat-LightItalic.ttf",
+            "background_color": "transparent"
+          },
+          "placement": { "anchor": ["center", "80%"], "width": "25%" }
+        }
+      ]
+    },
+    {
+      "id": "logo_center_title_above",
+      "_uso/": "Réplica fiel da cena 'final' de biblia-falada-ilustrada-template-final.json: logo (10%, width 34%), tagline (70%, width 45%, LightItalic, font_size 100), handle (80%, width 25%, ExtraBold, font_size 100). Uso: encerramento.",
+      "narration": {
+        "text": "PyVideoMaker."
+      },
+      "background": {
+        "visual": {
+          "type": "color",
+          "source": "#1A0F05"
+        }
+      },
+      "visual_elements": [
+        {
+          "type": "image",
+          "source": "./assets/image/pyvideomaker_logo.png",
+          "placement": { "anchor": ["center", "10%"], "width": "34%" }
+        },
+        {
+          "type": "text_box",
+          "content": "PyVideoMaker",
+          "style": {
+            "font_size": 100,
+            "text_color": "#FF8C32",
+            "font_path": "./assets/fonts/Montserrat/Montserrat-LightItalic.ttf",
+            "background_color": "transparent"
+          },
+          "placement": { "anchor": ["center", "70%"], "width": "45%" }
+        },
+        {
+          "type": "text_box",
+          "content": "{{HANDLE}}",
+          "style": {
+            "font_size": 100,
+            "text_color": "#FF8C32",
+            "font_path": "./assets/fonts/Montserrat/Montserrat-ExtraBold.ttf",
+            "background_color": "transparent"
+          },
+          "placement": { "anchor": ["center", "80%"], "width": "35%" }
+        }
+      ]
+    }
+  ]
+}

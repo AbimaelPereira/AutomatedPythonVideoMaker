@@ -26,8 +26,9 @@ Não há suítes de testes. Os testes são feitos manualmente executando `main.p
 Cada objeto de vídeo possui:
 - `slug` — nome do arquivo de saída e da pasta dentro de `output/`
 - `channel_name` — carrega `channels_config/{channel_name}.json` como configuração base (mesclado via `deep_merge`)
-- `output` — objeto raiz da saída: `{ "ratio": ..., "quality": ... }` (ver abaixo).
+- `output` — objeto raiz da saída: `{ "ratio": ..., "quality": ..., "dir": ... }` (ver abaixo).
   Retrocompat: `output_ratio` solto na raiz ainda é aceito (equivale a `output.ratio`).
+  Também pode vir do `channels_config/{canal}.json` (o do vídeo vence campo a campo).
 - `global_settings` — sobrescreve os padrões do canal: `tts`, `subtitle`, `background`, `transitions`, `padding_*`, `remote_assets`
 - `scenes` (lista plana) OU `chapters` (agrupado; cada capítulo pode sobrescrever `global_settings` e `background.audio`)
 - `youtube` — title, description, tags, `token_file_name`, `privacy_status`, `publish_at`
@@ -38,10 +39,18 @@ Cada objeto de vídeo possui:
 
 ```jsonc
 "output": {
-  "ratio": "16:9-2k",   // "9:16" | "16:9" | "16:9-2k" (2560×1440) | "9:16-2k" (1440×2560)
-  "quality": "high"      // preset OU objeto de override fino (ver abaixo)
+  "ratio": "16:9-2k",     // "9:16" | "16:9" | "16:9-2k" (2560×1440) | "9:16-2k" (1440×2560)
+  "quality": "high",       // preset OU objeto de override fino (ver abaixo)
+  "dir": "/mnt/videos"     // opcional: pasta base da saída (default: videomaker/output/)
 }
 ```
+
+`output.dir` troca a **pasta base** da saída — o `{slug}` continua sendo
+acrescentado por baixo dela (`{dir}/{slug}/` durante o render, `{dir}/{slug}.mp4`
+no final). Caminho relativo resolve a partir de `videomaker/` (o `main.py` faz
+`chdir` para lá), `~` é expandido e a pasta é criada se não existir. Só muda onde
+os arquivos são **gravados**; `cache/`, `tokens/` e assets seguem relativos a
+`videomaker/`.
 
 `output.quality` controla o encoding x264 (resolvido por `resolve_output_quality` em `libs/utils.py`)
 e é aplicado em **todos** os pontos de render: cenas (paralelo/sequencial), mixagem de áudio e
@@ -72,10 +81,33 @@ re-encodes de concatenação (via `_ffmpeg_video_args`). Aceita:
 ```
 
 ### Tipos de visual de fundo
-- `"type": "directory"` — escolhe um arquivo aleatório de uma pasta
+- `"type": "directory"` — sorteia arquivos de uma pasta até cobrir a duração da cena (ver abaixo)
 - `"type": "file"` — caminho para um arquivo único
 - `"type": "remote_asset"` — resolve um slug via `RemoteAssetManager` (lê `cache/remote_assets.json`)
 - `"type": "ai"` — gera uma imagem/vídeo via `libs/AIProviders` (Pollinations)
+
+#### `type: "directory"` (fundo e `visual_elements`)
+
+A escolha dos arquivos vive no `DirectorySelector` (`libs/Background/DirectorySelector.py`),
+compartilhado pelo fundo, pelos `visual_elements` e pelos **dois** caminhos de render. Ele monta
+um plano de segmentos que cobre exatamente a duração da cena; cada caminho materializa o plano do
+seu jeito (MoviePy: `subclip`/`concatenate`; ffmpeg: inputs + `concat`).
+
+```jsonc
+{ "type": "directory", "source": "./assets/video/x",
+  "fill_strategy": "prefer_single",  // default | "concat" | "single"
+  "no_repeat_window": 20 }           // default
+```
+
+- `fill_strategy`: `prefer_single` (default) usa um arquivo só quando algum cobre a cena inteira,
+  senão concatena; `concat` sempre emenda vários; `single` força um só (com loop se preciso).
+  **O default mudou de `concat` para `prefer_single`** — declare `"concat"` para o comportamento antigo.
+- `no_repeat_window` (default 20): quantos sorteios recentes daquela pasta ficam bloqueados. O
+  histórico é gravado em `cache/directory_usage.json`, então vale **entre cenas e entre processos**
+  (as cenas rodam em `ProcessPoolExecutor`). Antes o histórico era atributo de instância do
+  `BackgroundEngine` — que é criado por cena — e por isso nunca evitava repetição de fato.
+- Metadados (duração/dimensões) vêm do `MediaProbe` via `ffprobe`, com cache em
+  `cache/media_probe.json` por `path+mtime+size`. Nenhum arquivo é decodificado para saber a duração.
 
 ### Posicionamento unificado (`placement`)
 
@@ -109,7 +141,9 @@ históricos (top 100 / bottom 850); 16:9 usa ~5% simétrico (side 96, top/bottom
 em 1920×1080). Sobrescrevíveis em `global_settings` (`padding_top/bottom/side`).
 
 > `visual_elements` com `type: "ai"` NÃO é suportado — só `image`, `video`,
-> `text_box`. AI só vale para `background.visual`. Veja `jsons/teste_placement_16x9.json`.
+> `directory`, `color`, `remote_asset` e `text_box`. AI só vale para
+> `background.visual`. Veja
+> `.claude/skills/pyvideomaker/examples/teste_placement_16x9.json`.
 
 ### Providers de TTS
 - `"edge"` — Microsoft Edge TTS (gratuito, sem credenciais)
@@ -184,7 +218,8 @@ Em ambos os modos o timing é **word-by-word**: cada palavra aparece no seu `sta
 quando o bloco limpa.
 
 `palette` é lista → o `deep_merge` **substitui** a lista inteira (a paleta da cena vence a global,
-não funde). Exemplo de teste: `jsons/teste_karaoke.json`.
+não funde). Exemplo de teste:
+`.claude/skills/pyvideomaker/examples/teste_karaoke.json`.
 
 ## Arquitetura
 

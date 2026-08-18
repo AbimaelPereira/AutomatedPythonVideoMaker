@@ -19,13 +19,14 @@ e armadilhas conhecidas. Exemplos prontos e copiáveis ficam em `examples/`.
 | [reference/scenes.md](reference/scenes.md) | Campos de cena, merge especial de `background` por cena. |
 | [reference/narration_tts.md](reference/narration_tts.md) | `narration`, providers TTS (edge/google/polly/kokoro/local_file), `silence_removal`. |
 | [reference/background.md](reference/background.md) | `background.visual` (tipos, `fit_mode`, `animation`), `background.audio` (ducking), remote assets. |
-| [reference/visual_elements.md](reference/visual_elements.md) | Tipos de overlay (image/video/text_box/color), `opacity`, `border_radius`, `animation`, `filters`. |
+| [reference/visual_elements.md](reference/visual_elements.md) | Tipos de overlay (image/video/directory/text_box/color/remote_asset), `opacity`, `border_radius`, `animation`, `filters`. |
 | [reference/placement.md](reference/placement.md) | Bloco `placement` (`anchor`/`width`/`region`) — compartilhado por `visual_elements` e `subtitle`; área segura/paddings. |
 | [reference/subtitle.md](reference/subtitle.md) | Legendas: `classic` vs `karaoke`, modos legado/linhas, paletas. **Fonte da verdade para `subtitle`.** |
 | [reference/filters.md](reference/filters.md) | `light_leak`, `particles`, `brightness_pulse`, `light_sweep` — `overlay` vs `modifier`. |
 | [reference/transitions.md](reference/transitions.md) | Transições `zoom`/`fade`, áudio de transição, override por cena. |
-| [reference/output_quality.md](reference/output_quality.md) | `output.ratio`, `output.quality` (presets x264 e override fino). |
+| [reference/output_quality.md](reference/output_quality.md) | `output.ratio`, `output.quality` (presets x264 e override fino), `output.dir` (pasta de saída). |
 | [reference/youtube_upload.md](reference/youtube_upload.md) | Upload: `title`/`tags`/`privacy_status`/`publish_at`, thumbnail (file/directory/ai). |
+| [reference/scene_templates.md](reference/scene_templates.md) | Templates de cena prontos (`examples/template_*.json`) — logo (abertura/encerramento) e split (imagem + legenda lado a lado), com armadilhas já resolvidas. |
 
 ## Exemplos prontos (`examples/`)
 
@@ -37,6 +38,22 @@ e armadilhas conhecidas. Exemplos prontos e copiáveis ficam em `examples/`.
 | [examples/teste_transitions.json](examples/teste_transitions.json) | Transição global (`zoom`), override por cena (`fade`), desativação por cena. |
 | [examples/teste_chapters.json](examples/teste_chapters.json) | `chapters` com trilha de fundo diferente por capítulo. |
 | [examples/teste_canal_completo.json](examples/teste_canal_completo.json) | `output` 2K + `chapters` + `youtube` juntos num só JSON. |
+
+## Templates de cena reutilizáveis
+
+Cenas já validadas (render + revisão visual de frames) prontas para
+reaproveitar como ponto de partida — ver
+[reference/scene_templates.md](reference/scene_templates.md) para os detalhes
+de cada uma. Cópia canônica dentro da skill em `examples/` (portátil, não
+depende do projeto); os originais de trabalho ficam em `jsons/templates/`
+(mesmo conteúdo, é onde se roda `python main.py`):
+
+| Arquivo na skill (`examples/`) | Espelha (`jsons/templates/`) | Cenas | Uso |
+|---|---|---|---|
+| [examples/template_logo_scenes.json](examples/template_logo_scenes.json) | `logo_scenes.json` | `logo_center_title_below`, `logo_center_title_above` | Abertura/intro e encerramento com logo + título + subtítulo empilhados. |
+| [examples/template_logo_scenes_demo.json](examples/template_logo_scenes_demo.json) | `logo_scenes_demo.json` | idem, com valores reais preenchidos | Versão pronta para `DEBUG=1 python main.py`. |
+| [examples/template_split_scenes.json](examples/template_split_scenes.json) | `split_scenes.json` | `split_dark_right_image`, `split_light_left_image`, `fullscreen_background_center_subtitle` | Tela dividida imagem+legenda lado a lado (dois sentidos) e fundo cheio com legenda central. |
+| [examples/template_split_scenes_demo.json](examples/template_split_scenes_demo.json) | `split_scenes_demo.json` | idem, com valores reais preenchidos | Versão pronta para `DEBUG=1 python main.py`. |
 
 ## Velocidade de render: o que o JSON decide
 
@@ -53,17 +70,23 @@ Tudo funciona nos dois; a diferença é só tempo. O log diz qual foi usado
 
 | Recurso | Alternativa rápida |
 |---|---|
-| `background.visual` `type: "directory"` ou `"video"` | `image`, `remote_asset`, `ai` ou `color` |
 | `background` `fit_mode: "contain-blur"` / `"contain"` | `cover` (default) |
 | `filters` (`light_leak`, `particles`, …) | remover, ou aceitar o custo |
 | `transitions` `type: "zoom"` | `type: "fade"` |
 | `transitions` com `audio` (sfx) | transição sem áudio |
-| `visual_elements` `type: "text_box"` ou vídeo | `image` / `remote_asset` / `color` |
+| `visual_elements` `type: "text_box"` | `image` / `remote_asset` / `color` |
+| `background.visual` `type: "ai"` com `content_type: "video"` | `content_type: "image"` |
 
 Já são rápidos: fundo `color`/`image`/`remote_asset`/`ai`, `cover` com
 `focus: "face"`, modo cover (`placement.width`+`height`), `zoom_in`, `zoom_out`,
 `zoom_pulse`, `fade_in`, `fade_zoom_in`, `border_radius`, `opacity`, legendas
 `classic` e `karaoke` (inclusive com `shadow.blur`) e transição `fade`.
+
+**Mídia de vídeo também é rápida** (`type: "video"` e `type: "directory"`, tanto
+em `background.visual` quanto em `visual_elements`): os trechos viram inputs
+normalizados + `concat` no filtergraph. O ganho aqui é menor que o de cenas de
+imagem estática (~2x em vez de ~10x), porque os dois caminhos precisam
+decodificar os arquivos de origem — o Python deixa de ser o gargalo.
 
 Para comparar os dois caminhos no mesmo JSON:
 `RENDER_BACKEND=moviepy|ffmpeg|auto python main.py meu.json`.
@@ -100,17 +123,21 @@ DEBUG=1 python main.py meu.json
 ```
 
 O log confirma com `[UVE] Debug config: True`. Em debug o upload é pulado e os
-arquivos intermediários ficam em `output/{slug}/` para inspeção.
+arquivos intermediários ficam em `output/{slug}/` para inspeção (ou em
+`{output.dir}/{slug}/`, se você tiver definido `output.dir`).
 
 ## Checklist ao entregar um JSON
 
 - [ ] `slug`, `channel_name`, `output`/`output_ratio` presentes (ou herdados do contexto).
 - [ ] **Se for teste: `debug: true` (ou `DEBUG=1`)** — senão pode subir pro YouTube.
-- [ ] `subtitle.enabled: true` quando se quer legenda (default é desligado).
+- [ ] `subtitle.enabled: true` quando se quer legenda (default é desligado) —
+      erro mais comum ao copiar cenas de template: bloco `subtitle` presente e
+      completo, mas sem esse campo → vídeo renderiza sem nenhuma legenda.
 - [ ] Fontes referenciadas (`font_path`) existem em `assets/fonts/`.
 - [ ] Cores em formato válido (`"#RRGGBB"` ou nome CSS).
 - [ ] No karaokê com `palette`: lista completa (não fundirá com a global).
 - [ ] `placement` (se usado) coerente com `output_ratio`/`output.ratio` e com os visuais.
-- [ ] `visual_elements` não usa `type: "ai"` (só `image`/`video`/`text_box`/`color`) — mas
+- [ ] `visual_elements` não usa `type: "ai"` (só `image`/`video`/`directory`/
+      `text_box`/`color`/`remote_asset`) — mas
       IA dentro de `source` funciona, ver [reference/visual_elements.md](reference/visual_elements.md).
 - [ ] `chapters` (se usado) tem `background.audio` dentro de `global_settings` de cada capítulo, não fora.

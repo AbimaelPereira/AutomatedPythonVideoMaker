@@ -23,9 +23,59 @@ Resolvidos em `BackgroundEngine.build_scene_background`
 | `"color"` (default se ausente) | `source` (hex, default `#000000`) | `ColorClip` sólido. |
 | `"image"` | `source`, `fit_mode`, `fill_color` | Imagem única. |
 | `"video"` | `source`, `fit_mode` | Vídeo único; faz loop ou corta para a duração da cena. |
-| `"directory"` | `source`, `shuffle`, `max_clips`, `max_clip_duration`, `image_default_duration` | Sorteia/concatena arquivos de uma pasta (`DirectoryType`) até preencher a duração. |
+| `"directory"` | `source`, `fill_strategy`, `no_repeat_window`, `shuffle`, `max_clips`, `max_clip_duration`, `image_default_duration` | Sorteia arquivos de uma pasta até preencher a duração da cena — ver seção abaixo. |
 | `"ai"` | `provider`, `content_type`, `prompt`, `parameters`, `cache_key` | Gera via `AIProviders` (Pollinations), com cache em disco. |
 | `"remote_asset"` | `source` (= slug), `register_remote_asset_as` | Resolve um slug via `RemoteAssetManager` — ver seção abaixo. |
+
+### `type: "directory"` — como a pasta vira cena
+
+A escolha dos arquivos é feita pelo `DirectorySelector`
+([DirectorySelector.py](../../../../libs/Background/DirectorySelector.py)), que
+monta um **plano de preenchimento**: a lista de trechos que, emendados, cobrem
+exatamente a duração da cena. O mesmo plano vale para os dois caminhos de
+render (ffmpeg e MoviePy) e também para `visual_elements` — ver
+[visual_elements.md](visual_elements.md).
+
+```jsonc
+"visual": {
+  "type": "directory",
+  "source": "./assets/video/background/suspense",
+  "fill_strategy": "prefer_single",   // default
+  "no_repeat_window": 20,              // default
+  "max_clips": 4,                      // opcional: teto de trechos
+  "max_clip_duration": 8,              // opcional: nenhum trecho passa disso
+  "image_default_duration": 4          // duração de cada imagem (default 4s)
+}
+```
+
+**`fill_strategy`** — como preencher a duração:
+
+| valor | Comportamento |
+|---|---|
+| `"prefer_single"` (**default**) | Usa um arquivo só, se existir algum que cubra a cena inteira; senão concatena. |
+| `"concat"` | Sempre emenda vários arquivos até cobrir a duração. |
+| `"single"` | Força um arquivo só. Se nenhum cobrir, usa o mais longo em loop. |
+
+> O default é `prefer_single`: cenas cuja pasta tenha clipes longos o bastante
+> mostram um vídeo contínuo em vez de vários cortes. Para o comportamento
+> antigo (sempre fragmentar), declare `"fill_strategy": "concat"`.
+
+**`no_repeat_window`** (default 20) — quantos sorteios recentes daquela pasta
+entram no bloqueio anti-repetição. O histórico é gravado em
+`cache/directory_usage.json`, então vale **entre cenas e entre processos** (o
+pipeline renderiza cenas em paralelo). Se a janela esvaziar as opções — pasta
+menor que a janela —, ela é ignorada: melhor repetir do que ficar sem fundo.
+`0` desliga o anti-repetição.
+
+Detalhes que costumam surpreender:
+
+- Quando um arquivo é mais longo que o trecho necessário, o **início é
+  sorteado** — a mesma pasta não mostra sempre os primeiros segundos do clipe.
+- Se a pasta inteira não bastar para a cena, ela é percorrida de novo
+  (reembaralhada) em vez de esticar um clipe em loop.
+- Vídeos ilegíveis (sem duração no `ffprobe`) são descartados do sorteio.
+- Cobertura vence variedade: se o único arquivo que cobre a cena está bloqueado
+  pelo anti-repetição, ele é usado mesmo assim em vez de forçar um loop visível.
 
 ### Cache do `type: "ai"`
 
@@ -100,6 +150,19 @@ Mesclado entre global e cena via `deep_merge` (`_apply_filters`). Ver
   voz no áudio da narração), via `AudioEffects.apply_ducking`
   ([AudioEffects.py](../../../../libs/Audio/AudioEffects.py)). Sem ducking, a
   trilha toca no volume fixo o tempo todo.
+
+  Campos aceitos dentro de `ducking` (todos opcionais):
+
+  | Campo | Default | O que faz |
+  |---|---|---|
+  | `ducking_db` | `-18.0` | Quanto abaixar a trilha durante a fala (dB, negativo). |
+  | `threshold_db` | `-40.0` | Acima deste nível, a narração conta como "fala". |
+  | `attack_ms` | `50` | Tempo para abaixar quando a fala começa. |
+  | `release_ms` | `300` | Tempo para voltar ao volume cheio quando a fala para. |
+  | `chunk_ms` | `10` | Resolução da análise; raramente precisa mudar. |
+
+  > `-18.0` é bem mais agressivo que o `-10.0` do exemplo acima — se a trilha
+  > sumir demais sob a narração, `ducking_db` é o campo a ajustar.
 - Aplicado uma vez por **vídeo inteiro** (ou por capítulo, se usar `chapters`)
   — não por cena. Ver [global_settings.md](global_settings.md#capítulos-chapters).
 

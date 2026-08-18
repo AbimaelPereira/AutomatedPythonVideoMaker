@@ -29,6 +29,7 @@ da cena, processados por `VisualClip`
 | `"text_box"` | `content`, `style.{font_family,font_size,padding,background_color,text_color,border_radius,strikethrough}` | Renderiza texto como imagem PIL (não usa o `SubtitleEngine`). |
 | `"color"` | `color` (hex, default `#000000`) | `ColorClip` sólido — útil como overlay de escurecimento (combine com `placement.width/height` e `opacity`). |
 | `"remote_asset"` | `source` (= slug), `register_remote_asset_as` | Resolve slug via `RemoteAssetManager` (mesma mecânica do `background.visual`, ver [background.md](background.md#remote-assets)); despacha para imagem ou vídeo pela extensão do arquivo baixado. |
+| `"directory"` | `source`, `fill_strategy`, `no_repeat_window`, `max_clips`, `max_clip_duration`, `image_default_duration`, `audio.keep_audio` | Sorteia arquivos de uma pasta até cobrir a duração da cena — ver seção abaixo. |
 
 > **`type: "ai"` não é suportado em `visual_elements`** — só em
 > `background.visual`. Tentar usar é silenciosamente ignorado (`clip` fica
@@ -40,6 +41,33 @@ da cena, processados por `VisualClip`
 > troca o `source` pelo caminho do arquivo. Diferente do `background.visual`,
 > esse caminho **não usa o AICache** — regenera a cada execução, e o
 > `ai_cache: false` não tem efeito sobre ele.
+
+## `type: "directory"` — pasta como elemento
+
+Mesma mecânica do fundo (mesmo `DirectorySelector`, mesmos campos, mesmo
+histórico anti-repetição em `cache/directory_usage.json`) — ver
+[background.md](background.md#type-directory--como-a-pasta-vira-cena) para o
+detalhamento de `fill_strategy` e `no_repeat_window`.
+
+```jsonc
+{
+  "type": "directory",
+  "source": "./assets/video/b_roll",
+  "fill_strategy": "prefer_single",   // default
+  "border_radius": 28,
+  "placement": { "anchor": ["right", "center"], "width": "45%" }
+}
+```
+
+Diferenças em relação ao fundo:
+
+- O **aspect ratio do elemento vem do primeiro arquivo** do plano; os demais são
+  ajustados (cover) para o mesmo tamanho antes de emendar. Numa pasta com
+  orientações misturadas, o primeiro sorteado decide o formato da caixa.
+- Como a pasta é compartilhada com o fundo se apontarem para o mesmo `source`,
+  o anti-repetição evita que o mesmo clipe apareça no fundo e no overlay ao
+  mesmo tempo.
+- `audio.keep_audio` funciona como no `type: "video"` (default silencia).
 
 ## `placement`
 

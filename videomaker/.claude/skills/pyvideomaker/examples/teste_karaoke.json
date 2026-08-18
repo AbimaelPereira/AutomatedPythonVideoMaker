@@ -1,6 +1,7 @@
 {
   "slug": "teste_karaoke",
   "channel_name": "exemplo",
+  "debug": true,
   "output_ratio": "9:16",
   "scenes": [
     {

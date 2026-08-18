@@ -1,6 +1,7 @@
 {
   "slug": "teste_canal_completo",
   "channel_name": "exemplo",
+  "debug": true,
   "output": { "ratio": "16:9-2k", "quality": "high" },
   "global_settings": {
     "tts": { "provider": "edge", "voice": "pt-BR-AntonioNeural", "rate": "+15%" },
