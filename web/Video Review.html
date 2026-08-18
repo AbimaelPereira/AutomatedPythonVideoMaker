@@ -1,0 +1,1192 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<title>Video Review</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #111318;
+    --card: #1c1f26;
+    --card-2: #232730;
+    --border: #2a2d35;
+    --text: #ffffff;
+    --muted: #8b8fa8;
+    --blue: #4f7ef8;
+    --green: #22c55e;
+    --yellow: #eab308;
+    --red: #ef4444;
+    --orange: #f97316;
+    --radius: 10px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); font-family: 'Inter', system-ui, -apple-system, sans-serif; font-size: 14px; line-height: 1.5; }
+  body { padding-top: 64px; min-height: 100vh; }
+
+  /* ---------- Navbar ---------- */
+  .navbar {
+    position: fixed; top: 0; left: 0; right: 0; height: 64px; z-index: 100;
+    background: rgba(17, 19, 24, 0.92);
+    backdrop-filter: saturate(140%) blur(10px);
+    -webkit-backdrop-filter: saturate(140%) blur(10px);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; padding: 0 24px; gap: 16px;
+  }
+  .nav-left, .nav-right { display: flex; align-items: center; gap: 12px; }
+  .nav-right { margin-left: auto; }
+  .back-btn { width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; background: transparent; border: 1px solid var(--border); color: var(--text); cursor: pointer; transition: background .15s; }
+  .back-btn:hover { background: var(--card-2); }
+  .nav-title { font-weight: 600; font-size: 15px; letter-spacing: -0.01em; }
+  .badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 6px; background: var(--card-2); border: 1px solid var(--border); color: var(--muted); font-size: 12px; font-weight: 500; font-variant-numeric: tabular-nums; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 500; }
+  .chip-yellow { background: rgba(234, 179, 8, 0.12); color: var(--yellow); border: 1px solid rgba(234, 179, 8, 0.25); }
+  .chip-yellow::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--yellow); box-shadow: 0 0 8px rgba(234, 179, 8, 0.6); }
+
+  .btn { display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; transition: all .15s; font-family: inherit; border: 1px solid transparent; }
+  .btn-outline-red { background: transparent; border-color: rgba(239, 68, 68, 0.45); color: var(--red); }
+  .btn-outline-red:hover { background: rgba(239, 68, 68, 0.08); border-color: var(--red); }
+  .btn-green { background: var(--green); color: #062b15; font-weight: 600; }
+  .btn-green:hover { background: #1eb556; }
+  .btn-ghost { background: var(--card-2); color: var(--text); border-color: var(--border); }
+  .btn-ghost:hover { background: #2c313c; }
+  .btn-blue { background: var(--blue); color: white; }
+  .btn-blue:hover { filter: brightness(1.08); }
+
+  /* ---------- Layout ---------- */
+  .layout { display: grid; grid-template-columns: 1.5fr 1fr; gap: 20px; padding: 20px 24px 40px; max-width: 1600px; margin: 0 auto; }
+  @media (max-width: 1100px) { .layout { grid-template-columns: 1fr; } }
+
+  .column-title { display: flex; align-items: center; justify-content: space-between; margin: 4px 0 14px; }
+  .column-title h2 { margin: 0; font-size: 13px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
+  .column-title .meta { font-size: 12px; color: var(--muted); }
+
+  /* ---------- Scene cards ---------- */
+  .scene-list { display: flex; flex-direction: column; gap: 12px; }
+  .scene-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+    overflow: hidden; transition: border-color .2s, box-shadow .2s;
+    position: relative;
+  }
+  .scene-card.active { border-color: rgba(79, 126, 248, 0.35); box-shadow: 0 0 0 1px rgba(79, 126, 248, 0.12); }
+  .scene-card.active::before {
+    content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+    background: var(--blue);
+  }
+  .scene-header { padding: 14px 16px; display: flex; align-items: flex-start; gap: 12px; cursor: pointer; user-select: none; }
+  .scene-header:hover { background: rgba(255,255,255,0.015); }
+  .drag-handle { color: var(--muted); display: flex; align-items: center; height: 22px; cursor: grab; }
+  .drag-handle:active { cursor: grabbing; }
+  .scene-num { font-weight: 600; font-size: 13px; color: var(--text); letter-spacing: 0.02em; font-variant-numeric: tabular-nums; }
+  .scene-head-main { flex: 1; min-width: 0; }
+  .scene-head-row { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+  .scene-preview { color: var(--muted); font-size: 13px; line-height: 1.45; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .scene-active .scene-preview { display: none; }
+  .scene-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .scene-active .scene-chips { display: none; }
+  .mini-chip {
+    display: inline-flex; align-items: center; gap: 5px; padding: 3px 8px; border-radius: 6px;
+    background: var(--card-2); border: 1px solid var(--border); color: var(--muted);
+    font-size: 11.5px; font-weight: 500;
+  }
+  .mini-chip svg { opacity: 0.7; }
+  .mini-chip.on { color: var(--green); }
+  .mini-chip.on::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: var(--green); }
+  .mini-chip.off { color: #6b7080; }
+  .mini-chip.off::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: #4a4e5a; }
+
+  .scene-header-actions { display: flex; align-items: center; gap: 4px; color: var(--muted); }
+  .icon-btn { width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border-radius: 6px; background: transparent; border: none; color: var(--muted); cursor: pointer; transition: all .15s; }
+  .icon-btn:hover { background: var(--card-2); color: var(--text); }
+  .chevron-toggle { transition: transform .25s ease; }
+  .scene-card.expanded .chevron-toggle { transform: rotate(180deg); }
+
+  /* ---------- Scene body / accordions ---------- */
+  .scene-body {
+    max-height: 0; overflow: hidden;
+    transition: max-height .35s ease;
+    border-top: 1px solid transparent;
+  }
+  .scene-card.expanded .scene-body { max-height: 5000px; border-top-color: var(--border); }
+  .scene-body-inner { padding: 4px 0 8px; }
+
+  .accordion { border-bottom: 1px solid var(--border); }
+  .accordion:last-child { border-bottom: none; }
+  .accordion-head {
+    padding: 14px 18px; display: flex; align-items: center; justify-content: space-between;
+    cursor: pointer; user-select: none;
+  }
+  .accordion-head:hover { background: rgba(255,255,255,0.015); }
+  .accordion-title { display: flex; align-items: center; gap: 10px; font-size: 13.5px; font-weight: 600; letter-spacing: -0.005em; }
+  .accordion-title .override-dot {
+    width: 7px; height: 7px; border-radius: 50%; background: var(--orange);
+    box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.15);
+  }
+  .accordion-title .override-text { color: var(--orange); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
+  .accordion-chevron { color: var(--muted); transition: transform .25s ease; }
+  .accordion.open .accordion-chevron { transform: rotate(180deg); }
+  .accordion-body { max-height: 0; overflow: hidden; transition: max-height .35s ease; }
+  .accordion.open .accordion-body { max-height: 1200px; }
+  .accordion-content { padding: 4px 18px 20px; }
+
+  /* ---------- Form controls ---------- */
+  .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+  .field:last-child { margin-bottom: 0; }
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
+  .field-row:last-child { margin-bottom: 0; }
+  .field-label { font-size: 12px; font-weight: 500; color: var(--muted); display: flex; align-items: center; justify-content: space-between; }
+  .field-hint { font-size: 12px; color: var(--muted); margin: -2px 0 10px; }
+  .field-hint .pill { display: inline-block; padding: 1px 6px; border-radius: 4px; background: rgba(79, 126, 248, 0.1); color: var(--blue); font-weight: 500; font-size: 11px; margin: 0 2px; }
+
+  input[type="text"], input[type="number"], input[type="datetime-local"], textarea, select {
+    background: #15171d; border: 1px solid var(--border); color: var(--text);
+    border-radius: 7px; padding: 9px 11px; font-size: 13px; font-family: inherit;
+    width: 100%; transition: border-color .15s, background .15s;
+    outline: none;
+  }
+  input[type="text"]:focus, input[type="number"]:focus, input[type="datetime-local"]:focus, textarea:focus, select:focus {
+    border-color: var(--blue); background: #181b22;
+  }
+  input::placeholder, textarea::placeholder { color: #5b5f72; }
+  textarea { resize: vertical; min-height: 80px; line-height: 1.5; font-family: inherit; }
+  select {
+    appearance: none; -webkit-appearance: none;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238b8fa8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'></polyline></svg>");
+    background-repeat: no-repeat; background-position: right 11px center;
+    padding-right: 30px;
+  }
+  input[type="color"] { width: 100%; height: 38px; border: 1px solid var(--border); border-radius: 7px; background: #15171d; padding: 3px; cursor: pointer; }
+
+  /* Toggle switch */
+  .toggle-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 0; }
+  .toggle-row .toggle-text { display: flex; flex-direction: column; gap: 2px; }
+  .toggle-row .toggle-label { font-size: 13px; font-weight: 500; }
+  .toggle-row .toggle-desc { font-size: 12px; color: var(--muted); }
+  .switch { position: relative; width: 36px; height: 20px; flex-shrink: 0; cursor: pointer; }
+  .switch input { opacity: 0; width: 0; height: 0; position: absolute; }
+  .switch .track { position: absolute; inset: 0; background: #353945; border-radius: 999px; transition: background .2s; }
+  .switch .thumb { position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; background: white; border-radius: 50%; transition: transform .2s, background .2s; box-shadow: 0 1px 2px rgba(0,0,0,0.3); }
+  .switch input:checked + .track { background: var(--blue); }
+  .switch input:checked + .track + .thumb { transform: translateX(16px); }
+  .switch.green input:checked + .track { background: var(--green); }
+  .switch.disabled { opacity: 0.5; pointer-events: none; }
+
+  /* Slider */
+  .slider-row { display: flex; align-items: center; gap: 12px; margin-top: 8px; }
+  .slider-row .slider-label { font-size: 12px; color: var(--muted); min-width: 60px; }
+  .slider-row .slider-value { font-size: 12px; color: var(--text); font-variant-numeric: tabular-nums; min-width: 36px; text-align: right; }
+  input[type="range"] {
+    -webkit-appearance: none; appearance: none; flex: 1; height: 4px;
+    background: var(--border); border-radius: 999px; outline: none;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none; width: 16px; height: 16px;
+    background: var(--blue); border-radius: 50%; cursor: pointer;
+    box-shadow: 0 0 0 4px rgba(79, 126, 248, 0.15);
+    transition: transform .15s;
+  }
+  input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.1); }
+  input[type="range"]::-moz-range-thumb { width: 16px; height: 16px; background: var(--blue); border-radius: 50%; cursor: pointer; border: none; }
+
+  /* Filters sub-section */
+  .filters-block { background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 8px; padding: 4px 14px; margin-top: 8px; }
+  .filters-block .filter-item { padding: 10px 0; border-bottom: 1px dashed var(--border); }
+  .filters-block .filter-item:last-child { border-bottom: none; }
+  .filters-block .filter-item.disabled { opacity: 0.45; }
+  .sub-label { font-size: 11.5px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; }
+
+  /* Overlays */
+  .overlay-empty {
+    border: 1.5px dashed var(--border); border-radius: 8px; padding: 18px;
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    margin-bottom: 12px;
+  }
+  .overlay-empty p { margin: 0; color: var(--muted); font-size: 13px; }
+  .overlay-item {
+    background: var(--card-2); border: 1px solid var(--border); border-radius: 8px;
+    padding: 12px; display: grid;
+    grid-template-columns: 40px 1fr auto;
+    gap: 12px; align-items: start; margin-top: 8px;
+  }
+  .overlay-thumb {
+    width: 40px; height: 40px; border-radius: 6px;
+    background: repeating-linear-gradient(45deg, #2f323c 0 6px, #353945 6px 12px);
+    display: flex; align-items: center; justify-content: center; color: var(--muted);
+    flex-shrink: 0;
+  }
+  .overlay-meta { min-width: 0; }
+  .overlay-line1 { font-size: 12.5px; display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .overlay-line1 .type-pill { background: rgba(79, 126, 248, 0.14); color: var(--blue); padding: 2px 7px; border-radius: 4px; font-weight: 600; font-size: 11px; }
+  .overlay-line1 .source { color: var(--muted); font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .overlay-controls { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 8px; }
+  .overlay-controls input, .overlay-controls select { padding: 6px 8px; font-size: 12px; }
+  .overlay-delete { color: var(--muted); cursor: pointer; transition: color .15s; padding: 4px; }
+  .overlay-delete:hover { color: var(--red); }
+
+  /* ---------- Right column cards ---------- */
+  .panel-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+    margin-bottom: 14px; overflow: hidden;
+  }
+  .panel-head {
+    padding: 14px 18px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .panel-head .panel-title { font-size: 13.5px; font-weight: 600; letter-spacing: -0.005em; display: flex; align-items: center; gap: 10px; }
+  .panel-head .panel-sub { font-size: 11.5px; color: var(--muted); font-weight: 500; }
+  .panel-body { padding: 16px 18px; }
+  .subsection { margin-top: 16px; padding-top: 14px; border-top: 1px dashed var(--border); }
+  .subsection:first-child { margin-top: 0; padding-top: 0; border-top: none; }
+  .subsection-title { font-size: 11.5px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 12px; }
+
+  /* Tags */
+  .tags-input {
+    display: flex; flex-wrap: wrap; gap: 6px; padding: 7px 8px;
+    border: 1px solid var(--border); border-radius: 7px; background: #15171d;
+    min-height: 38px; align-items: center;
+  }
+  .tags-input:focus-within { border-color: var(--blue); }
+  .tag-chip {
+    background: rgba(79, 126, 248, 0.14); color: var(--blue);
+    padding: 3px 4px 3px 9px; border-radius: 5px; font-size: 12px;
+    display: inline-flex; align-items: center; gap: 4px;
+  }
+  .tag-chip .tag-close { width: 16px; height: 16px; display: inline-flex; align-items: center; justify-content: center; border-radius: 3px; cursor: pointer; color: var(--blue); opacity: 0.7; }
+  .tag-chip .tag-close:hover { opacity: 1; background: rgba(79, 126, 248, 0.2); }
+  .tags-input input {
+    background: transparent; border: none; outline: none; color: var(--text);
+    flex: 1; min-width: 100px; padding: 4px 2px; font-size: 12.5px;
+  }
+
+  /* Context menu */
+  .menu-popup {
+    position: absolute; z-index: 50;
+    background: #20232c; border: 1px solid var(--border); border-radius: 8px;
+    padding: 5px; min-width: 160px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.45), 0 2px 6px rgba(0,0,0,0.3);
+    animation: menu-in .12s ease-out;
+  }
+  @keyframes menu-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+  .menu-popup button {
+    display: flex; align-items: center; gap: 8px; width: 100%;
+    background: transparent; border: none; color: var(--text);
+    padding: 7px 10px; border-radius: 5px; font-size: 13px; cursor: pointer;
+    font-family: inherit; text-align: left;
+  }
+  .menu-popup button:hover { background: var(--card-2); }
+  .menu-popup button.danger { color: var(--red); }
+  .menu-popup .sep { height: 1px; background: var(--border); margin: 4px 2px; }
+
+  /* TikTok collapse */
+  .tiktok-extra { max-height: 0; overflow: hidden; transition: max-height .35s ease; }
+  .panel-card.tt-on .tiktok-extra { max-height: 1000px; }
+  .tiktok-extra-inner { padding-top: 16px; margin-top: 16px; border-top: 1px dashed var(--border); }
+
+  /* Disabled state */
+  .field.disabled, .field-row.disabled { opacity: 0.45; pointer-events: none; }
+
+  /* Pulse animation for override dot */
+  @keyframes pulse-orange {
+    0%, 100% { box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.15); }
+    50% { box-shadow: 0 0 0 5px rgba(249, 115, 22, 0.05); }
+  }
+  .override-dot { animation: pulse-orange 2s ease-in-out infinite; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #2a2d35; border-radius: 6px; }
+  ::-webkit-scrollbar-thumb:hover { background: #3a3d47; }
+</style>
+</head>
+<body>
+
+<!-- =============== NAVBAR =============== -->
+<nav class="navbar">
+  <div class="nav-left">
+    <button class="back-btn" aria-label="Voltar">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+    </button>
+    <div class="nav-title">Video Review</div>
+    <span class="badge">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="3" width="10" height="18" rx="1"></rect></svg>
+      9:16
+    </span>
+    <span class="chip chip-yellow">Pending Review</span>
+  </div>
+  <div class="nav-right">
+    <button class="btn btn-outline-red" onclick="alert('Discard action mocked')">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"></path></svg>
+      Discard
+    </button>
+    <button class="btn btn-green" onclick="alert('Approve & Generate mocked')">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+      Approve &amp; Generate
+    </button>
+  </div>
+</nav>
+
+<!-- =============== LAYOUT =============== -->
+<div class="layout">
+
+  <!-- ============ LEFT COLUMN ============ -->
+  <section class="left-col">
+    <div class="column-title">
+      <h2>Cenas</h2>
+      <span class="meta"><span id="sceneCount">3</span> cenas · duração total ~37s</span>
+    </div>
+
+    <div class="scene-list" id="sceneList">
+
+      <!-- Scene 01 -->
+      <article class="scene-card" data-scene="1">
+        <div class="scene-header" onclick="toggleScene(1, event)">
+          <span class="drag-handle" title="Arrastar">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.6"></circle><circle cx="15" cy="6" r="1.6"></circle><circle cx="9" cy="12" r="1.6"></circle><circle cx="15" cy="12" r="1.6"></circle><circle cx="9" cy="18" r="1.6"></circle><circle cx="15" cy="18" r="1.6"></circle></svg>
+          </span>
+          <div class="scene-head-main">
+            <div class="scene-head-row">
+              <span class="scene-num">Scene 01</span>
+            </div>
+            <div class="scene-preview">Hoje eu quero te lembrar de algo muito importante: Deus não te esqueceu. Mesmo quando o silêncio parece infinito, Ele está trabalhando nos bastidores da sua vida...</div>
+            <div class="scene-chips">
+              <span class="mini-chip">Edge TTS · pt-BR-Francisca</span>
+              <span class="mini-chip">Directory</span>
+              <span class="mini-chip on">Subtitles</span>
+              <span class="mini-chip">12.4s</span>
+            </div>
+          </div>
+          <div class="scene-header-actions">
+            <button class="icon-btn menu-btn" onclick="openSceneMenu(event, 1)" aria-label="Menu">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"></circle><circle cx="12" cy="12" r="1.8"></circle><circle cx="19" cy="12" r="1.8"></circle></svg>
+            </button>
+            <button class="icon-btn" aria-label="Expandir">
+              <svg class="chevron-toggle" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </button>
+          </div>
+        </div>
+        <div class="scene-body"></div>
+      </article>
+
+      <!-- Scene 02 (active, expanded) -->
+      <article class="scene-card active expanded scene-active" data-scene="2">
+        <div class="scene-header" onclick="toggleScene(2, event)">
+          <span class="drag-handle" title="Arrastar">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.6"></circle><circle cx="15" cy="6" r="1.6"></circle><circle cx="9" cy="12" r="1.6"></circle><circle cx="15" cy="12" r="1.6"></circle><circle cx="9" cy="18" r="1.6"></circle><circle cx="15" cy="18" r="1.6"></circle></svg>
+          </span>
+          <div class="scene-head-main">
+            <div class="scene-head-row">
+              <span class="scene-num">Scene 02</span>
+              <span class="mini-chip on" style="font-size:10.5px">Editando</span>
+            </div>
+            <div class="scene-preview">Talvez você esteja passando por uma fase difícil, sentindo que suas orações não estão sendo ouvidas...</div>
+            <div class="scene-chips">
+              <span class="mini-chip">Edge TTS</span>
+              <span class="mini-chip">Directory</span>
+              <span class="mini-chip on">Subtitles</span>
+              <span class="mini-chip">15.1s</span>
+            </div>
+          </div>
+          <div class="scene-header-actions">
+            <button class="icon-btn menu-btn" onclick="openSceneMenu(event, 2)" aria-label="Menu">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"></circle><circle cx="12" cy="12" r="1.8"></circle><circle cx="19" cy="12" r="1.8"></circle></svg>
+            </button>
+            <button class="icon-btn" aria-label="Recolher">
+              <svg class="chevron-toggle" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="scene-body">
+          <div class="scene-body-inner">
+
+            <!-- Narration -->
+            <div class="accordion open">
+              <div class="accordion-head" onclick="toggleAcc(this)">
+                <div class="accordion-title">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--blue)"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+                  Narração
+                </div>
+                <svg class="accordion-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+              </div>
+              <div class="accordion-body">
+                <div class="accordion-content">
+                  <div class="field">
+                    <label class="field-label">Texto da narração</label>
+                    <textarea placeholder="Digite o texto da narração..." rows="4">Talvez você esteja passando por uma fase difícil, sentindo que suas orações não estão sendo ouvidas. Mas eu te digo: Deus está mais próximo de você do que você imagina. Ele conhece cada lágrima que você derramou.</textarea>
+                  </div>
+                  <div class="toggle-row">
+                    <div class="toggle-text">
+                      <span class="toggle-label">Legendas</span>
+                      <span class="toggle-desc">Renderizar legendas automáticas a partir do TTS</span>
+                    </div>
+                    <label class="switch green"><input type="checkbox" checked><span class="track"></span><span class="thumb"></span></label>
+                  </div>
+                  <div class="field">
+                    <label class="field-label">Duração (s)</label>
+                    <input type="text" placeholder="auto (TTS length)" value="">
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- TTS -->
+            <div class="accordion open" data-section="tts">
+              <div class="accordion-head" onclick="toggleAcc(this)">
+                <div class="accordion-title">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--blue)"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
+                  TTS — override
+                  <span class="override-dot" data-override="tts" style="display:none"></span>
+                  <span class="override-text" data-override-text="tts" style="display:none">override active</span>
+                </div>
+                <svg class="accordion-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+              </div>
+              <div class="accordion-body">
+                <div class="accordion-content">
+                  <div class="field-hint">Herdando do global: <span class="pill">Edge TTS</span> · <span class="pill">pt-BR-FranciscaNeural</span></div>
+                  <div class="field-row">
+                    <div class="field">
+                      <label class="field-label">Provider</label>
+                      <select id="ttsProvider" onchange="checkOverride('tts')">
+                        <option>Edge TTS</option>
+                        <option>Google Cloud TTS</option>
+                        <option>AWS Polly</option>
+                        <option>Local File</option>
+                      </select>
+                    </div>
+                    <div class="field">
+                      <label class="field-label">Voice</label>
+                      <select id="ttsVoice" onchange="checkOverride('tts')">
+                        <option>pt-BR-FranciscaNeural</option>
+                        <option>pt-BR-AntonioNeural</option>
+                        <option>pt-BR-BrendaNeural</option>
+                        <option>pt-BR-DonatoNeural</option>
+                        <option>pt-BR-ElzaNeural</option>
+                        <option>pt-BR-FabioNeural</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Background Visual -->
+            <div class="accordion open">
+              <div class="accordion-head" onclick="toggleAcc(this)">
+                <div class="accordion-title">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--blue)"><rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                  Background — Visual
+                </div>
+                <svg class="accordion-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+              </div>
+              <div class="accordion-body">
+                <div class="accordion-content">
+                  <div class="field-row">
+                    <div class="field">
+                      <label class="field-label">Tipo</label>
+                      <select>
+                        <option>Directory</option>
+                        <option>Single File</option>
+                        <option>Remote Asset</option>
+                        <option>AI Generated</option>
+                      </select>
+                    </div>
+                    <div class="field">
+                      <label class="field-label">Path</label>
+                      <input type="text" value="./assets/videos/pregacoes/">
+                    </div>
+                  </div>
+                  <div class="sub-label">Filtros</div>
+                  <div class="filters-block">
+                    <div class="filter-item" id="zoomFilter">
+                      <div class="toggle-row">
+                        <div class="toggle-text">
+                          <span class="toggle-label">Animação de zoom</span>
+                          <span class="toggle-desc">Zoom suave nos clipes de fundo</span>
+                        </div>
+                        <label class="switch"><input type="checkbox" checked onchange="toggleZoom(this)"><span class="track"></span><span class="thumb"></span></label>
+                      </div>
+                      <div class="slider-row" id="zoomSliderRow">
+                        <span class="slider-label">Velocidade</span>
+                        <input type="range" min="0.1" max="1" step="0.1" value="0.3" oninput="document.getElementById('zoomVal').textContent = parseFloat(this.value).toFixed(1)">
+                        <span class="slider-value" id="zoomVal">0.3</span>
+                      </div>
+                    </div>
+                    <div class="filter-item disabled">
+                      <div class="toggle-row">
+                        <div class="toggle-text">
+                          <span class="toggle-label">Contain + blur</span>
+                          <span class="toggle-desc">Adicionar borrão atrás de mídia menor que o frame</span>
+                        </div>
+                        <label class="switch disabled"><input type="checkbox"><span class="track"></span><span class="thumb"></span></label>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Background Audio -->
+            <div class="accordion">
+              <div class="accordion-head" onclick="toggleAcc(this)">
+                <div class="accordion-title">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--blue)"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>
+                  Background — Áudio
+                </div>
+                <svg class="accordion-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+              </div>
+              <div class="accordion-body">
+                <div class="accordion-content">
+                  <div class="toggle-row">
+                    <div class="toggle-text">
+                      <span class="toggle-label">Áudio customizado para esta cena</span>
+                      <span class="toggle-desc">Sobrescrever a trilha global apenas nesta cena</span>
+                    </div>
+                    <label class="switch"><input type="checkbox" onchange="toggleBgAudio(this)"><span class="track"></span><span class="thumb"></span></label>
+                  </div>
+                  <div id="bgAudioFields" style="display:none">
+                    <div class="field-row" style="margin-top:14px">
+                      <div class="field">
+                        <label class="field-label">Tipo</label>
+                        <select>
+                          <option>Directory</option>
+                          <option>File</option>
+                          <option>Remote Asset</option>
+                        </select>
+                      </div>
+                      <div class="field">
+                        <label class="field-label">Path</label>
+                        <input type="text" placeholder="./assets/audio/instrumental/">
+                      </div>
+                    </div>
+                    <div class="field">
+                      <label class="field-label">
+                        <span>Volume</span>
+                        <span id="bgVolVal" style="color:var(--text)">35%</span>
+                      </label>
+                      <input type="range" min="0" max="100" value="35" oninput="document.getElementById('bgVolVal').textContent = this.value + '%'">
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Overlays -->
+            <div class="accordion">
+              <div class="accordion-head" onclick="toggleAcc(this)">
+                <div class="accordion-title">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--blue)"><rect x="3" y="3" width="18" height="18" rx="2"></rect><rect x="9" y="9" width="6" height="6"></rect></svg>
+                  Elementos visuais (Overlays)
+                  <span class="mini-chip" style="font-size:10.5px" id="overlayCount">1</span>
+                </div>
+                <svg class="accordion-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+              </div>
+              <div class="accordion-body">
+                <div class="accordion-content">
+                  <div class="overlay-empty">
+                    <p>Adicione logos, marcas d'água ou imagens decorativas sobre o vídeo</p>
+                    <button class="btn btn-ghost" onclick="addOverlay()">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                      Adicionar overlay
+                    </button>
+                  </div>
+                  <div id="overlayList">
+                    <div class="overlay-item">
+                      <div class="overlay-thumb">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                      </div>
+                      <div class="overlay-meta">
+                        <div class="overlay-line1">
+                          <span class="type-pill">image</span>
+                          <span class="source">./assets/logo.png</span>
+                        </div>
+                        <div class="overlay-controls">
+                          <select>
+                            <option>top-left</option>
+                            <option>top-center</option>
+                            <option selected>top-right</option>
+                            <option>center</option>
+                            <option>bottom-left</option>
+                            <option>bottom-right</option>
+                          </select>
+                          <input type="number" value="15" min="0" max="100" title="Width %">
+                          <input type="number" value="15" min="0" max="100" title="Height %">
+                        </div>
+                      </div>
+                      <span class="overlay-delete" onclick="deleteOverlay(this)" title="Remover">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Subtitles Style -->
+            <div class="accordion">
+              <div class="accordion-head" onclick="toggleAcc(this)">
+                <div class="accordion-title">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--blue)"><rect x="2" y="3" width="20" height="14" rx="2"></rect><path d="M6 13h4"></path><path d="M14 13h4"></path><path d="M6 9h12"></path></svg>
+                  Estilo de legendas
+                </div>
+                <svg class="accordion-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+              </div>
+              <div class="accordion-body">
+                <div class="accordion-content">
+                  <div class="field-hint">Herdando do global</div>
+                  <div class="toggle-row">
+                    <div class="toggle-text">
+                      <span class="toggle-label">Sobrescrever estilo global</span>
+                      <span class="toggle-desc">Ativar para customizar legendas apenas nesta cena</span>
+                    </div>
+                    <label class="switch"><input type="checkbox" id="subOverride" onchange="toggleSubOverride(this)"><span class="track"></span><span class="thumb"></span></label>
+                  </div>
+                  <div id="subFields" style="margin-top:12px">
+                    <div class="field-row disabled">
+                      <div class="field">
+                        <label class="field-label">Tamanho da fonte</label>
+                        <input type="number" value="90">
+                      </div>
+                      <div class="field">
+                        <label class="field-label">Cor da fonte</label>
+                        <input type="color" value="#ffffff">
+                      </div>
+                    </div>
+                    <div class="field-row disabled">
+                      <div class="field">
+                        <label class="field-label">Posição</label>
+                        <select>
+                          <option>bottom</option>
+                          <option>center</option>
+                          <option>top</option>
+                        </select>
+                      </div>
+                      <div class="field">
+                        <label class="field-label">Máx. palavras por linha</label>
+                        <input type="number" value="4">
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Transitions -->
+            <div class="accordion" data-section="trans">
+              <div class="accordion-head" onclick="toggleAcc(this)">
+                <div class="accordion-title">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--blue)"><path d="M17 1l4 4-4 4"></path><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><path d="M7 23l-4-4 4-4"></path><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>
+                  Transições
+                  <span class="override-dot" data-override="trans"></span>
+                  <span class="override-text" data-override-text="trans">override active</span>
+                </div>
+                <svg class="accordion-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+              </div>
+              <div class="accordion-body">
+                <div class="accordion-content">
+                  <div class="toggle-row">
+                    <div class="toggle-text">
+                      <span class="toggle-label">Habilitar transições</span>
+                      <span class="toggle-desc">Global está <strong style="color:var(--text)">ON</strong> · sobrescrito para OFF nesta cena</span>
+                    </div>
+                    <label class="switch"><input type="checkbox" id="sceneTrans" onchange="toggleSceneTrans(this)"><span class="track"></span><span class="thumb"></span></label>
+                  </div>
+                  <div id="transFields" style="display:none">
+                    <div class="field-row" style="margin-top:14px">
+                      <div class="field">
+                        <label class="field-label">Tipo</label>
+                        <select>
+                          <option>Fade</option>
+                          <option>Zoom</option>
+                        </select>
+                      </div>
+                      <div class="field">
+                        <label class="field-label">Duração (s)</label>
+                        <input type="number" step="0.1" value="0.5">
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </article>
+
+      <!-- Scene 03 -->
+      <article class="scene-card" data-scene="3">
+        <div class="scene-header" onclick="toggleScene(3, event)">
+          <span class="drag-handle" title="Arrastar">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.6"></circle><circle cx="15" cy="6" r="1.6"></circle><circle cx="9" cy="12" r="1.6"></circle><circle cx="15" cy="12" r="1.6"></circle><circle cx="9" cy="18" r="1.6"></circle><circle cx="15" cy="18" r="1.6"></circle></svg>
+          </span>
+          <div class="scene-head-main">
+            <div class="scene-head-row">
+              <span class="scene-num">Scene 03</span>
+            </div>
+            <div class="scene-preview">Levante a sua cabeça, respire fundo, e confie. A resposta que você espera está a caminho. Que Deus abençoe a sua vida hoje e sempre. Amém.</div>
+            <div class="scene-chips">
+              <span class="mini-chip">Edge TTS · pt-BR-Francisca</span>
+              <span class="mini-chip">Directory</span>
+              <span class="mini-chip on">Subtitles</span>
+              <span class="mini-chip">9.8s</span>
+            </div>
+          </div>
+          <div class="scene-header-actions">
+            <button class="icon-btn menu-btn" onclick="openSceneMenu(event, 3)" aria-label="Menu">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"></circle><circle cx="12" cy="12" r="1.8"></circle><circle cx="19" cy="12" r="1.8"></circle></svg>
+            </button>
+            <button class="icon-btn" aria-label="Expandir">
+              <svg class="chevron-toggle" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </button>
+          </div>
+        </div>
+        <div class="scene-body"></div>
+      </article>
+
+    </div>
+
+    <button class="btn btn-ghost" style="margin-top:14px; width:100%; justify-content:center" onclick="addScene()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+      Adicionar cena
+    </button>
+  </section>
+
+  <!-- ============ RIGHT COLUMN ============ -->
+  <aside class="right-col">
+    <div class="column-title">
+      <h2>Configurações do vídeo</h2>
+    </div>
+
+    <!-- Global Settings -->
+    <div class="panel-card">
+      <div class="panel-head">
+        <div class="panel-title">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--blue)"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+          Configurações globais
+        </div>
+        <span class="panel-sub">aplicadas a todas as cenas</span>
+      </div>
+      <div class="panel-body">
+        <div class="subsection">
+          <div class="field-row">
+            <div class="field">
+              <label class="field-label">Output ratio</label>
+              <select>
+                <option selected>9:16</option>
+                <option>16:9</option>
+              </select>
+            </div>
+            <div class="field">
+              <label class="field-label">Canal</label>
+              <select>
+                <option>devocional_com_jesus</option>
+                <option>mensagens_de_fe</option>
+                <option>palavra_diaria</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="subsection">
+          <div class="subsection-title">TTS padrão</div>
+          <div class="field-row">
+            <div class="field">
+              <label class="field-label">Provider</label>
+              <select id="globalTtsProvider" onchange="checkOverride('tts')">
+                <option>Edge TTS</option>
+                <option>Google Cloud TTS</option>
+                <option>AWS Polly</option>
+                <option>Local File</option>
+              </select>
+            </div>
+            <div class="field">
+              <label class="field-label">Voice</label>
+              <select id="globalTtsVoice" onchange="checkOverride('tts')">
+                <option>pt-BR-FranciscaNeural</option>
+                <option>pt-BR-AntonioNeural</option>
+                <option>pt-BR-BrendaNeural</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="subsection">
+          <div class="subsection-title">Background padrão</div>
+          <div class="field-row">
+            <div class="field">
+              <label class="field-label">Tipo</label>
+              <select>
+                <option>Directory</option>
+                <option>Single File</option>
+                <option>Remote Asset</option>
+              </select>
+            </div>
+            <div class="field">
+              <label class="field-label">Path</label>
+              <input type="text" value="./assets/videos/global/">
+            </div>
+          </div>
+        </div>
+        <div class="subsection">
+          <div class="subsection-title">Transições padrão</div>
+          <div class="toggle-row">
+            <div class="toggle-text">
+              <span class="toggle-label">Habilitar</span>
+              <span class="toggle-desc">Aplicar a todas as cenas por padrão</span>
+            </div>
+            <label class="switch"><input type="checkbox" id="globalTrans" checked onchange="checkOverride('trans')"><span class="track"></span><span class="thumb"></span></label>
+          </div>
+          <div class="field-row" style="margin-top:10px">
+            <div class="field">
+              <label class="field-label">Tipo</label>
+              <select>
+                <option>Fade</option>
+                <option>Zoom</option>
+              </select>
+            </div>
+            <div class="field">
+              <label class="field-label">Duração (s)</label>
+              <input type="number" step="0.1" value="0.5">
+            </div>
+          </div>
+        </div>
+        <div class="subsection">
+          <div class="subsection-title">Padding</div>
+          <div class="field-row" style="grid-template-columns:1fr 1fr 1fr">
+            <div class="field">
+              <label class="field-label">Start</label>
+              <input type="number" step="0.1" value="0.3">
+            </div>
+            <div class="field">
+              <label class="field-label">End</label>
+              <input type="number" step="0.1" value="0.5">
+            </div>
+            <div class="field">
+              <label class="field-label">Between</label>
+              <input type="number" step="0.1" value="0.2">
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- YouTube Metadata -->
+    <div class="panel-card">
+      <div class="panel-head">
+        <div class="panel-title">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--red)"><path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33z"></path><polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02"></polygon></svg>
+          Metadados do YouTube
+        </div>
+        <span class="panel-sub">para upload automático</span>
+      </div>
+      <div class="panel-body">
+        <div class="field">
+          <label class="field-label">Título</label>
+          <input type="text" value="🙏 DEUS NÃO ESQUECEU DE VOCÊ 🙏">
+        </div>
+        <div class="field">
+          <label class="field-label">Descrição</label>
+          <textarea rows="3">Mensagem de fé e esperança. Se este vídeo te tocou, deixe seu amém nos comentários e compartilhe com alguém que precisa ouvir essa palavra hoje. 🙏
+
+#devocional #fé #palavradedeus</textarea>
+        </div>
+        <div class="field">
+          <label class="field-label">Tags</label>
+          <div class="tags-input" id="tagsInput" onclick="document.getElementById('tagInputField').focus()">
+            <span class="tag-chip">devocional com jesus<span class="tag-close" onclick="removeTag(this, event)">×</span></span>
+            <span class="tag-chip">palavra de deus<span class="tag-close" onclick="removeTag(this, event)">×</span></span>
+            <span class="tag-chip">fé<span class="tag-close" onclick="removeTag(this, event)">×</span></span>
+            <span class="tag-chip">bíblia<span class="tag-close" onclick="removeTag(this, event)">×</span></span>
+            <input type="text" id="tagInputField" placeholder="adicionar tag..." onkeydown="handleTagKey(event)">
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label class="field-label">Privacidade</label>
+            <select>
+              <option>Public</option>
+              <option>Unlisted</option>
+              <option>Private</option>
+            </select>
+          </div>
+          <div class="field">
+            <label class="field-label">Publicar em</label>
+            <input type="datetime-local" value="2026-05-18T17:00">
+          </div>
+        </div>
+        <div class="field">
+          <label class="field-label">Token file</label>
+          <select>
+            <option>devocional_token.json</option>
+            <option>mensagens_token.json</option>
+            <option>palavra_token.json</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- TikTok -->
+    <div class="panel-card" id="tiktokCard">
+      <div class="panel-head">
+        <div class="panel-title">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--muted)"><path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5"></path></svg>
+          TikTok <span class="panel-sub" style="margin-left:4px">(opcional)</span>
+        </div>
+        <label class="switch"><input type="checkbox" id="tiktokToggle" onchange="toggleTiktok(this)"><span class="track"></span><span class="thumb"></span></label>
+      </div>
+      <div class="panel-body" style="padding-top:0">
+        <div class="toggle-row" style="padding-top:14px">
+          <div class="toggle-text">
+            <span class="toggle-label">Também enviar para o TikTok</span>
+            <span class="toggle-desc">Faz upload com a mesma data do agendamento</span>
+          </div>
+        </div>
+        <div class="tiktok-extra">
+          <div class="tiktok-extra-inner">
+            <div class="field">
+              <label class="field-label">Legenda</label>
+              <textarea rows="3" placeholder="Digite a legenda do TikTok...">🙏 Deus não esqueceu de você. Compartilhe se sentiu no coração 🤍 #fé #devocional #palavradedeus #foryou #fyp</textarea>
+            </div>
+            <div class="field">
+              <label class="field-label">Privacidade</label>
+              <select>
+                <option>SELF_ONLY</option>
+                <option>PUBLIC</option>
+                <option>FRIENDS</option>
+              </select>
+            </div>
+            <div class="toggle-row">
+              <div class="toggle-text"><span class="toggle-label">Desativar dueto</span></div>
+              <label class="switch"><input type="checkbox" checked><span class="track"></span><span class="thumb"></span></label>
+            </div>
+            <div class="toggle-row">
+              <div class="toggle-text"><span class="toggle-label">Desativar comentários</span></div>
+              <label class="switch"><input type="checkbox"><span class="track"></span><span class="thumb"></span></label>
+            </div>
+            <div class="toggle-row">
+              <div class="toggle-text"><span class="toggle-label">Desativar stitch</span></div>
+              <label class="switch"><input type="checkbox" checked><span class="track"></span><span class="thumb"></span></label>
+            </div>
+            <div class="field" style="margin-top:6px">
+              <label class="field-label">Token file</label>
+              <select>
+                <option>tiktok_devocional.json</option>
+                <option>tiktok_mensagens.json</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </aside>
+</div>
+
+<script>
+  /* ====== Scene accordion ====== */
+  function toggleScene(num, ev) {
+    if (ev && ev.target.closest('.menu-btn')) return;
+    const cards = document.querySelectorAll('.scene-card');
+    cards.forEach(c => {
+      const isThis = +c.dataset.scene === num;
+      if (isThis) {
+        c.classList.toggle('expanded');
+        c.classList.toggle('scene-active', c.classList.contains('expanded'));
+        c.classList.toggle('active', c.classList.contains('expanded'));
+      } else {
+        c.classList.remove('expanded', 'scene-active', 'active');
+      }
+    });
+  }
+
+  /* ====== Inner accordion ====== */
+  function toggleAcc(headEl) {
+    const acc = headEl.closest('.accordion');
+    acc.classList.toggle('open');
+  }
+
+  /* ====== Scene menu ====== */
+  let openMenu = null;
+  function openSceneMenu(ev, sceneNum) {
+    ev.stopPropagation();
+    if (openMenu) { openMenu.remove(); openMenu = null; }
+    const menu = document.createElement('div');
+    menu.className = 'menu-popup';
+    menu.innerHTML = `
+      <button onclick="menuAction('duplicate', ${sceneNum})">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+        Duplicar
+      </button>
+      <button onclick="menuAction('move-up', ${sceneNum})">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>
+        Mover para cima
+      </button>
+      <button onclick="menuAction('move-down', ${sceneNum})">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><polyline points="19 12 12 19 5 12"></polyline></svg>
+        Mover para baixo
+      </button>
+      <div class="sep"></div>
+      <button class="danger" onclick="menuAction('delete', ${sceneNum})">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"></path></svg>
+        Deletar
+      </button>
+    `;
+    document.body.appendChild(menu);
+    const rect = ev.target.closest('.menu-btn').getBoundingClientRect();
+    menu.style.top = (rect.bottom + 4 + window.scrollY) + 'px';
+    menu.style.left = (rect.right - 160 + window.scrollX) + 'px';
+    openMenu = menu;
+    setTimeout(() => {
+      document.addEventListener('click', closeMenuOnce, { once: true });
+    }, 0);
+  }
+  function closeMenuOnce() { if (openMenu) { openMenu.remove(); openMenu = null; } }
+  function menuAction(action, sceneNum) {
+    console.log(action, sceneNum);
+    closeMenuOnce();
+  }
+
+  /* ====== Background audio toggle ====== */
+  function toggleBgAudio(input) {
+    document.getElementById('bgAudioFields').style.display = input.checked ? 'block' : 'none';
+  }
+
+  /* ====== Zoom toggle ====== */
+  function toggleZoom(input) {
+    document.getElementById('zoomSliderRow').style.opacity = input.checked ? '1' : '0.45';
+    document.getElementById('zoomSliderRow').style.pointerEvents = input.checked ? 'auto' : 'none';
+  }
+
+  /* ====== Subtitle override toggle ====== */
+  function toggleSubOverride(input) {
+    const fields = document.querySelectorAll('#subFields .field-row');
+    fields.forEach(f => f.classList.toggle('disabled', !input.checked));
+  }
+
+  /* ====== Scene transitions toggle ====== */
+  function toggleSceneTrans(input) {
+    document.getElementById('transFields').style.display = input.checked ? 'block' : 'none';
+    checkOverride('trans');
+  }
+
+  /* ====== Override dot logic ====== */
+  function checkOverride(section) {
+    let isOverride = false;
+    if (section === 'tts') {
+      const sceneProv = document.getElementById('ttsProvider').value;
+      const sceneVoice = document.getElementById('ttsVoice').value;
+      const globalProv = document.getElementById('globalTtsProvider').value;
+      const globalVoice = document.getElementById('globalTtsVoice').value;
+      isOverride = (sceneProv !== globalProv) || (sceneVoice !== globalVoice);
+    } else if (section === 'trans') {
+      const sceneOn = document.getElementById('sceneTrans').checked;
+      const globalOn = document.getElementById('globalTrans').checked;
+      isOverride = sceneOn !== globalOn;
+    }
+    const dot = document.querySelector(`[data-override="${section}"]`);
+    const txt = document.querySelector(`[data-override-text="${section}"]`);
+    if (dot) dot.style.display = isOverride ? 'inline-block' : 'none';
+    if (txt) txt.style.display = isOverride ? 'inline' : 'none';
+  }
+
+  /* ====== Overlays ====== */
+  function addOverlay() {
+    const list = document.getElementById('overlayList');
+    const div = document.createElement('div');
+    div.className = 'overlay-item';
+    div.innerHTML = `
+      <div class="overlay-thumb">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+      </div>
+      <div class="overlay-meta">
+        <div class="overlay-line1">
+          <span class="type-pill">image</span>
+          <span class="source">./assets/new-overlay.png</span>
+        </div>
+        <div class="overlay-controls">
+          <select>
+            <option>top-left</option><option>top-center</option><option>top-right</option>
+            <option selected>center</option><option>bottom-left</option><option>bottom-right</option>
+          </select>
+          <input type="number" value="20" min="0" max="100">
+          <input type="number" value="20" min="0" max="100">
+        </div>
+      </div>
+      <span class="overlay-delete" onclick="deleteOverlay(this)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"></path></svg>
+      </span>
+    `;
+    list.appendChild(div);
+    updateOverlayCount();
+  }
+  function deleteOverlay(el) {
+    el.closest('.overlay-item').remove();
+    updateOverlayCount();
+  }
+  function updateOverlayCount() {
+    document.getElementById('overlayCount').textContent =
+      document.querySelectorAll('#overlayList .overlay-item').length;
+  }
+
+  /* ====== Tags ====== */
+  function handleTagKey(ev) {
+    const input = ev.target;
+    if ((ev.key === 'Enter' || ev.key === ',') && input.value.trim()) {
+      ev.preventDefault();
+      const val = input.value.trim().replace(/,$/, '');
+      if (!val) return;
+      const chip = document.createElement('span');
+      chip.className = 'tag-chip';
+      chip.innerHTML = `${val}<span class="tag-close" onclick="removeTag(this, event)">×</span>`;
+      document.getElementById('tagsInput').insertBefore(chip, input);
+      input.value = '';
+    } else if (ev.key === 'Backspace' && !input.value) {
+      const chips = document.querySelectorAll('#tagsInput .tag-chip');
+      if (chips.length) chips[chips.length - 1].remove();
+    }
+  }
+  function removeTag(el, ev) { ev.stopPropagation(); el.closest('.tag-chip').remove(); }
+
+  /* ====== TikTok ====== */
+  function toggleTiktok(input) {
+    document.getElementById('tiktokCard').classList.toggle('tt-on', input.checked);
+  }
+
+  /* ====== Add scene ====== */
+  function addScene() {
+    const list = document.getElementById('sceneList');
+    const num = list.querySelectorAll('.scene-card').length + 1;
+    const numStr = String(num).padStart(2, '0');
+    const card = document.createElement('article');
+    card.className = 'scene-card';
+    card.dataset.scene = num;
+    card.innerHTML = `
+      <div class="scene-header" onclick="toggleScene(${num}, event)">
+        <span class="drag-handle"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.6"></circle><circle cx="15" cy="6" r="1.6"></circle><circle cx="9" cy="12" r="1.6"></circle><circle cx="15" cy="12" r="1.6"></circle><circle cx="9" cy="18" r="1.6"></circle><circle cx="15" cy="18" r="1.6"></circle></svg></span>
+        <div class="scene-head-main">
+          <div class="scene-head-row"><span class="scene-num">Scene ${numStr}</span></div>
+          <div class="scene-preview">Nova cena — adicione a narração e configure os assets.</div>
+          <div class="scene-chips">
+            <span class="mini-chip">Edge TTS</span>
+            <span class="mini-chip">Directory</span>
+            <span class="mini-chip on">Subtitles</span>
+            <span class="mini-chip">auto</span>
+          </div>
+        </div>
+        <div class="scene-header-actions">
+          <button class="icon-btn menu-btn" onclick="openSceneMenu(event, ${num})"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"></circle><circle cx="12" cy="12" r="1.8"></circle><circle cx="19" cy="12" r="1.8"></circle></svg></button>
+          <button class="icon-btn"><svg class="chevron-toggle" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg></button>
+        </div>
+      </div>
+      <div class="scene-body"></div>
+    `;
+    list.appendChild(card);
+    document.getElementById('sceneCount').textContent = num;
+  }
+
+  /* Initial state: trans override is active (scene OFF, global ON) */
+  checkOverride('tts');
+  checkOverride('trans');
+</script>
+</body>
+</html>
