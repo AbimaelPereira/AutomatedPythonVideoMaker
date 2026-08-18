@@ -14,17 +14,19 @@ Cobertura (o que NÃO é coberto cai no caminho MoviePy — ver `can_handle`):
   ---------------------------------------|----------------------------------
   background type color                  | lavfi `color`
   background type file/remote (imagem)   | input + `scale`/`crop`
+  background type video                  | input com `-ss`/`-t` + cover
+  background type directory              | N inputs normalizados + `concat`
   background animation zoom              | `scale` com expr em `t`, eval=frame
   visual_elements image/remote (estático)| input + `scale` + `overlay`
+  visual_elements video/directory        | input + `scale`/`crop` + `overlay`
   visual_elements zoom_in / fade_in      | `scale` eval=frame / `fade`
   border_radius                          | máscara PNG + `alphamerge`
   opacity                                | `colorchannelmixer=aa=`
   legendas classic/karaoke               | `ass` (via AssBuilder)
 
   NÃO suportado (fallback):
-    fundo de vídeo e `type: directory`/`ai`, `fit_mode` contain-blur,
-    filtros (light_leak, particles, …), transições, text_box,
-    sombra com blur nas legendas, `focus: face`.
+    `fit_mode` contain-blur/contain, filtros (light_leak, particles, …),
+    transição zoom, text_box, background ai de vídeo.
 """
 
 import os
@@ -79,6 +81,66 @@ class FilterGraphBuilder:
             "-loop", "1", "-t", f"{duration:.3f}", "-r", str(self.fps), "-i", path,
         ])
         return f"{idx}:v"
+
+    def background_video(self, path: str, start: float, duration: float,
+                         loop: bool = False) -> str:
+        """Trecho de um arquivo de vídeo como fundo.
+
+        `-ss` antes de `-i` é seek rápido (por keyframe, sem decodificar o que
+        vem antes) — a diferença é grande em arquivos longos. `-t` limita o
+        trecho lido.
+
+        `loop=True` (arquivo mais curto que o segmento) usa `-stream_loop -1`,
+        que repete o input indefinidamente; o `-t` corta na duração pedida.
+        Nesse caso o `-ss` é ignorado de propósito: começar fora do zero num
+        stream em loop deixaria um salto visível na emenda.
+        """
+        args = []
+        if loop:
+            args += ["-stream_loop", "-1"]
+        elif start and start > 0:
+            args += ["-ss", f"{float(start):.3f}"]
+        args += ["-t", f"{float(duration):.3f}", "-i", path]
+        idx = self.add_input(args)
+        return f"{idx}:v"
+
+    def normalize_segment(self, src: str, duration: float,
+                          size: tuple = None) -> str:
+        """Deixa um segmento pronto para `concat`: cover + SAR/fps/formato fixos.
+
+        O filtro `concat` exige que TODOS os segmentos tenham a mesma resolução,
+        SAR, pixel format e taxa de quadros — se divergirem, ele falha ou emenda
+        com timing corrompido. Como os arquivos da pasta têm resoluções e fps
+        variados, cada um passa por aqui antes de entrar na concatenação.
+
+        `size` é o alvo do cover: a tela inteira (fundo) ou a caixa do elemento
+        (visual_element). `fps` vem antes do trim para a contagem de frames do
+        segmento ser previsível; `trim`+`setpts` reancoram o tempo em zero, que
+        é o que o `concat` espera de cada entrada.
+        """
+        w = int(size[0]) if size else self.width
+        h = int(size[1]) if size else self.height
+        out = self._label("seg")
+        self.add_chain(
+            f"[{src}]"
+            f"scale={w}:{h}:force_original_aspect_ratio=increase,"
+            f"crop={w}:{h},"
+            f"setsar=1,fps={self.fps},format=rgba,"
+            f"trim=duration={float(duration):.3f},setpts=PTS-STARTPTS"
+            f"[{out}]"
+        )
+        return out
+
+    def concat(self, labels: list) -> str:
+        """Concatena segmentos já normalizados numa única stream de vídeo."""
+        if not labels:
+            raise Unsupported("concat sem segmentos")
+        if len(labels) == 1:
+            return labels[0]
+        out = self._label("cat")
+        joined = "".join(f"[{lbl}]" for lbl in labels)
+        self.add_chain(f"{joined}concat=n={len(labels)}:v=1:a=0[{out}]")
+        return out
 
     def cover(self, src: str, duration: float) -> str:
         """Redimensiona cobrindo o quadro e corta o excesso (fit_mode cover)."""

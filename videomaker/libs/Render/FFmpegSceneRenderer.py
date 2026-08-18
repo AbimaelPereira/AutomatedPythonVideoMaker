@@ -25,7 +25,7 @@ _SUPPORTED_ANIMATIONS = {
 }
 
 # Tipos de elemento visual suportados.
-_SUPPORTED_VISUAL_TYPES = {"image", "remote_asset", "color"}
+_SUPPORTED_VISUAL_TYPES = {"image", "remote_asset", "color", "video", "directory"}
 
 
 def _anim_type(element: dict) -> str:
@@ -76,7 +76,8 @@ class FFmpegSceneRenderer:
         bg = {**bg, **bg_scene}
 
         bg_type = bg.get("type")
-        if bg_type not in ("color", "file", "remote_asset", "image", "ai", None):
+        if bg_type not in ("color", "file", "remote_asset", "image", "ai",
+                           "video", "directory", None):
             return (False, f"background.visual.type '{bg_type}' não suportado")
 
         # IA de vídeo continua no MoviePy (loop/subclip de clipe); imagem é
@@ -133,6 +134,39 @@ class FFmpegSceneRenderer:
     # RENDER
     # ------------------------------------------------------------------
 
+    @staticmethod
+    def _build_segments(g, segments: list, duration: float,
+                        size: tuple = None) -> str:
+        """Materializa um plano do DirectorySelector como uma stream única.
+
+        Cada segmento vira um input (imagem em loop ou trecho de vídeo),
+        normalizado para tamanho/SAR/fps comuns, e todos são concatenados.
+        Um único segmento dispensa o `concat`, mas ainda passa pela
+        normalização — é ela que aplica o cover.
+
+        `size` define o alvo do cover: a tela (fundo) ou a caixa do elemento
+        (visual_element). Ausente = resolução de saída.
+        """
+        labels = []
+        for seg in segments:
+            seg_duration = float(seg.get("duration") or 0)
+            if seg_duration <= 0:
+                continue
+
+            if seg.get("is_video"):
+                src = g.background_video(
+                    seg["path"], float(seg.get("start") or 0.0),
+                    seg_duration, bool(seg.get("loop")),
+                )
+            else:
+                src = g.background_image(seg["path"], seg_duration)
+
+            labels.append(g.normalize_segment(src, seg_duration, size=size))
+
+        if not labels:
+            raise Unsupported("plano de diretório sem segmentos utilizáveis")
+        return g.concat(labels)
+
     def render(self, *, scene: dict, effective_gs: dict, duration: float,
                out_path: str, audio_path: str = None, ass_path: str = None,
                fontsdir: str = None, bg_resolved: dict = None,
@@ -154,6 +188,10 @@ class FFmpegSceneRenderer:
         if bg_type == "color":
             cur = g.background_color(bg.get("source", "#000000"), duration)
             cur = g.cover(cur, duration)
+        elif bg.get("_segments"):
+            # Pasta (ou vídeo único): o plano de segmentos já vem resolvido pelo
+            # DirectorySelector — mesmo plano que o caminho MoviePy usaria.
+            cur = self._build_segments(g, bg["_segments"], duration)
         else:
             path = bg.get("_path")
             if not path or not os.path.exists(path):
@@ -202,6 +240,12 @@ class FFmpegSceneRenderer:
                     "-i", f"color=c={color.replace('#', '0x')}:s={bw}x{bh}:r={fps}",
                 ])
                 lbl = g.set_sar(f"{idx}:v")
+            elif el.get("_segments"):
+                # Pasta/vídeo: os segmentos são concatenados no tamanho da CAIXA
+                # do elemento (não da tela), e o resultado já sai recortado —
+                # por isso não passa pelo resize/crop de imagem abaixo.
+                lbl = self._build_segments(g, el["_segments"], duration,
+                                           size=(bw, bh))
             else:
                 path = el.get("_path")
                 if not path or not os.path.exists(path):
@@ -289,8 +333,14 @@ class FFmpegSceneRenderer:
             cmd += ["-f", "lavfi", "-t", f"{duration:.3f}",
                     "-i", "anullsrc=r=44100:cl=stereo"]
 
-        cmd += ["-filter_complex", filter_complex,
-                "-map", f"[{final}]", "-map", f"{audio_idx}:a"]
+        # A narração costuma ser mais curta que a cena (o JSON pode fixar
+        # `duration` maior). O caminho MoviePy resolve isso com
+        # `set_duration(scene_duration)` no composite: o vídeo manda e o áudio
+        # simplesmente acaba antes. Aqui o equivalente é completar o áudio com
+        # silêncio — sem isso, `-shortest` cortaria o VÍDEO no fim da narração.
+        audio_filter = f"[{audio_idx}:a]apad,atrim=0:{duration:.3f},asetpts=PTS-STARTPTS[aout]"
+        cmd += ["-filter_complex", f"{filter_complex};{audio_filter}",
+                "-map", f"[{final}]", "-map", "[aout]"]
         cmd += ["-c:a", "aac", "-b:a", "192k", "-ar", "44100", "-ac", "2"]
 
         cmd += [
@@ -300,7 +350,7 @@ class FFmpegSceneRenderer:
             "-pix_fmt", self.quality.get("pix_fmt", "yuv420p"),
             "-r", str(fps), "-vsync", "cfr", "-g", "60", "-bf", "2",
             "-t", f"{duration:.3f}",
-            "-shortest", "-movflags", "+faststart",
+            "-movflags", "+faststart",
             out_path,
         ]
 
