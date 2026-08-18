@@ -19,6 +19,29 @@ def force_rgb(im):
         return im[:, :, :3]
     return im
 
+def _apply_cover_size(clip, target_size):
+    """Leva um clipe a `target_size` cobrindo a área e cortando o excesso.
+
+    Usado para uniformizar segmentos de uma pasta antes de concatenar
+    (`concatenate_videoclips` exige tamanhos iguais). Cover em vez de resize
+    puro para não distorcer arquivos com proporção diferente do primeiro.
+    """
+    from moviepy.video.fx.all import crop as _crop, resize as _resize
+
+    target_w, target_h = int(target_size[0]), int(target_size[1])
+    w, h = clip.size
+    scale = max(target_w / w, target_h / h)
+    new_w, new_h = max(int(w * scale), target_w), max(int(h * scale), target_h)
+
+    clip = _resize(clip, newsize=(new_w, new_h))
+    x_center, y_center = new_w / 2, new_h / 2
+    return _crop(
+        clip,
+        x1=int(x_center - target_w / 2), y1=int(y_center - target_h / 2),
+        x2=int(x_center + target_w / 2), y2=int(y_center + target_h / 2),
+    )
+
+
 def apply_border_radius_clip(clip, radius: int):
     """Aplica máscara de cantos arredondados a um clip MoviePy. Função standalone."""
     w, h = clip.size
@@ -172,6 +195,8 @@ class VisualClip:
             clip = self._create_image_clip()
         elif el_type == "video":
             clip = self._create_video_clip()
+        elif el_type == "directory":
+            clip = self._create_directory_clip()
         elif el_type == "text_box":
             clip = self._create_text_box_clip()
         elif el_type == "color":
@@ -327,6 +352,71 @@ class VisualClip:
             clip = clip.volumex(audio_cfg.get("volume", 1.0))
             
         return clip
+
+    def _create_directory_clip(self):
+        """Elemento visual montado a partir de uma pasta.
+
+        Usa o mesmo `DirectorySelector` do fundo — inclusive o histórico
+        anti-repetição —, então uma pasta compartilhada entre fundo e overlay
+        não mostra o mesmo arquivo nos dois ao mesmo tempo.
+
+        Diferença importante em relação ao fundo: aqui NÃO se aplica cover para
+        a resolução de saída. O tamanho final do elemento é decidido depois pelo
+        LayoutEngine (via `placement`), então os segmentos são apenas
+        normalizados entre si — o menor denominador comum — e concatenados.
+        """
+        from libs.Background.DirectorySelector import DirectorySelector
+
+        plan = DirectorySelector().build_plan(self.data, float(self.duration))
+        if not plan:
+            print(f"[VisualClip] Pasta sem mídia utilizável: {self.data.get('source')}")
+            return None
+
+        segments = []
+        for seg in plan:
+            try:
+                segments.append(self._clip_from_segment(seg))
+            except Exception as e:
+                print(f"[VisualClip] ⚠️ Falha ao carregar {seg['path']}: {e}")
+
+        if not segments:
+            return None
+        if len(segments) == 1:
+            return segments[0]
+
+        # `concatenate_videoclips` exige tamanho igual entre as partes. Os
+        # arquivos da pasta têm resoluções variadas, então todos são levados ao
+        # tamanho do primeiro segmento (preservando proporção via cover), que é
+        # quem define o aspect ratio que o layout vai posicionar.
+        target = segments[0].size
+        normalized = [
+            seg if seg.size == target else _apply_cover_size(seg, target)
+            for seg in segments
+        ]
+        return concatenate_videoclips(normalized, method="compose")
+
+    def _clip_from_segment(self, seg: dict):
+        """Materializa um segmento do plano (sem redimensionar para a saída)."""
+        duration = float(seg["duration"])
+
+        if seg["is_video"]:
+            clip = VideoFileClip(seg["path"])
+            audio_cfg = self.data.get("audio", {})
+            if not audio_cfg.get("keep_audio", False):
+                clip = clip.without_audio()
+            else:
+                clip = clip.volumex(audio_cfg.get("volume", 1.0))
+
+            if seg.get("loop"):
+                clip = clip.loop(duration=duration)
+            else:
+                start = float(seg.get("start", 0.0))
+                clip = clip.subclip(start, min(start + duration, clip.duration))
+                if clip.duration < duration:
+                    clip = clip.loop(duration=duration)
+            return clip.set_duration(duration)
+
+        return ImageClip(seg["path"]).set_duration(duration)
 
     def _create_color_clip(self):
         """Cria um ColorClip sólido (ex.: overlay de escurecimento). Tamanho

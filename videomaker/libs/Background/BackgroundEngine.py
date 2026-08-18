@@ -7,7 +7,7 @@ from moviepy.video.fx.all import crop, resize as mpy_resize
 from libs.utils import deep_merge
 from libs.VisualClip import force_rgb
 from libs.MediaDownloader import MediaDownloader
-from libs.Background.DirectoryType import DirectoryType
+from libs.Background.DirectorySelector import DirectorySelector
 from libs.Filters import FilterEngine
 from libs.FaceDetector import detect_focus_point
 from PIL import Image, ImageFilter
@@ -71,13 +71,15 @@ def _apply_cover(clip, target_w: int, target_h: int, focus: str = "center"):
 
 class BackgroundEngine:
     def __init__(self, resolution_output: Tuple[int, int], dir_clips_cache: Dict[str, List],
-                 ai_cache=None, remote_asset_manager=None):
+                 ai_cache=None, remote_asset_manager=None, directory_selector=None):
         self.resolution_output = tuple(map(int, resolution_output))
         self.dir_clips_cache = dir_clips_cache
         self.ai_cache = ai_cache if AI_AVAILABLE else None
         self.remote_asset_manager = remote_asset_manager
-        self.last_used_videos: List[str] = []
-        self.max_history = 3
+        # Sem selector injetado, cria um com os caminhos de cache padrão — o
+        # estado que importa (histórico de uso) vive em disco, então instâncias
+        # separadas por cena/processo continuam compartilhando o mesmo histórico.
+        self.directory_selector = directory_selector or DirectorySelector()
 
     def _build_color(self, cfg: Dict, scene_duration: float):
         color = cfg.get("source", "#000000")
@@ -404,91 +406,63 @@ class BackgroundEngine:
                 clip = clip.subclip(0, scene_duration)
             return clip.without_audio()
 
-    def _select_random_videos_for_duration(self, available_clips: List, target_duration: float) -> List:
-        if not available_clips:
-            return []
-
-        selected_clips = []
-        current_duration = 0.0
-        attempts = 0
-        max_attempts = len(available_clips) * 3
-
-        available_for_selection = []
-        for clip in available_clips:
-            clip_path = getattr(clip, 'filename', str(hash(str(clip))))
-            if clip_path not in self.last_used_videos:
-                available_for_selection.append(clip)
-
-        if not available_for_selection:
-            available_for_selection = available_clips.copy()
-            self.last_used_videos = []
-
-        import random
-        while current_duration < target_duration and attempts < max_attempts:
-            attempts += 1
-            if not available_for_selection:
-                break
-
-            selected_clip = random.choice(available_for_selection)
-            clip_duration = getattr(selected_clip, 'duration', 4.0)
-            remaining_duration = target_duration - current_duration
-            actual_duration = min(clip_duration, remaining_duration)
-
-            if actual_duration < clip_duration:
-                start_time = random.uniform(0, max(0, clip_duration - actual_duration))
-                clip_segment = selected_clip.subclip(start_time, start_time + actual_duration)
-            else:
-                clip_segment = selected_clip.copy()
-
-            selected_clips.append(clip_segment)
-            current_duration += actual_duration
-
-            clip_path = getattr(selected_clip, 'filename', str(hash(str(selected_clip))))
-            if clip_path not in self.last_used_videos:
-                self.last_used_videos.append(clip_path)
-
-            available_for_selection.remove(selected_clip)
-
-        if len(self.last_used_videos) > self.max_history:
-            self.last_used_videos = self.last_used_videos[-self.max_history:]
-
-        return selected_clips
-
     def _build_directory(self, cfg: Dict, scene_duration: float) -> Optional:
+        """Fundo montado a partir de uma pasta, seguindo o plano do DirectorySelector.
+
+        A ESCOLHA dos arquivos mora no `DirectorySelector` (compartilhado com o
+        caminho ffmpeg e com os visual_elements); aqui só materializamos o plano
+        em clips MoviePy. Antes a escolha vivia neste arquivo e o histórico
+        anti-repetição era um atributo de instância — como o engine é criado uma
+        vez POR CENA, esse histórico nascia vazio toda vez e nunca evitava
+        repetição entre cenas. Agora o histórico é persistido em disco.
+        """
         source_dir = cfg.get("source")
         if not source_dir:
             raise ValueError("Diretório source não especificado")
 
-        loader = DirectoryType(self.resolution_output, self.dir_clips_cache)
-        if source_dir not in self.dir_clips_cache:
-            clips = loader.load_clips(cfg, scene_duration)
+        black = ColorClip(size=self.resolution_output, color=(0, 0, 0)).set_duration(scene_duration)
+
+        plan = self.directory_selector.build_plan(cfg, float(scene_duration))
+        if not plan:
+            return black
+
+        segments = []
+        for seg in plan:
+            try:
+                segments.append(self._clip_from_segment(seg))
+            except Exception as e:
+                print(f"[BackgroundEngine] ⚠️ Falha ao carregar {seg['path']}: {e}")
+
+        if not segments:
+            return black
+
+        if len(segments) == 1:
+            return segments[0]
+
+        return concatenate_videoclips(segments, method="compose")
+
+    def _clip_from_segment(self, seg: Dict):
+        """Materializa um segmento do plano num clipe já no tamanho de saída."""
+        target_w, target_h = self.resolution_output
+        duration = float(seg["duration"])
+
+        if seg["is_video"]:
+            clip = VideoFileClip(seg["path"], audio=False)
+            if seg.get("loop"):
+                # O arquivo é mais curto que o segmento: repete até fechar.
+                clip = clip.loop(duration=duration)
+            else:
+                start = float(seg.get("start", 0.0))
+                end = min(start + duration, clip.duration)
+                clip = clip.subclip(start, end)
+                # Arredondamento do subclip pode devolver alguns ms a menos.
+                if clip.duration < duration:
+                    clip = clip.loop(duration=duration)
+            clip = clip.without_audio()
         else:
-            clips = self.dir_clips_cache[source_dir]
+            clip = ImageClip(seg["path"]).set_duration(duration)
 
-        if not clips:
-            return ColorClip(size=self.resolution_output, color=(0, 0, 0)).set_duration(scene_duration)
-
-        selected = self._select_random_videos_for_duration(clips, float(scene_duration))
-        if not selected:
-            return ColorClip(size=self.resolution_output, color=(0, 0, 0)).set_duration(scene_duration)
-
-        if len(selected) == 1:
-            bg_clip = selected[0]
-            if bg_clip.duration < scene_duration:
-                bg_clip = bg_clip.loop(duration=scene_duration)
-            elif bg_clip.duration > scene_duration:
-                bg_clip = bg_clip.subclip(0, scene_duration)
-            return bg_clip
-
-        bg_clip = concatenate_videoclips(selected, method="compose")
-        if bg_clip.duration > scene_duration:
-            bg_clip = bg_clip.subclip(0, scene_duration)
-        elif bg_clip.duration < scene_duration:
-            remaining = scene_duration - bg_clip.duration
-            last_clip = selected[-1]
-            extra_clip = last_clip.subclip(0, remaining) if last_clip.duration >= remaining else last_clip.loop(duration=remaining)
-            bg_clip = concatenate_videoclips([bg_clip, extra_clip], method="compose")
-        return bg_clip
+        return _apply_cover(clip, target_w, target_h).set_duration(duration)
 
     def _apply_animation(self, clip, animation_config: Dict):
         anim_type = animation_config.get("type", "none")
