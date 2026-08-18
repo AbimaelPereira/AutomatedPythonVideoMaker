@@ -38,3 +38,6 @@ videomaker/assets/sem-fundo/
 
 # Memória interna do Claude Code
 .claude/projects/
+
+# Logs locais do downloader de stock
+stock_footage_downloader/download.log
