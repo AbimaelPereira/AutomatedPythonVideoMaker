@@ -1,0 +1,19 @@
+{
+    "global_settings": {
+        "tts": {
+            "provider": "edge",
+            "voice": "en-US-AndrewNeural"
+        },
+        "subtitle": {
+            "enabled": false
+        },
+        "transitions": {
+            "enabled": false
+        }
+    },
+    "youtube": {
+        "token_file_name": "pyvideomaker.json",
+        "privacy_status": "private",
+        "category_id": "22"
+    }
+}
