@@ -175,13 +175,14 @@ class YouTube:
         Configuração esperada em thumb_config:
             prompt          (str)  obrigatório — descrição da imagem
             provider        (str)  opcional    — default "pollinations"
-            model           (str)  opcional    — default "flux"
-            width           (int)  opcional    — default 1280
-            height          (int)  opcional    — default 720
-            quality         (str)  opcional    — "low"|"medium"|"high"|"hd", default "hd"
-            seed            (int)  opcional    — para reproduzibilidade
-            negative_prompt (str)  opcional    — o que evitar na imagem
-            enhance         (bool) opcional    — deixar IA melhorar o prompt
+            parameters      (dict) opcional    — argumentos do provider, e SÓ aqui:
+                model           default "flux"
+                width / height  default 1280 / 720
+                quality         "low"|"medium"|"high"|"hd", default "hd"
+                seed, negative_prompt, enhance, enable_fallback
+
+        Argumento do provider solto em thumb_config é erro (ver AIProviders/params.py).
+        O default do canal em global_settings.ai.parameters também vale aqui.
         """
         try:
             from libs.AIProviders import ai_manager
@@ -198,20 +199,19 @@ class YouTube:
         output_path = self._resolve_thumbnail_output_path()
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
-        generate_params = {
-            "model":           thumb_config.get("model", "flux"),
-            "width":           thumb_config.get("width", 1280),
-            "height":          thumb_config.get("height", 720),
-            "quality":         thumb_config.get("quality", "hd"),
-            "enhance":         thumb_config.get("enhance", False),
-            "negative_prompt": thumb_config.get(
-                "negative_prompt",
-                "worst quality, blurry, text, watermark, low resolution"
-            ),
-        }
-
-        if "seed" in thumb_config:
-            generate_params["seed"] = thumb_config["seed"]
+        from libs.AIProviders.params import resolve_parameters
+        try:
+            generate_params = resolve_parameters(
+                thumb_config, self.global_settings, "youtube.thumbnail",
+                defaults={
+                    "model": "flux", "width": 1280, "height": 720,
+                    "quality": "hd", "enhance": False,
+                    "negative_prompt": "worst quality, blurry, text, watermark, low resolution",
+                },
+            )
+        except ValueError as e:
+            print(f"[YouTube] ❌ {e}")
+            return None
 
         provider = thumb_config.get("provider", "pollinations")
 

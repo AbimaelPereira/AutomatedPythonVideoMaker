@@ -33,6 +33,8 @@ Cada nível abaixo vence em caso de conflito. Implementado em
 | `transitions` | [transitions.md](transitions.md) |
 | `padding_top` / `padding_bottom` / `padding_side` | [placement.md](placement.md) |
 | `remote_assets` (config do `RemoteAssetManager`, ex.: `selection_mode`) | [background.md](background.md#remote-assets) |
+| `ai.parameters` (default de todo bloco de IA: `model`, `enable_fallback`…) | [ai.md](ai.md) |
+| `ai_cache` (`false` desliga o cache de IA do fundo) | [background.md](background.md#cache-do-type-ai) |
 
 ## Capítulos (`chapters`)
 

@@ -14,6 +14,7 @@ Cobertura (o que NÃO é coberto cai no caminho MoviePy — ver `can_handle`):
   ---------------------------------------|----------------------------------
   background type color                  | lavfi `color`
   background type file/remote (imagem)   | input + `scale`/`crop`
+  background fit_mode contain (imagem/ai)| `scale` + `pad` com `fill_color`
   background type video                  | input com `-ss`/`-t` + cover
   background type directory              | N inputs normalizados + `concat`
   background animation zoom              | `zoompan` centrado, expr em `on`
@@ -25,8 +26,8 @@ Cobertura (o que NÃO é coberto cai no caminho MoviePy — ver `can_handle`):
   legendas classic/karaoke               | `ass` (via AssBuilder)
 
   NÃO suportado (fallback):
-    `fit_mode` contain-blur/contain, filtros (light_leak, particles, …),
-    transição zoom, text_box, background ai de vídeo.
+    `fit_mode` contain-blur (e contain em fundo de vídeo/pasta), filtros
+    (light_leak, particles, …), transição zoom, text_box, background ai de vídeo.
 """
 
 import os
@@ -153,6 +154,30 @@ class FilterGraphBuilder:
         out = self._label("cat")
         joined = "".join(f"[{lbl}]" for lbl in labels)
         self.add_chain(f"{joined}concat=n={len(labels)}:v=1:a=0[{out}]")
+        return out
+
+    def contain(self, src: str, img_w: int, img_h: int, fill_color="#000000") -> str:
+        """Encaixa a imagem inteira no quadro; a sobra vira `fill_color` (fit_mode contain).
+
+        Espelha `BackgroundEngine._fit_image`: escala = min(W/w, H/h), tamanho
+        truncado com int() e imagem centrada. As contas são feitas aqui em Python
+        (e não com `force_original_aspect_ratio=decrease`) porque o arredondamento
+        do ffmpeg difere do int() em 1px — e os dois caminhos precisam bater.
+        """
+        scale = min(self.width / img_w, self.height / img_h)
+        nw, nh = max(1, int(img_w * scale)), max(1, int(img_h * scale))
+        x, y = (self.width - nw) // 2, (self.height - nh) // 2
+        if isinstance(fill_color, (list, tuple)):
+            r, g, b = (int(c) for c in list(fill_color)[:3])
+            color = f"0x{r:02x}{g:02x}{b:02x}"
+        else:
+            color = "0x" + str(fill_color).lstrip("#")
+        out = self._label("bg")
+        self.add_chain(
+            f"[{src}]scale={nw}:{nh},setsar=1,"
+            f"pad={self.width}:{self.height}:{x}:{y}:color={color},"
+            f"format=rgba[{out}]"
+        )
         return out
 
     def cover(self, src: str, duration: float) -> str:

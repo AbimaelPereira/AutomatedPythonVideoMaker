@@ -367,30 +367,28 @@ class BackgroundEngine:
             clip = clip.subclip(0, scene_duration)
         return clip.without_audio()
 
-    def _build_ai(self, cfg: Dict, scene_duration: float, storage_dir: str):
+    def _build_ai(self, cfg: Dict, scene_duration: float, storage_dir: str,
+                  global_settings: Dict = None):
         ai_manager = _ai_manager()
         if ai_manager is None:
             raise ValueError("Sistema de IA não está disponível")
         if not self.ai_cache:
             raise ValueError("AICache não configurado para o fundo de IA")
 
+        # Import local: carregar AIProviders no topo penaliza cenas sem IA.
+        from libs.AIProviders.params import resolve_parameters, cache_key as ai_cache_key
+
         provider = cfg.get("provider", "pollinations")
         content_type = cfg.get("content_type", "image")
         prompt = cfg.get("prompt", "")
-        parameters = cfg.get("parameters", {})
-        cache_key = cfg.get("cache_key")
 
         if not prompt:
             raise ValueError("Prompt não especificado para IA background")
 
-        if not cache_key:
-            cache_data = {
-                "provider": provider,
-                "type": content_type,
-                "prompt": prompt,
-                "parameters": parameters
-            }
-            cache_key = hashlib.md5(json.dumps(cache_data, sort_keys=True).encode()).hexdigest()[:12]
+        # Argumentos do provider vêm SÓ de `parameters`, com o default do canal
+        # em global_settings.ai.parameters por baixo. Ver AIProviders/params.py.
+        parameters = resolve_parameters(cfg, global_settings, "background.visual")
+        cache_key = ai_cache_key(cfg, parameters)
 
         cached_file = self.ai_cache.get(cache_key, content_type) if self.ai_cache else None
         if cached_file:
@@ -417,6 +415,11 @@ class BackgroundEngine:
                 f.write(result["content"])
 
         if content_type == "image":
+            # `contain`/`contain-blur` explícitos são respeitados (preservam a
+            # imagem inteira, p.ex. margem de papel pintada). Qualquer outro
+            # fit_mode mantém o resize puro histórico para a resolução de saída.
+            if cfg.get("fit_mode") in ("contain", "contain-blur"):
+                return self._fit_image(file_path, cfg["fit_mode"], scene_duration, cfg)
             return ImageClip(file_path).resize(newsize=self.resolution_output).set_duration(scene_duration)
         else:
             clip = VideoFileClip(file_path, audio=False).resize(newsize=self.resolution_output)
@@ -562,7 +565,8 @@ class BackgroundEngine:
             elif bg_type == "video":
                 bg_clip = self._build_video(visual_config, scene_duration, storage_dir)
             elif bg_type == "ai":
-                bg_clip = self._build_ai(visual_config, scene_duration, storage_dir)
+                bg_clip = self._build_ai(visual_config, scene_duration, storage_dir,
+                                         global_settings)
             elif bg_type == "directory":
                 bg_clip = self._build_directory(visual_config, scene_duration)
             elif bg_type == "remote_asset":

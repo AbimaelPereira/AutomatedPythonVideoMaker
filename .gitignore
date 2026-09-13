@@ -41,3 +41,6 @@ videomaker/assets/sem-fundo/
 
 # Logs locais do downloader de stock
 stock_footage_downloader/download.log
+
+# cache do vite (dev server)
+web/.vite/

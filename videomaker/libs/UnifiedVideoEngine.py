@@ -372,9 +372,15 @@ def _try_ffmpeg_scene(*, scene, effective_gs, scene_dir, scene_id, scene_duratio
             # A imagem de IA já é (ou vira) um arquivo em disco; o cache é o
             # mesmo do BackgroundEngine, então não há geração duplicada.
             bg_resolved["_path"] = SceneBridge.resolve_ai_background(
-                bg_cfg, resolution_output, ai_cache, scene_dir
+                bg_cfg, resolution_output, ai_cache, scene_dir, effective_gs
             )
-            bg_resolved["_stretch"] = True
+            # Mesmo critério do BackgroundEngine._build_ai: `contain` explícito é
+            # respeitado; qualquer outro fit_mode mantém o resize puro histórico.
+            # (contain-blur nem chega aqui — o can_handle recusa.)
+            if bg_cfg.get("fit_mode") == "contain":
+                bg_resolved["_contain"] = True
+            else:
+                bg_resolved["_stretch"] = True
         elif bg_type == "directory":
             # A escolha dos arquivos é a MESMA do caminho MoviePy (mesmo
             # DirectorySelector, mesmo histórico em disco) — só a materialização
@@ -396,9 +402,12 @@ def _try_ffmpeg_scene(*, scene, effective_gs, scene_dir, scene_id, scene_duratio
                 )
             else:
                 bg_resolved["_path"] = bg_path
-                bg_resolved["_crop"] = SceneBridge.resolve_background_cover(
-                    bg_path, resolution_output, bg_cfg.get("focus", "center")
-                )
+                if bg_cfg.get("fit_mode") == "contain":
+                    bg_resolved["_contain"] = True
+                else:
+                    bg_resolved["_crop"] = SceneBridge.resolve_background_cover(
+                        bg_path, resolution_output, bg_cfg.get("focus", "center")
+                    )
 
         # --- visuais ---
         elements = list(scene.get("visual_elements") or [])
@@ -1660,6 +1669,7 @@ class UnifiedVideoEngine:
             return
 
         from libs.AIProviders.PollinationsProvider import PollinationsProvider
+        from libs.AIProviders.params import resolve_parameters
         provider = PollinationsProvider()
 
         for scene in scenes:
@@ -1674,19 +1684,19 @@ class UnifiedVideoEngine:
                     print(f"[UVE] visual_element ai source sem prompt — ignorado")
                     continue
 
-                model = source.get("model", "flux")
-                width = source.get("width", 576)
-                height = source.get("height", 1024)
                 scene_id = scene.get("id", "scene")
-
-                print(f"[UVE] Gerando imagem IA para visual_element da cena '{scene_id}' (model={model})...")
-
-                result = provider.generate_image(
-                    prompt=prompt,
-                    model=model,
-                    width=width,
-                    height=height,
+                # Argumentos SÓ de `parameters` (mesma regra do fundo). Os
+                # defaults históricos deste caminho valem quando nem o canal
+                # (global_settings.ai.parameters) nem o bloco definem.
+                params = resolve_parameters(
+                    source, self.global_settings,
+                    f"cena '{scene_id}' visual_elements.source",
+                    defaults={"model": "flux", "width": 576, "height": 1024},
                 )
+
+                print(f"[UVE] Gerando imagem IA para visual_element da cena '{scene_id}' (model={params.get('model')})...")
+
+                result = provider.generate_image(prompt=prompt, **params)
 
                 if not result.get("success"):
                     print(f"[UVE] Falha ao gerar imagem IA para visual_element da cena '{scene_id}': {result.get('error')}")
@@ -1732,6 +1742,13 @@ class UnifiedVideoEngine:
         if not scenes:
             print("[UVE] Nenhuma cena encontrada na configuração")
             return None
+
+        # Bloco de IA com argumento fora de `parameters` aborta o vídeo AQUI, antes
+        # de gastar TTS e geração. Sem isso o fundo engoliria o erro e viraria
+        # cena preta. Ver libs/AIProviders/params.py.
+        if AI_AVAILABLE:
+            from libs.AIProviders.params import validate_video_ai_blocks
+            validate_video_ai_blocks(scenes, (self.youtube_config or {}).get("thumbnail"))
 
         # PRÉ-PROCESSAMENTO: resolve imagens IA em visual_elements antes do pool
         try:

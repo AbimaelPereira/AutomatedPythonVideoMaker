@@ -22,7 +22,8 @@ YouTube (categoria, token do canal). Estrutura típica:
       "audio": { "type": "directory", "source": "./assets/audio/background/suspense" },
       "visual": { "fit_mode": "contain-blur", "animation": { "type": "zoom", "duration": 20.0, "intensity": 0.12 } }
     },
-    "transitions": { "enabled": true, "audio": { "type": "directory", "source": "./assets/audio/effects/transitions" } }
+    "transitions": { "enabled": true, "audio": { "type": "directory", "source": "./assets/audio/effects/transitions" } },
+    "ai": { "parameters": { "model": "zimage", "enable_fallback": false } }  // default de todo bloco de IA — ver ai.md
   },
   "youtube": {
     "token_file_name": "meu_canal.json",

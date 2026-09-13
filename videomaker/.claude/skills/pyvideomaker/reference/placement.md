@@ -99,9 +99,9 @@ Núcleo do cálculo: `LayoutEngine.safe_area` e `LayoutEngine.resolve_anchor`
   animação é adiada para depois do crop e roda dentro de uma janela de tamanho
   fixo. Se acontecer, confira se `width` e `height` estão realmente os dois
   presentes (caso contrário cai no modo width-only, sem essa proteção).
-- **`visual_elements` com `type: "ai"`** não é suportado — só `image`, `video`,
-  `text_box`, `color`. AI só vale para `background.visual`. Ver
-  [visual_elements.md](visual_elements.md).
+- **`visual_elements` com `type: "ai"`** não é suportado como tipo do elemento —
+  use `type: "image"` com `source: {"type": "ai", ...}`. Ver
+  [visual_elements.md](visual_elements.md) e [ai.md](ai.md).
 
 ---
 

@@ -37,7 +37,10 @@ da cena, processados por `VisualClip`
 > `None` e o elemento não aparece).
 >
 > **Mas IA dentro de `source` funciona**: `{"type": "image", "source": {"type":
-> "ai", "prompt": "...", "model": "flux", "width": 576, "height": 1024}}`.
+> "ai", "prompt": "...", "parameters": {"model": "zimage", "width": 1920,
+> "height": 1080}}}`. Argumentos do provider **só dentro de `parameters`** —
+> `model`/`width`/`height` soltos abortam o vídeo (formato único, ver
+> [ai.md](ai.md)). Sem `width`/`height` o default é `576`×`1024`.
 > `_resolve_visual_elements_ai_sources` gera a imagem antes do pool de workers e
 > troca o `source` pelo caminho do arquivo. Diferente do `background.visual`,
 > esse caminho **não usa o AICache** — regenera a cada execução, e o

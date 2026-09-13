@@ -25,7 +25,7 @@
         "visual": {
           "type": "ai",
           "prompt": "dark moody cathedral interior, dramatic god rays, cinematic, 4k",
-          "model": "flux"
+          "parameters": { "model": "flux" }
         }
       },
       "visual_elements": [

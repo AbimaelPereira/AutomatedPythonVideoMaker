@@ -24,7 +24,7 @@ Resolvidos em `BackgroundEngine.build_scene_background`
 | `"image"` | `source`, `fit_mode`, `fill_color` | Imagem única. |
 | `"video"` | `source`, `fit_mode` | Vídeo único; faz loop ou corta para a duração da cena. |
 | `"directory"` | `source`, `fill_strategy`, `no_repeat_window`, `shuffle`, `max_clips`, `max_clip_duration`, `image_default_duration` | Sorteia arquivos de uma pasta até preencher a duração da cena — ver seção abaixo. |
-| `"ai"` | `provider`, `content_type`, `prompt`, `parameters`, `cache_key` | Gera via `AIProviders` (Pollinations), com cache em disco. |
+| `"ai"` | `provider`, `content_type`, `prompt`, `parameters`, `cache_key`, `fit_mode`, `fill_color` | Gera via `AIProviders` (Pollinations), com cache em disco. Argumentos do provider (`model`, `seed`…) **só dentro de `parameters`** — ver [ai.md](ai.md). |
 | `"remote_asset"` | `source` (= slug), `register_remote_asset_as` | Resolve um slug via `RemoteAssetManager` — ver seção abaixo. |
 
 ### `type: "directory"` — como a pasta vira cena
@@ -81,7 +81,9 @@ Detalhes que costumam surpreender:
 
 A imagem gerada é guardada em `cache/ai_generated/` e reaproveitada nas próximas
 execuções (a chave vem de `cache_key` ou de um hash de `provider`+`prompt`+
-`parameters`). Isso evita chamar a IA de novo a cada render.
+`parameters` já resolvidos, incluindo o default do canal em
+`global_settings.ai.parameters`). Isso evita chamar a IA de novo a cada render.
+Formato do bloco, precedência e fallback de modelo: [ai.md](ai.md).
 
 Para **forçar regeração**, desligue o cache:
 
@@ -100,14 +102,24 @@ log avisa: `[AICache] ⚠️ Cache de IA DESATIVADO`.
 > `visual_elements` (via `source: {type:"ai"}`) **não usam esse cache** — são
 > sempre regeradas, então o switch não muda nada lá.
 
-### `fit_mode` (para `image`/`video`)
+### `fit_mode`
 
-| `fit_mode` | Comportamento |
-|------------|----------------|
-| `"cover"` (default) | Escala para preencher e corta o excesso, sem distorcer. Aceita `focus: "center"` (default) ou `focus: "face"` (centra o crop no maior rosto detectado, com fallback silencioso pro centro). |
-| `"contain"` | Encaixa a imagem inteira, preenchendo as margens com `fill_color` (default preto). |
-| `"contain-blur"` | Como `contain`, mas as margens são a própria imagem desfocada (`GaussianBlur` raio 50) em vez de cor sólida. |
-| `"cover-zoom"` | Cover com zoom linear unidirecional. Config em `zoom_config`: `direction` (`in`/`out`), `speed`, `start_scale`, `end_scale`. |
+| `fit_mode` | Comportamento | Render |
+|------------|----------------|--------|
+| `"cover"` (default) | Escala para preencher e corta o excesso, sem distorcer. Aceita `focus: "center"` (default) ou `focus: "face"` (centra o crop no maior rosto detectado, com fallback silencioso pro centro). | rápido |
+| `"contain"` | Encaixa a imagem inteira, preenchendo as margens com `fill_color` (default preto). | rápido em `image`/`ai`/`remote_asset` de imagem; MoviePy em `video`/`directory` |
+| `"contain-blur"` | Como `contain`, mas as margens são a própria imagem desfocada (`GaussianBlur` raio 50) em vez de cor sólida. | MoviePy |
+| `"cover-zoom"` | Cover com zoom linear unidirecional. Config em `zoom_config`: `direction` (`in`/`out`), `speed`, `start_scale`, `end_scale`. | MoviePy |
+
+Por tipo de fundo:
+
+- **`image` / `remote_asset`** — todos os modos acima.
+- **`ai` (imagem)** — resize puro para a resolução de saída (sem crop),
+  **exceto** `contain` e `contain-blur`, que são respeitados. `cover` herdado do
+  canal não recorta um fundo de IA.
+- **`video`** — `cover`; qualquer outro modo vira resize puro.
+
+`fit_mode`, `fill_color` e `focus` ficam **dentro de `background.visual`**.
 
 ### `animation` (dentro de `background.visual`)
 
@@ -195,8 +207,11 @@ falhar.
 - **Fundo aparece preto sem erro aparente** → fallback silencioso de
   `BackgroundEngine` para qualquer falha (slug vazio, diretório inexistente,
   download falhou). Confira os logs `[BackgroundEngine]`.
-- **`fit_mode: "contain"` com `fill_color` ignorado** → confirme que `fill_color`
-  está dentro de `background.visual`, não em `background` direto.
+- **`fit_mode`/`fill_color`/`animation` sem efeito** → estão em `background`
+  direto em vez de `background.visual`. O engine só lê de `visual`, e a chave no
+  nível errado é ignorada sem erro.
+- **Fundo de IA saiu em outro estilo** → o modelo pedido falhou e o fallback
+  trocou por outro. Ver [ai.md](ai.md#fallback-de-modelo-enable_fallback).
 - **`ducking` não reduz o volume da trilha** → exige que o vídeo da cena tenha
   stream de áudio (a narração); sem narração, a música toca em volume cheio e
   o ducking é ignorado silenciosamente.

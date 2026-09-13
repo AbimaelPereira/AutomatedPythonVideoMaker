@@ -14,20 +14,24 @@ class PollinationsProvider:
     
     BASE_URL = "https://gen.pollinations.ai"
     
-    # Modelos de fallback para imagens (em ordem de preferência) // flux, flux-2-dev, zimage, grok-imagine, imagen-4
+    # Aliases conferidos em gen.pollinations.ai/image/models em 13/09/2026.
+    # `flux-2-dev`, `imagen-4` e `seedance` (sem sufixo) tinham saído do catálogo.
+    # Um canal com estilo fixo deve passar `enable_fallback: false` (em
+    # global_settings.ai.parameters) — senão uma falha troca o modelo em silêncio.
+
+    # Modelos de fallback para imagens (em ordem de preferência)
     IMAGE_FALLBACK_MODELS = [
-        "flux",
-        "flux-2-dev", 
-        "zimage",
-        "grok-imagine",
-        "imagen-4"
+        "flux",        # FLUX.1 Schnell
+        "zimage",      # Z-Image Turbo
+        "klein",       # FLUX.2 Klein 4B
+        "gptimage",    # GPT Image 1 Mini
     ]
-    
+
     # Modelos de fallback para vídeos (em ordem de preferência)
     VIDEO_FALLBACK_MODELS = [
-        "veo",         # Modelo padrão do Google
-        "seedance",    # Alternativa rápida
-        "seedance-pro" # Versão pro se disponível
+        "veo",          # Veo 3.1 Fast
+        "seedance-2",   # Seedance 2.0
+        "seedance-pro", # Seedance 1 Pro Fast
     ]
     
     def __init__(self, api_token: Optional[str] = None):

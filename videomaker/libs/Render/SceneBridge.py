@@ -275,7 +275,8 @@ def _detect_face_center(path: str, resized_size: tuple):
     return result
 
 
-def resolve_ai_background(cfg: dict, resolution: tuple, ai_cache, storage_dir: str) -> str:
+def resolve_ai_background(cfg: dict, resolution: tuple, ai_cache, storage_dir: str,
+                          global_settings: dict = None) -> str:
     """Caminho local da imagem de fundo gerada por IA.
 
     `type: "ai"` termina como arquivo em disco (via AICache) e, no
@@ -298,16 +299,11 @@ def resolve_ai_background(cfg: dict, resolution: tuple, ai_cache, storage_dir: s
         raise Unsupported("background ai sem prompt")
 
     provider = cfg.get("provider", "pollinations")
-    parameters = dict(cfg.get("parameters", {}))
-    cache_key = cfg.get("cache_key")
-    if not cache_key:
-        import hashlib
-        import json as _json
-        cache_data = {"provider": provider, "type": content_type,
-                      "prompt": prompt, "parameters": cfg.get("parameters", {})}
-        cache_key = hashlib.md5(
-            _json.dumps(cache_data, sort_keys=True).encode()
-        ).hexdigest()[:12]
+    # Mesma resolução e mesma chave do BackgroundEngine._build_ai — é o que faz
+    # os dois caminhos dividirem o cache. Ver AIProviders/params.py.
+    from libs.AIProviders.params import resolve_parameters, cache_key as ai_cache_key
+    parameters = resolve_parameters(cfg, global_settings, "background.visual")
+    cache_key = ai_cache_key(cfg, parameters)
 
     cached = ai_cache.get(cache_key, content_type)
     if cached and os.path.exists(cached):

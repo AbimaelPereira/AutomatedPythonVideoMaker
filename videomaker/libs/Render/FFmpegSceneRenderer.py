@@ -90,8 +90,15 @@ class FFmpegSceneRenderer:
         if bg_type == "ai" and bg.get("content_type", "image") != "image":
             return (False, "background ai content_type 'video' não suportado")
 
-        if bg.get("fit_mode") in ("contain-blur", "contain"):
-            return (False, f"background fit_mode '{bg.get('fit_mode')}' não suportado")
+        # `contain` com cor sólida é `scale`+`pad` (ver FilterGraphBuilder.contain).
+        # `contain-blur` compõe a própria imagem desfocada por trás — sem
+        # equivalente fiel. Vídeo/pasta com contain: o MoviePy faz resize puro
+        # (`_fit_video`), então também fica lá para não divergir.
+        fit_mode = bg.get("fit_mode")
+        if fit_mode == "contain-blur":
+            return (False, "background fit_mode 'contain-blur' não suportado")
+        if fit_mode == "contain" and bg_type in ("video", "directory"):
+            return (False, f"background fit_mode 'contain' em type '{bg_type}' não suportado")
 
         # `focus` só tem efeito em crop de mídia; num fundo de cor sólida é
         # inócuo. "center" é o default; "face" é suportado (detecção 1x na
@@ -204,13 +211,24 @@ class FFmpegSceneRenderer:
         elif bg.get("_segments"):
             # Pasta (ou vídeo único): o plano de segmentos já vem resolvido pelo
             # DirectorySelector — mesmo plano que o caminho MoviePy usaria.
+            if bg.get("fit_mode") == "contain":
+                # remote_asset que resolveu para vídeo: o MoviePy faz resize puro.
+                raise Unsupported("fit_mode 'contain' em fundo de vídeo")
             cur = self._build_segments(g, bg["_segments"], duration)
         else:
             path = bg.get("_path")
             if not path or not os.path.exists(path):
                 raise Unsupported(f"fundo sem arquivo resolvido: {path}")
             cur = g.background_image(path, duration)
-            if bg.get("_stretch"):
+            if bg.get("_contain"):
+                # fit_mode contain: imagem inteira, sobra em `fill_color`. O
+                # tamanho nativo entra nas mesmas contas do _fit_image do MoviePy.
+                from PIL import Image
+                with Image.open(path) as im:
+                    img_w, img_h = im.size
+                cur = g.contain(cur, img_w, img_h, bg.get("fill_color", "#000000"))
+                bg_crop = None
+            elif bg.get("_stretch"):
                 # `type: "ai"` no BackgroundEngine faz resize puro para a
                 # resolução de saída, sem preservar aspect ratio — replica isso
                 # em vez de aplicar cover, senão o enquadramento diverge.
@@ -225,7 +243,7 @@ class FFmpegSceneRenderer:
                 cur = g.scale_to(cur, rw, rh)
                 cur = g.crop_to(cur, cx, cy, w, h)
                 cur = g.set_sar(cur)
-            else:
+            elif not bg.get("_contain"):
                 cur = g.cover(cur, duration)
 
         anim = (bg.get("animation") or {})

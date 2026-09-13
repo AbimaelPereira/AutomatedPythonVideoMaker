@@ -48,14 +48,19 @@ O bloco `youtube` configura o upload automatizado via OAuth, feito por
   "type": "ai",
   "prompt": "descrição da imagem",       // obrigatório
   "provider": "pollinations",             // default
-  "model": "flux",                        // default
-  "width": 1280, "height": 720,           // defaults
-  "quality": "hd",                        // "low"|"medium"|"high"|"hd"
-  "seed": 42,                              // opcional, para reproduzibilidade
-  "negative_prompt": "...",                // default genérico anti-artefato
-  "enhance": false
+  "parameters": {                          // argumentos do provider SÓ aqui
+    "model": "flux",                      // default
+    "width": 1280, "height": 720,         // defaults
+    "quality": "hd",                      // "low"|"medium"|"high"|"hd"
+    "seed": 42,                            // opcional, para reproduzibilidade
+    "negative_prompt": "...",              // default genérico anti-texto/artefato
+    "enhance": false
+  }
 }
 ```
+
+`model`/`width`/… soltos no bloco da thumbnail abortam o vídeo. O default do
+canal em `global_settings.ai.parameters` também vale aqui — ver [ai.md](ai.md).
 
 A thumbnail gerada por IA é sempre salva em `output/{slug}/thumbnail.png` —
 não precisa configurar caminho de saída.
