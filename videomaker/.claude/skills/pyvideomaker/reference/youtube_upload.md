@@ -60,6 +60,56 @@ O bloco `youtube` configura o upload automatizado via OAuth, feito por
 A thumbnail gerada por IA é sempre salva em `output/{slug}/thumbnail.png` —
 não precisa configurar caminho de saída.
 
+### `type: "scene"` — thumbnail composta
+
+Monta a thumbnail como uma **cena de 1 frame**: aceita o mesmo `background` e os
+mesmos `visual_elements` de uma cena do vídeo, com o mesmo `placement`. É o modo
+para combinar fundo (IA/imagem) com caixa de texto, degradê e logo.
+
+```jsonc
+"thumbnail": {
+  "type": "scene",
+  "width": 1280, "height": 720,          // defaults (padrão YouTube)
+
+  "background": {
+    "visual": { "type": "ai", "prompt": "dark cathedral, cinematic light" }
+  },
+
+  "visual_elements": [
+    // Degradê para escurecer só a faixa do texto, sem apagar a imagem
+    { "type": "gradient", "direction": "to_top",
+      "stops": [ { "color": "#000000", "opacity": 0.9, "at": 0.0 },
+                 { "color": "#000000", "opacity": 0.0, "at": 0.6 } ],
+      "placement": { "anchor": ["center","center"], "width": "100%",
+                     "height": "100%", "relative_to": "screen" } },
+
+    { "type": "text_box", "content": "ELE NUNCA\nTE ABANDONOU",
+      "style": { "font_path": "./assets/fonts/Montserrat/Montserrat-Black.ttf",
+                 "font_size": 96, "text_color": "#FFE24A",
+                 "background_color": "transparent",
+                 "stroke_color": "#000000", "stroke_width": 8,
+                 "shadow": { "offset": [6,6], "color": "#000000",
+                             "blur": 4, "opacity": 0.8 },
+                 "line_spacing": 1.05, "align": "left" },
+      "placement": { "anchor": ["left","bottom"], "width": "62%" } }
+  ]
+}
+```
+
+| Campo | Default | Descrição |
+|-------|---------|-----------|
+| `width` / `height` | `1280` / `720` | Resolução da thumbnail (independente do `output.ratio` do vídeo). |
+| `background` | herda o global | Mesmos tipos de `background.visual` de uma cena (`ai`, `image`, `color`, `video`, `directory`, `remote_asset`). Omitido → herda o fundo do canal/vídeo. |
+| `visual_elements` | `[]` | Mesmos tipos de overlay de uma cena, incluindo `gradient` e `text_box`. |
+| `padding_*` | por orientação | Área segura da thumbnail. Os paddings do canal só são herdados se a orientação for a mesma do vídeo (um `padding_bottom: 850` de 9:16 colapsaria uma thumb 16:9). |
+
+Salva em `output/{slug}/thumbnail.png`, como os demais tipos. Se o PNG passar de
+2MB (limite do YouTube), é recomprimido em JPEG automaticamente.
+
+> Para um overlay que cobre a tela inteira, use
+> `"relative_to": "screen"` no `placement` — sem ele, `width: "100%"` significa
+> 100% da **área segura**, deixando a moldura do padding aparecendo.
+
 ## Autenticação
 
 Primeira execução abre o navegador para o fluxo OAuth (`generate_token`) e

@@ -28,6 +28,7 @@ da cena, processados por `VisualClip`
 | `"video"` | `source`, `audio.keep_audio`, `audio.volume` | `audio.keep_audio: false` (default) silencia o vídeo. |
 | `"text_box"` | `content`, `style.{font_family,font_size,padding,background_color,text_color,border_radius,strikethrough}` | Renderiza texto como imagem PIL (não usa o `SubtitleEngine`). |
 | `"color"` | `color` (hex, default `#000000`) | `ColorClip` sólido — útil como overlay de escurecimento (combine com `placement.width/height` e `opacity`). |
+| `"gradient"` | `direction`, `stops[]` | Degradê linear com transparência variável — ver seção abaixo. |
 | `"remote_asset"` | `source` (= slug), `register_remote_asset_as` | Resolve slug via `RemoteAssetManager` (mesma mecânica do `background.visual`, ver [background.md](background.md#remote-assets)); despacha para imagem ou vídeo pela extensão do arquivo baixado. |
 | `"directory"` | `source`, `fill_strategy`, `no_repeat_window`, `max_clips`, `max_clip_duration`, `image_default_duration`, `audio.keep_audio` | Sorteia arquivos de uma pasta até cobrir a duração da cena — ver seção abaixo. |
 
@@ -68,6 +69,55 @@ Diferenças em relação ao fundo:
   o anti-repetição evita que o mesmo clipe apareça no fundo e no overlay ao
   mesmo tempo.
 - `audio.keep_audio` funciona como no `type: "video"` (default silencia).
+
+## `type: "gradient"` — degradê linear
+
+Irmão do `type: "color"`, mas com **opacidade variável ao longo de um eixo**. É o
+recurso para escurecer só a faixa onde o texto entra, sem apagar a imagem inteira
+(uso típico: thumbnail e legenda sobre fundo claro).
+
+```jsonc
+{
+  "type": "gradient",
+  "direction": "to_top",          // to_top (default) | to_bottom | to_left | to_right
+  "stops": [
+    { "color": "#000000", "opacity": 0.9, "at": 0.0 },
+    { "color": "#000000", "opacity": 0.0, "at": 0.6 }
+  ],
+  "placement": { "anchor": ["center","center"], "width": "100%",
+                 "height": "100%", "relative_to": "screen" }
+}
+```
+
+- `at` vai de 0 a 1 **na direção declarada**: em `to_top`, `at: 0` é a base.
+- Cor e opacidade são interpoladas linearmente entre stops vizinhos; antes do
+  primeiro e depois do último, o valor da ponta é mantido.
+- Sem `stops`, o default é preto de `opacity` 0 → 1.
+- Para cobrir a tela toda use `"relative_to": "screen"` — sem isso, `100%` é
+  100% da **área segura** e sobra a moldura do padding.
+
+## `text_box` — contorno, sombra e multilinha
+
+Além de `font_size`/`text_color`/`background_color`, o `style` aceita:
+
+```jsonc
+"style": {
+  "font_path": "./assets/fonts/Montserrat/Montserrat-Black.ttf",
+  "font_size": 96,
+  "text_color": "#FFE24A",
+  "background_color": "transparent",     // sem caixa; só o texto
+  "stroke_color": "#000000", "stroke_width": 8,
+  "shadow": { "offset": [6,6], "color": "#000000", "blur": 4, "opacity": 0.8 },
+  "line_spacing": 1.05,                  // multiplicador do font_size
+  "align": "left"                        // left | center | right (multilinha)
+}
+```
+
+- `content` aceita `\n` — as linhas são medidas e alinhadas por `align`.
+- `line_spacing` é multiplicador (1.0 = padrão da fonte), não pixels.
+- `shadow.blur` usa uma camada borrada separada, então não borra o texto nítido.
+- `background_color: "transparent"` agora funciona de fato (antes virava um
+  retângulo opaco): o clip mantém a máscara alpha.
 
 ## `placement`
 

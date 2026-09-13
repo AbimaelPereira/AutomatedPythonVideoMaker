@@ -12,6 +12,7 @@ from reelscutter_api.router import router as reelscutter_router
 from channels.router import router as channels_router
 from videos.router import router as videos_router
 from subtitle_preview.router import router as subtitle_preview_router
+from thumbnail_preview.router import router as thumbnail_preview_router
 import channels.models  # noqa: F401 — garante que a tabela é criada
 import videos.models  # noqa: F401 — garante que a tabela é criada
 
@@ -40,6 +41,7 @@ app.include_router(reelscutter_router, prefix="/reelscutter", tags=["reelscutter
 app.include_router(channels_router, prefix="/channels", tags=["channels"])
 app.include_router(videos_router, prefix="/videos", tags=["videos"])
 app.include_router(subtitle_preview_router, prefix="/subtitle-preview", tags=["subtitle-preview"])
+app.include_router(thumbnail_preview_router, prefix="/thumbnail-preview", tags=["thumbnail-preview"])
 
 
 @app.get("/health")

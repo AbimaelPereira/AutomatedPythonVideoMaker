@@ -689,9 +689,22 @@ def _wrap_visual_layer(positioned_clips, element_data_list, resolution_output, s
     com fade sobre o fundo PRETO do composite interno e, ao compor sobre o fundo da cena,
     aplica a máscara de novo (dupla pré-multiplicação) — o que escurece as regiões em
     transição, fazendo o fade "começar preto". Splatados direto na composição da cena,
-    o blend acontece UMA vez, sobre o fundo real."""
+    o blend acontece UMA vez, sobre o fundo real.
+
+    Elementos com TRANSPARÊNCIA própria (gradient, text_box sem fundo) seguem a
+    mesma regra do fade e pelo mesmo motivo: achatá-los num composite opaco
+    resolve a máscara contra PRETO, apagando o fundo da cena onde deveriam ser
+    translúcidos — um degradê de escurecimento viraria um retângulo preto."""
+    def _is_translucent(e):
+        if e.get('type') == 'gradient':
+            return True
+        if e.get('type') == 'text_box':
+            return (e.get('style') or {}).get('background_color') == 'transparent'
+        return False
+
     has_fade = any(
         e.get('animation', {}).get('type') in ('fade_in', 'fade_zoom_in')
+        or _is_translucent(e)
         for e in element_data_list
     )
     if has_fade:
@@ -2053,6 +2066,13 @@ class UnifiedVideoEngine:
                 print("[UVE] Iniciando upload para o YouTube...")
                 youtube_params = self.youtube_config.copy()
                 youtube_params["video_path"] = final_path
+                # Contexto para a thumbnail `type: "scene"` compor com as mesmas
+                # engines do vídeo (herda o fundo global, reusa cache de IA e os
+                # slugs de remote_asset já resolvidos).
+                youtube_params["global_settings"] = self.global_settings
+                youtube_params["ai_cache"] = getattr(self, "ai_cache", None)
+                youtube_params["remote_asset_manager"] = self.remote_asset_manager
+                youtube_params["video_resolution"] = self.resolution_output
                 youtube_uploader = YouTube(params=youtube_params)
                 video_id = youtube_uploader.upload()
 

@@ -4,7 +4,6 @@ import io
 import mimetypes
 import numpy as np 
 from PIL import Image, ImageDraw, ImageFont
-from rembg import remove
 from moviepy.editor import *
 from libs.LayoutEngine import LayoutEngine
 from libs.Filters.utils import hex_to_rgb
@@ -201,6 +200,8 @@ class VisualClip:
             clip = self._create_text_box_clip()
         elif el_type == "color":
             clip = self._create_color_clip()
+        elif el_type == "gradient":
+            clip = self._create_gradient_clip()
 
         if not clip: return None
 
@@ -221,6 +222,15 @@ class VisualClip:
         border_radius = self.data.get("border_radius", 0)
         anim_type = anim.get("type", "none") if anim else "none"
         uses_fade = anim_type in ("fade_in", "fade_zoom_in")
+
+        # O degradê É a máscara alpha: todo o efeito vive na transparência
+        # variável. Entra na mesma exceção do fade. O text_box sem fundo
+        # depende do alpha pelo mesmo motivo (senão vira retângulo opaco).
+        if el_type == "gradient":
+            uses_fade = True
+        elif el_type == "text_box" and \
+                (self.data.get("style") or {}).get("background_color") == "transparent":
+            uses_fade = True
 
         # force_rgb apenas quando não há fade — fade_in/fade_zoom_in dependem da
         # máscara alpha para compor corretamente; removê-la antes causa fade sobre preto.
@@ -312,6 +322,12 @@ class VisualClip:
             
             # 1. Aplica filtros como remove_bg
             if filters.get("remove_bg"):
+                # Import preguiçoso: `rembg` puxa torch/onnxruntime e custa ~3s
+                # de import. Só `filters.remove_bg` precisa dele, então carregar
+                # no topo penalizava TODO import de VisualClip (incluindo o
+                # render de thumbnail, que nunca usa remoção de fundo).
+                from rembg import remove
+
                 print(f"[DEBUG_VC] Aplicando remove_bg em: {os.path.basename(path)}")
                 with open(path, "rb") as i:
                     pil_img = Image.open(io.BytesIO(remove(i.read())))
@@ -424,6 +440,78 @@ class VisualClip:
         color = hex_to_rgb(self.data.get("color", "#000000"))
         return ColorClip(size=self.resolution, color=color).set_duration(self.duration)
 
+    def _create_gradient_clip(self):
+        """Degradê linear com alpha, renderizado via PIL.
+
+        Irmão do `_create_color_clip`: mesma função de overlay, mas com opacidade
+        variável ao longo de um eixo — o recurso mais usado em thumbnail para
+        escurecer só a faixa onde o texto entra, sem apagar a imagem inteira.
+
+        `stops` é uma lista de {color, opacity, at}, com `at` em 0..1 medido na
+        direção do degradê. Cada canal (RGB e alpha) é interpolado linearmente
+        entre os stops vizinhos. Sem `stops`, cai num preto 0→1 (o caso comum).
+
+        O bitmap nasce no tamanho da tela e é redimensionado pelo LayoutEngine
+        via `placement`, exatamente como o ColorClip sólido.
+        """
+        direction = str(self.data.get("direction", "to_top")).lower()
+        stops = self.data.get("stops") or [
+            {"color": "#000000", "opacity": 0.0, "at": 0.0},
+            {"color": "#000000", "opacity": 1.0, "at": 1.0},
+        ]
+
+        # Normaliza e ordena — um `stops` fora de ordem no JSON não deve inverter
+        # o degradê silenciosamente.
+        parsed = []
+        for s in stops:
+            try:
+                at = min(1.0, max(0.0, float(s.get("at", 0.0))))
+                rgb = hex_to_rgb(s.get("color", "#000000"))
+                alpha = min(1.0, max(0.0, float(s.get("opacity", 1.0))))
+                parsed.append((at, rgb, alpha))
+            except Exception:
+                continue
+        if not parsed:
+            parsed = [(0.0, (0, 0, 0), 0.0), (1.0, (0, 0, 0), 1.0)]
+        parsed.sort(key=lambda item: item[0])
+
+        w, h = int(self.resolution[0]), int(self.resolution[1])
+
+        # O degradê só varia em UM eixo: gera-se uma faixa 1-D e depois estica-se
+        # para a tela inteira. Bem mais barato que preencher w*h ponto a ponto.
+        vertical = direction in ("to_top", "to_bottom")
+        steps = h if vertical else w
+
+        positions = np.linspace(0.0, 1.0, max(steps, 1))
+        stop_ats = np.array([p[0] for p in parsed], dtype=float)
+        ramp = np.zeros((max(steps, 1), 4), dtype=float)
+        for channel in range(4):
+            if channel < 3:
+                values = np.array([p[1][channel] for p in parsed], dtype=float)
+            else:
+                values = np.array([p[2] * 255.0 for p in parsed], dtype=float)
+            # np.interp já faz clamp nas pontas (antes do 1º stop / após o último).
+            ramp[:, channel] = np.interp(positions, stop_ats, values)
+
+        # `at=0` é o INÍCIO da direção declarada: "to_top" cresce de baixo p/ cima,
+        # "to_left" da direita p/ esquerda.
+        if direction in ("to_top", "to_left"):
+            ramp = ramp[::-1]
+
+        if vertical:
+            arr = np.repeat(ramp[:, np.newaxis, :], w, axis=1)
+        else:
+            arr = np.repeat(ramp[np.newaxis, :, :], h, axis=0)
+
+        arr = arr.astype("uint8")
+
+        temp_path = os.path.join(self.temp_dir, f"gradient_{id(self)}.png")
+        Image.fromarray(arr, mode="RGBA").save(temp_path)
+
+        # ImageClip com transparent=True preserva o alpha como máscara MoviePy —
+        # sem isso o degradê viraria um retângulo opaco.
+        return ImageClip(temp_path, transparent=True).set_duration(self.duration)
+
     def _create_text_box_clip(self):
         content = self.data.get("content", "")
         style = self.data.get("style", {})
@@ -452,38 +540,108 @@ class VisualClip:
         pad_ss = [pad[0] * ss, pad[1] * ss]
         font = self._resolve_font(style, font_size_ss)
 
-        # 1. Calcular BBox e Dimensões (na escala SS)
-        try:
-            bbox = dummy.textbbox((0,0), content, font=font)
-            w, h = bbox[2]-bbox[0], bbox[3]-bbox[1]
-        except Exception:
-            w, h = dummy.textsize(content, font=font)
-            bbox = (0, 0, w, h)
+        # Contorno e sombra (usados em thumbnail para destacar o texto sobre
+        # imagem). Ambos crescem a caixa: sem folga extra o traço e a sombra
+        # seriam cortados na borda do bitmap.
+        stroke_width = int(round(float(style.get("stroke_width", 0) or 0) * ss))
+        stroke_color = style.get("stroke_color", "black")
 
-        box_w, box_h = w + pad_ss[1]*2, h + pad_ss[0]*2
+        shadow = style.get("shadow") or {}
+        shadow_offset = shadow.get("offset", [0, 0])
+        try:
+            sh_dx = int(round(float(shadow_offset[0]) * ss))
+            sh_dy = int(round(float(shadow_offset[1]) * ss))
+        except Exception:
+            sh_dx = sh_dy = 0
+        sh_blur = float(shadow.get("blur", 0) or 0) * ss
+        sh_color = shadow.get("color", "black")
+        sh_opacity = min(1.0, max(0.0, float(shadow.get("opacity", 1.0))))
+        has_shadow = bool(shadow) and (sh_dx or sh_dy or sh_blur)
+
+        align = str(style.get("align", "left")).lower()
+        line_spacing = float(style.get("line_spacing", 1.0) or 1.0)
+        # PIL mede o espaçamento entre linhas em pixels absolutos; o JSON o
+        # expressa como multiplicador do tamanho da fonte (mais intuitivo e
+        # independente da escala de supersampling).
+        spacing_px = int(round(font_size_ss * (line_spacing - 1.0)))
+
+        # 1. Calcular BBox e Dimensões (na escala SS)
+        # `multiline_textbbox` cobre também o caso de uma linha só, então
+        # substitui o textbbox anterior sem mudar o resultado do caso legado.
+        try:
+            bbox = dummy.multiline_textbbox(
+                (0, 0), content, font=font, spacing=spacing_px, align=align,
+                stroke_width=stroke_width,
+            )
+            w, h = bbox[2] - bbox[0], bbox[3] - bbox[1]
+        except Exception:
+            try:
+                bbox = dummy.textbbox((0, 0), content, font=font)
+                w, h = bbox[2] - bbox[0], bbox[3] - bbox[1]
+            except Exception:
+                w, h = dummy.textsize(content, font=font)
+                bbox = (0, 0, w, h)
+
+        # Folga para a sombra deslocada/borrada não estourar a caixa.
+        blur_pad = int(round(sh_blur * 3)) if has_shadow else 0
+        extra_x = (abs(sh_dx) + blur_pad) if has_shadow else 0
+        extra_y = (abs(sh_dy) + blur_pad) if has_shadow else 0
+
+        box_w = w + pad_ss[1] * 2 + extra_x * 2
+        box_h = h + pad_ss[0] * 2 + extra_y * 2
 
         # 2. Criar Imagem e Desenhar Fundo
-        img = Image.new("RGBA", (int(box_w), int(box_h)), (0,0,0,0))
+        img = Image.new("RGBA", (int(box_w), int(box_h)), (0, 0, 0, 0))
         draw = ImageDraw.Draw(img)
 
         background_color = style.get("background_color", "white")
 
         if background_color != "transparent":
-            draw.rounded_rectangle([(0,0),(box_w,box_h)], radius=style.get("border_radius",0)*ss, fill=background_color)
+            draw.rounded_rectangle([(0, 0), (box_w, box_h)], radius=style.get("border_radius", 0) * ss, fill=background_color)
 
         # 3. Desenhar Texto
-        # bbox[1] é geralmente negativo ou pequeno, ajustamos para desenhar na linha correta
-        text_x_pos = pad_ss[1]
-        text_y_pos = pad_ss[0] - bbox[1]
+        # bbox[0]/bbox[1] compensam o offset interno da fonte (bearing), que em
+        # geral é negativo ou pequeno.
+        text_x_pos = pad_ss[1] + extra_x - bbox[0]
+        text_y_pos = pad_ss[0] + extra_y - bbox[1]
 
-        text_color = style.get("text_color","black")
-        draw.text((text_x_pos, text_y_pos), content, font=font, fill=text_color)
+        text_color = style.get("text_color", "black")
+
+        draw_kwargs = {"font": font, "spacing": spacing_px, "align": align}
+
+        # 3a. Sombra — desenhada ANTES do texto, numa camada própria para poder
+        # ser borrada sem afetar o texto nítido por cima.
+        if has_shadow:
+            shadow_layer = Image.new("RGBA", img.size, (0, 0, 0, 0))
+            shadow_draw = ImageDraw.Draw(shadow_layer)
+            shadow_draw.multiline_text(
+                (text_x_pos + sh_dx, text_y_pos + sh_dy), content,
+                fill=sh_color, stroke_width=stroke_width, stroke_fill=sh_color,
+                **draw_kwargs,
+            )
+            if sh_blur > 0:
+                from PIL import ImageFilter
+                shadow_layer = shadow_layer.filter(ImageFilter.GaussianBlur(sh_blur))
+            if sh_opacity < 1.0:
+                alpha = shadow_layer.getchannel("A").point(
+                    lambda v: int(v * sh_opacity))
+                shadow_layer.putalpha(alpha)
+            img = Image.alpha_composite(img, shadow_layer)
+            draw = ImageDraw.Draw(img)
+
+        # 3b. Texto (com contorno, quando houver)
+        if stroke_width > 0:
+            draw_kwargs["stroke_width"] = stroke_width
+            draw_kwargs["stroke_fill"] = stroke_color
+
+        draw.multiline_text((text_x_pos, text_y_pos), content,
+                            fill=text_color, **draw_kwargs)
 
         # --- [NOVO] Lógica de Riscado (Strikethrough) ---
         if style.get("strikethrough", False):
             # Calcula a posição Y da linha (aproximadamente no meio da altura visual do texto)
             # O fator 0.6 costuma alinhar melhor visualmente com a 'cintura' das letras
-            line_y = pad_ss[0] + (h * 0.6)
+            line_y = pad_ss[0] + extra_y + (h * 0.6)
 
             # Espessura da linha proporcional ao tamanho da fonte
             line_width = max(2, int(font_size_ss / 15))
@@ -498,7 +656,9 @@ class VisualClip:
 
         temp_path = os.path.join(self.temp_dir, f"textbox_{id(self)}.png")
         img.save(temp_path)
-        return ImageClip(temp_path).set_duration(self.duration)
+        # transparent=True preserva o alpha como máscara MoviePy. Sem isso,
+        # `background_color: "transparent"` virava um retângulo preto opaco.
+        return ImageClip(temp_path, transparent=True).set_duration(self.duration)
 
     def _apply_layout(self, clip):
         layout = self.data.get("layout", {})

@@ -16,10 +16,10 @@ Cobertura (o que NÃO é coberto cai no caminho MoviePy — ver `can_handle`):
   background type file/remote (imagem)   | input + `scale`/`crop`
   background type video                  | input com `-ss`/`-t` + cover
   background type directory              | N inputs normalizados + `concat`
-  background animation zoom              | `scale` com expr em `t`, eval=frame
+  background animation zoom              | `zoompan` centrado, expr em `on`
   visual_elements image/remote (estático)| input + `scale` + `overlay`
   visual_elements video/directory        | input + `scale`/`crop` + `overlay`
-  visual_elements zoom_in / fade_in      | `scale` eval=frame / `fade`
+  visual_elements zoom_in / fade_in      | `zoompan` centrado / `fade`
   border_radius                          | máscara PNG + `alphamerge`
   opacity                                | `colorchannelmixer=aa=`
   legendas classic/karaoke               | `ass` (via AssBuilder)
@@ -50,6 +50,19 @@ class FilterGraphBuilder:
         self._n = 0
 
     # -- helpers -----------------------------------------------------------
+
+    # Fator de ampliação da entrada do `zoompan`, para o zoom amostrar
+    # pixels reais em vez de esticar o frame já no tamanho final.
+    _ZOOM_SS = 2
+
+    @property
+    def _ZOOM_T(self) -> str:
+        """Tempo, em segundos, dentro de uma expressão do `zoompan`.
+
+        Ele não expõe `t` como o `scale` faz: conta frames de saída em `on`,
+        daí a divisão pelo fps.
+        """
+        return f"(on/{self.fps})"
 
     def _label(self, prefix: str = "v") -> str:
         self._n += 1
@@ -153,17 +166,14 @@ class FilterGraphBuilder:
 
     def zoom(self, src: str, start_scale: float, end_scale: float,
              duration: float, out_w: int = None, out_h: int = None) -> str:
-        """Zoom linear via `scale` com expressão em `t` (eval=frame).
-
-        Diferente do `zoompan` (que trabalha em passos de frame e costuma
-        tremer), `scale` com expressão dá o mesmo resultado do
-        `resize(lambda t)` do MoviePy: interpolação contínua.
+        """Zoom linear centrado, via `zoompan`.
 
         Serve zoom_in e zoom_out — a direção é só a ordem de start/end.
         """
         d = max(0.001, float(duration))
         s0, s1 = float(start_scale), float(end_scale)
-        return self._zoom_expr(src, f"({s0}+({s1}-{s0})*min(t/{d}\\,1))",
+        tt = self._ZOOM_T
+        return self._zoom_expr(src, f"({s0}+({s1}-{s0})*min({tt}/{d}\\,1))",
                                out_w, out_h)
 
     def zoom_pulse(self, src: str, intensity: float, duration: float,
@@ -174,27 +184,36 @@ class FilterGraphBuilder:
         reconhecida pelo avaliador de expressões do ffmpeg.
         """
         d = max(0.001, float(duration))
-        return self._zoom_expr(src, f"(1.0+{float(intensity)}*sin((t/{d})*PI))",
+        tt = self._ZOOM_T
+        return self._zoom_expr(src, f"(1.0+{float(intensity)}*sin(({tt}/{d})*PI))",
                                out_w, out_h)
 
     def _zoom_expr(self, src: str, scale_expr: str,
                    out_w: int = None, out_h: int = None) -> str:
-        """Aplica uma expressão de escala e recorta de volta à janela fixa.
+        """Aplica uma expressão de escala mantendo o centro fixo.
 
-        A escala transborda e o `crop` centralizado devolve o tamanho original —
-        é a mesma semântica de `apply_animation_in_window` (o layout do elemento
-        não muda quadro a quadro).
+        Usa `zoompan` em vez de `scale`+`crop`: o `crop` recorta a partir de um
+        canto e o conteúdo escapa para fora do quadro conforme a imagem cresce —
+        o zoom parece "puxar" para o canto superior esquerdo. O `zoompan` recebe
+        o ponto de ancoragem explicitamente em `x`/`y`, e centralizá-lo mantém o
+        mesmo pixel no meio do quadro do início ao fim.
+
+        A entrada é ampliada por `SS` antes do zoompan porque ele amostra do
+        frame de entrada: sem essa margem, ampliar significaria esticar pixels
+        do tamanho final e o resultado sairia borrado.
         """
         w = int(out_w or self.width)
         h = int(out_h or self.height)
         out = self._label("z")
         # A escala pode ficar < 1 (zoom_out terminando em 1.0 vindo de cima, ou
-        # o pulse com intensity negativa). `max(...)` garante que a imagem nunca
-        # fique menor que a janela, senão o crop falharia por falta de pixels.
-        expr_w = f"max({w}*{scale_expr}\\,{w})"
+        # o pulse com intensity negativa). `max(...)` prende o piso em 1.0: a
+        # janela nunca mostra menos que o enquadramento original.
+        z = f"max({scale_expr}\\,1.0)"
+        sw, sh = w * self._ZOOM_SS, h * self._ZOOM_SS
         self.add_chain(
-            f"[{src}]scale=w='{expr_w}':h=-2:eval=frame,"
-            f"crop={w}:{h},setsar=1[{out}]"
+            f"[{src}]scale={sw}:{sh}:flags=bicubic,"
+            f"zoompan=z='{z}':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':"
+            f"d=1:s={w}x{h}:fps={self.fps},setsar=1[{out}]"
         )
         return out
 

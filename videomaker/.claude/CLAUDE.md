@@ -141,7 +141,7 @@ históricos (top 100 / bottom 850); 16:9 usa ~5% simétrico (side 96, top/bottom
 em 1920×1080). Sobrescrevíveis em `global_settings` (`padding_top/bottom/side`).
 
 > `visual_elements` com `type: "ai"` NÃO é suportado — só `image`, `video`,
-> `directory`, `color`, `remote_asset` e `text_box`. AI só vale para
+> `directory`, `color`, `gradient`, `remote_asset` e `text_box`. AI só vale para
 > `background.visual`. Veja
 > `.claude/skills/pyvideomaker/examples/teste_placement_16x9.json`.
 
@@ -244,6 +244,8 @@ main.py
         ├── AIProviders           # geração de imagens (Pollinations)
         │     └── AICache         # faz cache das imagens geradas em cache/ai_generated/
         ├── MediaDownloader       # baixa vídeos/imagens remotos para temp/
+        ├── ThumbnailRenderer     # thumbnail composta (type: "scene") — reusa
+        │                         #   BackgroundEngine + VisualClip + LayoutEngine
         └── YouTube               # faz upload do MP4 final e define a thumbnail
 ```
 

@@ -19,13 +19,13 @@ e armadilhas conhecidas. Exemplos prontos e copiáveis ficam em `examples/`.
 | [reference/scenes.md](reference/scenes.md) | Campos de cena, merge especial de `background` por cena. |
 | [reference/narration_tts.md](reference/narration_tts.md) | `narration`, providers TTS (edge/google/polly/kokoro/local_file), `silence_removal`. |
 | [reference/background.md](reference/background.md) | `background.visual` (tipos, `fit_mode`, `animation`), `background.audio` (ducking), remote assets. |
-| [reference/visual_elements.md](reference/visual_elements.md) | Tipos de overlay (image/video/directory/text_box/color/remote_asset), `opacity`, `border_radius`, `animation`, `filters`. |
+| [reference/visual_elements.md](reference/visual_elements.md) | Tipos de overlay (image/video/directory/text_box/color/gradient/remote_asset), `opacity`, `border_radius`, `animation`, `filters`. |
 | [reference/placement.md](reference/placement.md) | Bloco `placement` (`anchor`/`width`/`region`) — compartilhado por `visual_elements` e `subtitle`; área segura/paddings. |
 | [reference/subtitle.md](reference/subtitle.md) | Legendas: `classic` vs `karaoke`, modos legado/linhas, paletas. **Fonte da verdade para `subtitle`.** |
 | [reference/filters.md](reference/filters.md) | `light_leak`, `particles`, `brightness_pulse`, `light_sweep` — `overlay` vs `modifier`. |
 | [reference/transitions.md](reference/transitions.md) | Transições `zoom`/`fade`, áudio de transição, override por cena. |
 | [reference/output_quality.md](reference/output_quality.md) | `output.ratio`, `output.quality` (presets x264 e override fino), `output.dir` (pasta de saída). |
-| [reference/youtube_upload.md](reference/youtube_upload.md) | Upload: `title`/`tags`/`privacy_status`/`publish_at`, thumbnail (file/directory/ai). |
+| [reference/youtube_upload.md](reference/youtube_upload.md) | Upload: `title`/`tags`/`privacy_status`/`publish_at`, thumbnail (file/directory/ai/scene — composta com background + visual_elements). |
 | [reference/scene_templates.md](reference/scene_templates.md) | Templates de cena prontos (`examples/template_*.json`) — logo (abertura/encerramento) e split (imagem + legenda lado a lado), com armadilhas já resolvidas. |
 
 ## Exemplos prontos (`examples/`)
@@ -34,6 +34,7 @@ e armadilhas conhecidas. Exemplos prontos e copiáveis ficam em `examples/`.
 |---------|-----------|
 | [examples/teste_karaoke.json](examples/teste_karaoke.json) | Karaokê modo legado e modo linhas. |
 | [examples/teste_placement_16x9.json](examples/teste_placement_16x9.json) | `placement` em visual + legenda lado a lado, 16:9. |
+| [examples/teste_thumbnail_scene.json](examples/teste_thumbnail_scene.json) | Thumbnail composta (`youtube.thumbnail.type: "scene"`) com fundo de IA + degradê + caixa de texto. |
 | [examples/teste_visual_elements.json](examples/teste_visual_elements.json) | image/video/text_box/color, `border_radius`, `animation`, `opacity`, `filters`. |
 | [examples/teste_transitions.json](examples/teste_transitions.json) | Transição global (`zoom`), override por cena (`fade`), desativação por cena. |
 | [examples/teste_chapters.json](examples/teste_chapters.json) | `chapters` com trilha de fundo diferente por capítulo. |

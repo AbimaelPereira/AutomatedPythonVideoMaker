@@ -31,7 +31,14 @@ class YouTube:
             "privacy_status": os.getenv("VIDEO_PRIVACY", "private"),
             "publish_at": os.getenv("VIDEO_PUBLISH_AT"),
             "timezone": os.getenv("TIMEZONE", "America/Sao_Paulo"),
-            "thumbnail": None,  # {"type": "file"|"directory"|"ai", ...}
+            "thumbnail": None,  # {"type": "file"|"directory"|"ai"|"scene", ...}
+            # Contexto injetado pelo UnifiedVideoEngine para o `type: "scene"`
+            # compor a thumbnail com as mesmas engines do vídeo (fundo herdado,
+            # cache de IA e slugs de remote_asset compartilhados).
+            "global_settings": None,
+            "ai_cache": None,
+            "remote_asset_manager": None,
+            "video_resolution": None,
         }
         if params:
             defaults.update(params)
@@ -119,6 +126,8 @@ class YouTube:
           - type: "ai"        → gera via Pollinations e salva em output/{slug}/thumbnail.png
                                 Parâmetros: prompt (obrigatório), provider, model,
                                 width, height, quality, seed, negative_prompt, enhance
+          - type: "scene"     → compõe background + visual_elements (mesmas engines
+                                do vídeo) e salva em output/{slug}/thumbnail.png
         """
         thumb_config = self.thumbnail
         if not thumb_config:
@@ -143,6 +152,9 @@ class YouTube:
 
         if thumb_type == "ai":
             return self._generate_thumbnail_ai(thumb_config)
+
+        if thumb_type == "scene":
+            return self._generate_thumbnail_scene(thumb_config)
 
         # type == "file"
         if not source:
@@ -224,6 +236,37 @@ class YouTube:
         print(f"[YouTube]    Modelo: {model_used} | Tentativas: {attempts} | Tamanho: {size_kb}KB")
 
         return output_path
+
+    def _generate_thumbnail_scene(self, thumb_config: dict) -> str | None:
+        """Compõe a thumbnail a partir de `background` + `visual_elements`.
+
+        Delega ao `ThumbnailRenderer`, que reusa as engines do vídeo. Os
+        intermediários vão para a pasta do vídeo, então uma imagem de IA gerada
+        aqui fica visível junto do resto do material do render.
+        """
+        try:
+            from libs.Thumbnail import ThumbnailRenderer
+        except ImportError as e:
+            print(f"[YouTube] ❌ ThumbnailRenderer não disponível: {e}")
+            return None
+
+        output_path = self._resolve_thumbnail_output_path()
+        work_dir = os.path.join(os.path.dirname(output_path), "thumbnail_tmp")
+
+        try:
+            return ThumbnailRenderer.render(
+                thumb_config,
+                output_path,
+                global_settings=self.global_settings,
+                work_dir=work_dir,
+                ai_cache=self.ai_cache,
+                remote_asset_manager=self.remote_asset_manager,
+                video_resolution=self.video_resolution,
+                log_prefix="[YouTube]",
+            )
+        except Exception as e:
+            print(f"[YouTube] ❌ Falha ao compor thumbnail: {type(e).__name__}: {e}")
+            return None
 
     def upload_thumbnail(self, video_id: str, thumbnail_path: str):
         """Faz upload da thumbnail para o vídeo especificado."""

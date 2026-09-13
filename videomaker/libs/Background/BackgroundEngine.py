@@ -9,18 +9,30 @@ from libs.VisualClip import force_rgb
 from libs.MediaDownloader import MediaDownloader
 from libs.Background.DirectorySelector import DirectorySelector
 from libs.Filters import FilterEngine
-from libs.FaceDetector import detect_focus_point
 from PIL import Image, ImageFilter
 import numpy as np
 
-try:
-    from libs.AIProviders import ai_manager
-    from libs.AIProviders.AICache import AICache
-    AI_AVAILABLE = True
-except ImportError:
-    AI_AVAILABLE = False
-    ai_manager = None
-    AICache = None
+# `libs.AIProviders` puxa o SDK do Gemini (~2,2s de import) e só é necessário
+# para `background.visual.type: "ai"`. Carregar no topo penalizava todo uso do
+# BackgroundEngine — cenas de cor, imagem, vídeo e pasta pagavam por um recurso
+# que não usam. `_ai_manager()` resolve sob demanda e memoriza o resultado.
+_AI_MANAGER = None
+_AI_CHECKED = False
+
+
+def _ai_manager():
+    """`ai_manager` do AIProviders, ou None se o sistema de IA não estiver
+    disponível. O import roda uma vez por processo."""
+    global _AI_MANAGER, _AI_CHECKED
+    if not _AI_CHECKED:
+        _AI_CHECKED = True
+        try:
+            from libs.AIProviders import ai_manager
+            _AI_MANAGER = ai_manager
+        except ImportError:
+            _AI_MANAGER = None
+    return _AI_MANAGER
+
 
 def _hex_to_rgb(hex_value):
     if not isinstance(hex_value, str):
@@ -38,6 +50,11 @@ def _resolve_focus_point(clip, new_w: int, new_h: int, focus: str) -> Tuple[floa
     detectado no primeiro frame (com fallback silencioso para o centro)."""
     if focus == "face":
         try:
+            # Import preguiçoso: o FaceDetector puxa mediapipe (~3s). Só o
+            # focus="face" precisa dele; no topo, penalizava todo import do
+            # BackgroundEngine — inclusive o render de thumbnail.
+            from libs.FaceDetector import detect_focus_point
+
             frame = clip.get_frame(0)
             w, h = clip.size
             point = detect_focus_point(frame)
@@ -74,7 +91,7 @@ class BackgroundEngine:
                  ai_cache=None, remote_asset_manager=None, directory_selector=None):
         self.resolution_output = tuple(map(int, resolution_output))
         self.dir_clips_cache = dir_clips_cache
-        self.ai_cache = ai_cache if AI_AVAILABLE else None
+        self.ai_cache = ai_cache
         self.remote_asset_manager = remote_asset_manager
         # Sem selector injetado, cria um com os caminhos de cache padrão — o
         # estado que importa (histórico de uso) vive em disco, então instâncias
@@ -351,8 +368,11 @@ class BackgroundEngine:
         return clip.without_audio()
 
     def _build_ai(self, cfg: Dict, scene_duration: float, storage_dir: str):
-        if not AI_AVAILABLE or not self.ai_cache:
+        ai_manager = _ai_manager()
+        if ai_manager is None:
             raise ValueError("Sistema de IA não está disponível")
+        if not self.ai_cache:
+            raise ValueError("AICache não configurado para o fundo de IA")
 
         provider = cfg.get("provider", "pollinations")
         content_type = cfg.get("content_type", "image")

@@ -14,6 +14,7 @@ import RemoteAssetFormPage from './pages/remote-assets/RemoteAssetFormPage'
 import RemoteAssetDetailPage from './pages/remote-assets/RemoteAssetDetailPage'
 import ReelsCutterPage from './pages/reelscutter/ReelsCutterPage'
 import SubtitlePreviewPage from './pages/subtitle-preview/SubtitlePreviewPage'
+import ThumbnailPreviewPage from './pages/thumbnail-preview/ThumbnailPreviewPage'
 import LandingPage from './pages/landing/LandingPage'
 
 const Spinner = () => (
@@ -54,6 +55,7 @@ function AppRoutes() {
       <Route path="/remote-assets/assets/:id" element={<RotaProtegida><RemoteAssetDetailPage /></RotaProtegida>} />
       <Route path="/reelscutter" element={<RotaProtegida><ReelsCutterPage /></RotaProtegida>} />
       <Route path="/subtitle-preview" element={<RotaProtegida><SubtitlePreviewPage /></RotaProtegida>} />
+      <Route path="/thumbnail-preview" element={<RotaProtegida><ThumbnailPreviewPage /></RotaProtegida>} />
     </Routes>
   )
 }

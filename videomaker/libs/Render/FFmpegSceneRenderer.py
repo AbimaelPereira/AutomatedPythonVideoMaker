@@ -32,6 +32,11 @@ def _anim_type(element: dict) -> str:
     return (element.get("animation") or {}).get("type") or "none"
 
 
+def _has_filters(d) -> bool:
+    """True se o dict declara `filters` não-vazio. Tolera None/não-dict."""
+    return bool(isinstance(d, dict) and d.get("filters"))
+
+
 def _resolve_transitions(effective_gs: dict, scene: dict):
     """Config de transição efetiva — reusa o resolvedor do engine (import local
     para evitar ciclo, já que o engine importa este módulo)."""
@@ -95,7 +100,13 @@ class FFmpegSceneRenderer:
             return (False, f"background.focus '{bg.get('focus')}' não suportado")
 
         # Filtros visuais (light_leak, partículas…) não têm equivalente.
-        if effective_gs.get("filters") or scene.get("filters"):
+        # Precisa cobrir os MESMOS lugares que o BackgroundEngine mescla
+        # (global/cena, raiz e dentro de `background`) — senão a cena vem pra
+        # cá, o BackgroundEngine nunca roda e o filtro some silenciosamente.
+        scene_bg = scene.get("background") if isinstance(scene.get("background"), dict) else {}
+        if (_has_filters(effective_gs) or _has_filters(scene)
+                or _has_filters(effective_gs.get("background"))
+                or _has_filters(scene_bg)):
             return (False, "filters (overlay/modifier) não suportados")
 
         # Transições aqui são INTRA-cena (aplicadas ao clipe da própria cena),
@@ -120,6 +131,8 @@ class FFmpegSceneRenderer:
             focus = el.get("focus")
             if focus not in (None, "center", "face"):
                 return (False, f"visual_elements[{i}].focus '{focus}' não suportado")
+            if _has_filters(el):
+                return (False, f"visual_elements[{i}].filters não suportado")
 
         if subtitle_cfg and subtitle_cfg.get("enabled"):
             sub_type = (subtitle_cfg.get("type") or "classic").lower()

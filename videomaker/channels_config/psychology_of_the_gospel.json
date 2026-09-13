@@ -1,0 +1,107 @@
+{
+    "_doc/": "Psychology of the Gospel — canal faceless em INGLES AMERICANO. Estrategia completa em ../../Psychology of the Gospel/strategy/. Paleta doc 02, imagens doc 03, estrutura de 9 blocos doc 04, formato doc 05.",
+    "global_settings": {
+        "tts": {
+            "provider": "kokoro",
+            "voice": "af_heart",
+            "lang_code": "a",
+            "whisper_language": "en",
+            "whisper_model": "base",
+            "speed": 0.92,
+            "_speed/": "0.92 = ritmo devocional. Canal fala como amiga de confianca (doc 01), nao locutor. NAO subir sem testar retencao.",
+            "silence_removal": {
+                "enabled": true,
+                "preset": "relaxed"
+            },
+            "_silence_removal/": "relaxed preserva pausas. O doc 05 usa a pausa como recurso de retencao — 'tight' cortaria a respiracao do texto.",
+            "tts_alt_male/": {
+                "provider": "kokoro",
+                "voice": "am_michael",
+                "lang_code": "a",
+                "whisper_language": "en",
+                "_uso/": "APENAS para citacao em primeira pessoa dentro de uma cena. Nunca como voz principal — a voz do canal e fixa (af_heart)."
+            }
+        },
+        "subtitle": {
+            "enabled": true,
+            "type": "classic",
+            "font_path": "./assets/fonts/CormorantGaramond/CormorantGaramond-SemiBold.ttf",
+            "font_size": 64,
+            "color": "#F5F0E8",
+            "uppercase": false,
+            "_uppercase/": "FALSE de proposito. Caixa alta grita; o doc 01 exige tom intimo, nao institucional. Este e um diferencial visual contra a coorte.",
+            "stroke_enabled": false,
+            "_stroke/": "Sem contorno. Serifa fina + contorno vira mancha. A legibilidade vem da sombra.",
+            "shadow_enabled": true,
+            "shadow_color": "#0F1929",
+            "shadow_opacity": 0.85,
+            "blur_radius": 12.0,
+            "shadow_offset": [
+                0,
+                3
+            ],
+            "placement": {
+                "anchor": [
+                    "center",
+                    "bottom"
+                ],
+                "height": "12%"
+            },
+            "_placement/": "USAR placement, NAO subtitle_position. E ATENCAO: padding_top/bottom/side dentro de `subtitle` sao DESCARTADOS pelo _resolve_scene_subtitle (_SAFE_AREA_KEYS, UnifiedVideoEngine.py:271) — a area segura e propriedade do canvas, entao os paddings vivem em global_settings, fora do bloco subtitle. Alem disso, o caminho rapido usa KaraokeSubtitle, cujo _layout_lines centraliza as linhas DENTRO da caixa e ignora o anchor bottom: quem define a posicao e a ALTURA da caixa (height 12%), nao a ancora."
+        },
+        "background": {
+            "visual": {
+                "fit_mode": "cover",
+                "_fit_mode/": "cover mantem o caminho rapido de render (~7s/cena). contain-blur cai no MoviePy (~70s)."
+            },
+            "audio": {
+                "type": "directory",
+                "source": "../../Psychology of the Gospel/assets/audio/trilha",
+                "_source/": "8 faixas classicas contemplativas (piano solo + quarteto), no projeto do canal. Curadoria em ../../Psychology of the Gospel/strategy/07-trilha-sonora.md. Caminhos relativos resolvem a partir de videomaker/ (main.py faz chdir). NAO apontar para ./assets/audio/background/classico — a pasta cheia inclui sinfonias e aberturas rejeitadas.",
+                "_licenca/": "PENDENTE: confirmar origem das gravacoes antes do primeiro upload. Obra e dominio publico, gravacao pode nao ser. Ver doc 07 §5.",
+                "fill_strategy": "concat",
+                "_fill_strategy/": "concat = emenda varias faixas ao longo do video, em vez de repetir uma so. Um video de 25min atravessa 4-6 pecas diferentes, o que acompanha o arco emocional dos 9 blocos e aumenta a variacao entre videos. O default (prefer_single) usaria so a Schubert D.845 de 12min em loop.",
+                "no_repeat_window": 20,
+                "_no_repeat_window/": "Nao repete uma faixa antes de 20 usos. Com 8 faixas, garante rotacao real entre videos.",
+                "ducking": {
+                    "enabled": true,
+                    "ducking_db": -8.0
+                },
+                "_ducking/": "-8dB: a musica precisa sumir sob a narracao. Tema e saude mental, nao motivacional."
+            }
+        },
+        "transitions": {
+            "enabled": true,
+            "type": "fade",
+            "visual": {
+                "fade_in_duration": 0.4,
+                "fade_out_duration": 0.4,
+                "color": [
+                    15,
+                    25,
+                    41
+                ]
+            },
+            "_color/": "#0F1929 (Dark Navy Shadow) em RGB. O doc 02 §1.3 proibe preto puro — inclusive na transicao.",
+            "_type/": "fade e nao zoom: zoom joga a cena no render lento."
+        },
+        "padding_bottom": 150,
+        "padding_top": 120,
+        "padding_side": 260,
+        "_padding/": "Area segura do canvas em 1080p. Precisa ficar AQUI, fora de `subtitle` — ver _placement/ acima."
+    },
+    "output": {
+        "ratio": "16:9",
+        "quality": "high",
+        "_quality/": "high (crf 18). A textura de pintura a oleo do doc 03 e o diferencial visual — crf alto destroi o grao."
+    },
+    "youtube": {
+        "token_file_name": "psychology_of_the_gospel.json",
+        "_token/": "CRIAR este token antes do primeiro upload. Nao existe ainda.",
+        "privacy_status": "private",
+        "_privacy/": "MANTER private ate os 4 videos do arco estarem prontos (doc 06 arco §5). Publicar em ordem, manualmente.",
+        "category_id": "22",
+        "default_language": "en",
+        "default_audio_language": "en"
+    }
+}
