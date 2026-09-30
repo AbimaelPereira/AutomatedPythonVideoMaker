@@ -1,55 +1,74 @@
 {
+    "_doc/": "Blood & Paperwork — faceless, INGLES AMERICANO. Estrategia em ../../Blood and Paperwork/strategy/core/. Paleta doc 02, imagens doc 03, formato doc 05.",
     "global_settings": {
-        "tts/": {
-            "provider": "local_file",
-            "audio_file": "./temp/geo.wav"
-        },
         "tts": {
-            "provider": "edge",
-            "voice": "en-US-AndrewNeural"
+            "provider": "kokoro",
+            "voice": "af_bella",
+            "lang_code": "a",
+            "speed": 0.95,
+            "whisper_model": "base",
+            "whisper_language": "en",
+            "_voice/": "Kokoro af_bella (nota A-). af_heart descartada: ja e a voz do psychology_of_the_gospel. speed 1.0 = 189 wpm; 0.95 ~ 180 wpm. Amostras em Blood and Paperwork/desenvolvimento/2026-09-27-teste-vozes/."
         },
         "subtitle": {
             "enabled": true,
-            "font_path": "./assets/fonts/BebasNeue/BebasNeue-Regular.ttf",
-            "font_size": 110,
-            "color": "#FFFFFF",
-            "uppercase": true,
+            "type": "classic",
+            "font_path": "./assets/fonts/LibreBaskerville/LibreBaskerville-Bold.ttf",
+            "font_size": 64,
+            "color": "#F3EBDD",
+            "uppercase": false,
             "stroke_enabled": false,
             "shadow_enabled": true,
-            "shadow_color": "#000000",
-            "shadow_opacity": 0.95,
-            "blur_radius": 6.0,
+            "shadow_color": "#2B1B17",
+            "shadow_opacity": 0.9,
+            "blur_radius": 10.0,
             "shadow_offset": [
-                4,
-                4
-            ]
+                0,
+                3
+            ],
+            "placement": {
+                "anchor": [
+                    "center",
+                    "bottom"
+                ],
+                "height": "12%"
+            },
+            "_tom/": "Parchment sentence case, serifa legivel: publico 60+ vendo na TV (doc 01 §2, doc 02 §2)."
         },
         "background": {
-            "audio": {
-                "type": "directory",
-                "source": "./assets/audio/background/inspiration"
-            },
             "visual": {
-                "fit_mode": "contain-blur",
+                "fit_mode": "cover",
                 "animation": {
                     "type": "zoom",
                     "duration": 20.0,
-                    "intensity": 0.12
+                    "intensity": 0.05
                 }
-            }
+            },
+            "_audio/": "Sem trilha global: type directory escolhe UMA faixa pro video todo. Trilha vai por capitulo em chapters[].global_settings.background.audio com type file (doc 07)."
         },
         "transitions": {
             "enabled": true,
-            "audio": {
-                "type": "file",
-                "source": "./assets/audio/effects/transitions/Rake Swing Whoosh Close-001.mp3",
-                "volume": 1.0
-            }
-        }
+            "type": "fade",
+            "visual": {
+                "fade_in_duration": 0.4,
+                "fade_out_duration": 0.4,
+                "color": [
+                    58,
+                    11,
+                    20
+                ]
+            },
+            "_color/": "#3A0B14 deep burgundy. Doc 02 proibe preto puro."
+        },
+        "padding_bottom": 150,
+        "padding_top": 120,
+        "padding_side": 260
     },
     "youtube": {
-        "token_file_name": "broke_to_millionaire.json",
+        "token_file_name": "/home/abimael/projetos/Canais Dark/Blood and Paperwork/credentials/youtube_token.json",
         "privacy_status": "private",
-        "category_id": "22"
+        "category_id": "24",
+        "default_language": "en",
+        "default_audio_language": "en"
     }
 }

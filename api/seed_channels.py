@@ -19,7 +19,7 @@ SQLModel.metadata.create_all(engine)
 CHANNELS_DIR = Path(__file__).parent.parent / "videomaker" / "channels_config"
 
 DISPLAY_NAMES = {
-    "broke_to_millionaire": "Broke to Millionaire",
+    "blood_and_paperwork": "Blood & Paperwork",
     "devocional_com_jesus": "Devocional com Jesus",
     "hacker_patriota": "Hacker Patriota",
 }

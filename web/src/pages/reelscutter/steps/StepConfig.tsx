@@ -14,7 +14,7 @@ interface Props {
 const CHANNELS = [
   { value: 'devocional_com_jesus', label: 'Devocional com Jesus' },
   { value: 'hacker_patriota',      label: 'Hacker Patriota' },
-  { value: 'broke_to_millionaire', label: 'Broke to Millionaire' },
+  { value: 'blood_and_paperwork', label: 'Blood & Paperwork' },
 ]
 
 export default function StepConfig({ state, update, onNext, onBack }: Props) {

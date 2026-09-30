@@ -98,13 +98,13 @@
         "_ai/": "Default de TODO bloco de IA do canal (fundo, visual_elements, thumbnail). model zimage: o estilo aquarela do doc 03 so' sai do zimage — flux produz outro estilo. enable_fallback false: se o zimage falhar, a cena FALHA em vez de sair em outro modelo em silencio. O bloco ainda pode sobrescrever em seu proprio `parameters`."
     },
     "output": {
-        "ratio": "16:9",
+        "ratio": "16:9-2k",
+        "_ratio/": "16:9-2k = 2560x1440 (libs/utils.py resolve_output_resolution). '16:9' resolveria 1920x1080. Mudado em 13/09/2026: o canal renderiza em 2K, e a resolucao de saida e o que o pipeline PEDE ao zimage nos fundos de tela cheia.",
         "quality": "high",
         "_quality/": "high (crf 18). A textura de pintura a oleo do doc 03 e o diferencial visual — crf alto destroi o grao."
     },
     "youtube": {
-        "token_file_name": "psychology_of_the_gospel.json",
-        "_token/": "CRIAR este token antes do primeiro upload. Nao existe ainda.",
+        "token_file_name": "/home/abimael/projetos/Canais Dark/Psychology of the Gospel/credentials/youtube_token.json",
         "privacy_status": "private",
         "_privacy/": "MANTER private ate os 4 videos do arco estarem prontos (doc 06 arco §5). Publicar em ordem, manualmente.",
         "category_id": "22",

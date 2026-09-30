@@ -41,7 +41,7 @@ vídeos daquele canal; ver [output_quality.md](output_quality.md).
 
 Canais reais de referência: `channels_config/hacker_patriota.json` (legenda
 estilo "glow" verde), `channels_config/devocional_com_jesus.json`,
-`channels_config/broke_to_millionaire.json`, `channels_config/the_touchline_record.json`.
+`channels_config/blood_and_paperwork.json`, `channels_config/the_touchline_record.json`.
 
 ## O que vai no JSON do vídeo, não no canal
 
