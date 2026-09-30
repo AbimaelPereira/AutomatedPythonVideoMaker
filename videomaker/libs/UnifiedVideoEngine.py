@@ -2078,6 +2078,14 @@ class UnifiedVideoEngine:
         print("[UVE] Debug config: " + str(self.video_data.get("debug", "N/A")))
 
         # 12. Upload YouTube
+        #
+        # `upload_ok` decide, lá na etapa 14, se a pasta de saída pode ser
+        # apagada. Antes a limpeza olhava só se `youtube_config` EXISTIA, e não
+        # se o upload tinha dado certo — então um erro de metadado destruía o
+        # render inteiro. Aconteceu em 22/09/2026: 2h57m de render apagadas por
+        # um `invalidTags` (as tags somavam 547 chars; o teto é 500), e o MP4
+        # não vai para a lixeira, porque `shutil.rmtree` apaga direto.
+        upload_ok = False
         if self.youtube_config and self.video_data.get("debug") is not True:
             try:
                 print("[UVE] Iniciando upload para o YouTube...")
@@ -2099,8 +2107,11 @@ class UnifiedVideoEngine:
                     youtube_uploader.upload_thumbnail(video_id, thumbnail_path)
 
                 self._save_video_record(video_id, thumbnail_path, scenes)
+                upload_ok = True
             except Exception as e:
                 print(f"[UVE] Upload YouTube falhou: {e}")
+                print("[UVE] O vídeo NÃO foi apagado — corrija o erro acima e "
+                      "suba o arquivo final sem re-renderizar.")
 
         # 12b. Upload TikTok
         tiktok_config = self.video_data.get("tiktok") or self.global_settings.get("tiktok")
@@ -2137,8 +2148,12 @@ class UnifiedVideoEngine:
             # except Exception as e:
             #     print(f"[UVE] Falha ao remover pasta de saída: {e}")
             
-            # se tiver uploadado para o youtube, pode remover a pasta inteira do video, se não deixa somente o arquivo final
-            if self.youtube_config:
+            # A pasta inteira só é removida quando o upload REALMENTE aconteceu
+            # (`upload_ok`), e não apenas quando havia config de upload. Se o
+            # upload falhou, cai no `else`: mantém o arquivo final e descarta
+            # só os intermediários, para o vídeo poder ser reenviado sem
+            # re-renderizar.
+            if self.youtube_config and upload_ok:
                 try:
                     parent_dir = os.path.dirname(self.output_dir)
                     no_bg_filename = f"{slug}_no_bg_audio.mp4"
@@ -2160,10 +2175,16 @@ class UnifiedVideoEngine:
 
                     # mover o final para a pasta pai e remover a pasta de saída
                     parent_dir = os.path.dirname(self.output_dir)
-                    shutil.move(final_path, os.path.join(parent_dir, os.path.basename(final_path))) # move o arquivo final para a pasta pai
+                    preservado = os.path.join(parent_dir, os.path.basename(final_path))
+                    shutil.move(final_path, preservado) # move o arquivo final para a pasta pai
                     shutil.rmtree(self.output_dir) # remove a pasta de saída após mover o final para a pasta pai
 
-                    print(f"[UVE] Arquivos temporários removidos, mantendo apenas o final: {final_path}")
+                    # O caminho MUDOU: imprimir `final_path` aqui apontaria para
+                    # o arquivo que acabou de ser movido, e quem lesse o log não
+                    # acharia o vídeo.
+                    print(f"[UVE] Arquivos temporários removidos, mantendo apenas o final: {preservado}")
+                    if self.youtube_config and not upload_ok:
+                        print(f"[UVE] Upload falhou — o vídeo está preservado em: {preservado}")
                 except Exception as e:
                     print(f"[UVE] Falha ao limpar arquivos temporários: {e}")
 

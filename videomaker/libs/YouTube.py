@@ -28,6 +28,13 @@ class YouTube:
             "description": os.getenv("VIDEO_DESCRIPTION", "Vídeo de teste enviado automaticamente via API do YouTube."),
             "tags": os.getenv("VIDEO_TAGS", "python,youtube,teste").split(","),
             "category_id": os.getenv("VIDEO_CATEGORY_ID", "22"),
+            # Idioma do título/descrição e do áudio falado. Sem eles o YouTube
+            # não sabe em que língua o vídeo está, o que prejudica legenda
+            # automática, legenda traduzida e alcance internacional.
+            # `None` = não enviar o campo, para não rotular errado quem não
+            # declarou nada.
+            "default_language": os.getenv("VIDEO_DEFAULT_LANGUAGE"),
+            "default_audio_language": os.getenv("VIDEO_DEFAULT_AUDIO_LANGUAGE"),
             "privacy_status": os.getenv("VIDEO_PRIVACY", "private"),
             "publish_at": os.getenv("VIDEO_PUBLISH_AT"),
             "timezone": os.getenv("TIMEZONE", "America/Sao_Paulo"),
@@ -288,22 +295,60 @@ class YouTube:
     # ---------------------------------------------------------
     # UPLOAD DE VÍDEO
     # ---------------------------------------------------------
+    # Teto de tags do YouTube: 500 caracteres somando TODAS as tags mais as
+    # vírgulas que as separam. Estourar devolve HTTP 400 `invalidTags`:
+    #     "The request metadata specifies invalid video keywords."
+    # A mensagem não menciona comprimento, então o erro parece ser de caractere
+    # inválido. Custou um render de 2h57m em 22/09/2026 (547 chars).
+    TAGS_MAX_CHARS = 500
+
+    @classmethod
+    def _tags_dentro_do_limite(cls, tags) -> list:
+        """Corta as tags que não cabem, preservando a ORDEM.
+
+        As primeiras tags são as de maior valor de SEO, então descartar a
+        cauda é melhor do que falhar o upload inteiro depois do render.
+        """
+        if not tags:
+            return []
+        mantidas, total = [], 0
+        for tag in tags:
+            custo = len(tag) + (1 if mantidas else 0)
+            if total + custo > cls.TAGS_MAX_CHARS:
+                print(f"[YouTube] ⚠️ Tags passam de {cls.TAGS_MAX_CHARS} chars — "
+                      f"cortando {len(tags) - len(mantidas)} do fim "
+                      f"(a partir de {tag!r}).")
+                break
+            mantidas.append(tag)
+            total += custo
+        return mantidas
+
     def upload(self) -> str:
         """Realiza o upload do vídeo para o canal autenticado."""
         creds = self._get_credentials()
         youtube = build("youtube", "v3", credentials=creds)
 
+        tags = self._tags_dentro_do_limite(self.tags)
+
         request_body = {
             "snippet": {
                 "title": self.title,
                 "description": self.description,
-                "tags": self.tags,
+                "tags": tags,
                 "categoryId": self.category_id
             },
             "status": {
                 "privacyStatus": self.privacy_status
             }
         }
+
+        # Idioma: só entra quando declarado. Enviar `None` faz a API recusar o
+        # campo, e cravar um default rotularia errado os canais em português.
+        if self.default_language:
+            request_body["snippet"]["defaultLanguage"] = self.default_language
+        if self.default_audio_language:
+            request_body["snippet"]["defaultAudioLanguage"] = \
+                self.default_audio_language
 
         if self.publish_at and self.privacy_status == "private":
             print(f"📅 Agendando publicação...")
