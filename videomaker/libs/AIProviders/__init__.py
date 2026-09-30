@@ -1,4 +1,5 @@
 from .PollinationsProvider import PollinationsProvider
+from .ModelScopeProvider import ModelScopeProvider
 from .AIProviderManager import AIProviderManager, AIProvider
 from .AICache import AICache
 from .GeminiProvider import GeminiProvider
@@ -13,9 +14,20 @@ def setup_providers():
         pollinations = PollinationsProvider()
         ai_manager.register_provider("pollinations", pollinations, make_default=True)
         print("✅ Provider Pollinations configurado")
-    except Exception as e: 
+    except Exception as e:
         print(f"⚠️ Erro ao configurar Pollinations: {e}")
-    
+
+    # ModelScope — so' se houver token. Sem MODELSCOPE_TOKEN o provider nem e'
+    # instanciado, para nao poluir o log de quem nao usa este provider.
+    # NUNCA make_default: o default continua sendo o Pollinations, e a troca
+    # e' explicita (provider="modelscope").
+    if ModelScopeProvider.disponivel():
+        try:
+            ai_manager.register_provider("modelscope", ModelScopeProvider())
+            print("✅ Provider ModelScope configurado")
+        except Exception as e:
+            print(f"⚠️ Erro ao configurar ModelScope: {e}")
+
     # Futuros providers podem ser adicionados aqui
     # try:
     #     openai_provider = OpenAIProvider()
@@ -26,4 +38,4 @@ def setup_providers():
 # Auto-setup
 setup_providers()
 
-__all__ = ["ai_manager", "PollinationsProvider", "AIProviderManager", "AIProvider", "AICache", "GeminiProvider"]
+__all__ = ["ai_manager", "PollinationsProvider", "ModelScopeProvider", "AIProviderManager", "AIProvider", "AICache", "GeminiProvider"]
