@@ -11,6 +11,30 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+# Escopos completos da conta do YouTube. O upload sozinho precisa apenas de
+# `youtube.upload`, mas o mesmo token serve a leitura (Analytics, listagem de
+# vídeos privados) e a playlists — pedir tudo de uma vez evita um segundo
+# consentimento no navegador quando essas funções são usadas.
+#
+# ATENÇÃO: um token gerado com menos escopos NÃO ganha os novos sozinho. O
+# Analytics devolve HTTP 403 com um token de escopo único, e o erro parece ser
+# de permissão do canal. Regere o token (`generate_token()`) para ampliar.
+SCOPES = [
+    # Data API v3
+    "https://www.googleapis.com/auth/youtube",
+    "https://www.googleapis.com/auth/youtube.force-ssl",
+    "https://www.googleapis.com/auth/youtube.upload",
+    "https://www.googleapis.com/auth/youtube.readonly",
+    "https://www.googleapis.com/auth/youtube.channel-memberships.creator",
+    "https://www.googleapis.com/auth/youtube.third-party-link.creator",
+    "https://www.googleapis.com/auth/youtubepartner",
+    "https://www.googleapis.com/auth/youtubepartner-channel-audit",
+    # Analytics / Reporting API
+    "https://www.googleapis.com/auth/yt-analytics.readonly",
+    "https://www.googleapis.com/auth/yt-analytics-monetary.readonly",
+]
+
+
 class YouTube:
     def __init__(self, params=None):
         def to_bool(value):
@@ -20,7 +44,7 @@ class YouTube:
             "client_secrets_file": os.getenv("CLIENT_SECRETS_FILE", "tokens/youtube_client_secret.json"),
             "token_dir": os.getenv("TOKEN_DIR", "tokens"),
             "token_file_name": os.getenv("TOKEN_FILE_NAME", "token_default.json"),
-            "scopes": ["https://www.googleapis.com/auth/youtube"],
+            "scopes": SCOPES,
             "verbose": to_bool(os.getenv("VERBOSE", True)),
 
             "video_path": os.getenv("VIDEO_PATH", "test_video.mp4"),
@@ -60,34 +84,107 @@ class YouTube:
     # ---------------------------------------------------------
     # AUTENTICAÇÃO
     # ---------------------------------------------------------
+    def _escopos_do_token(self) -> list:
+        """Os escopos que o token em disco REALMENTE tem.
+
+        Crucial: um token antigo foi concedido com menos escopos do que o
+        `SCOPES` de hoje. Pedir ao Google a renovação com escopos que o
+        refresh_token não cobre falha com `invalid_scope: Bad Request` — e o
+        canal que fazia upload normalmente pararia de funcionar.
+        Por isso o token manda, não a constante.
+        """
+        try:
+            import json as _json
+            gravados = _json.load(open(self.token_path)).get("scopes")
+            if gravados:
+                return gravados
+        except Exception:
+            pass
+        return self.scopes
+
     def _get_credentials(self):
         """Carrega o token salvo ou cria um novo."""
         creds = None
 
         if os.path.exists(self.token_path):
-            creds = Credentials.from_authorized_user_file(self.token_path, self.scopes)
+            creds = Credentials.from_authorized_user_file(
+                self.token_path, self._escopos_do_token())
         else:
             self.generate_token()
+            creds = Credentials.from_authorized_user_file(
+                self.token_path, self._escopos_do_token())
 
         if not creds or not creds.valid:
             if creds and creds.expired and creds.refresh_token:
                 creds.refresh(Request())
             else:
                 self.generate_token()
-                creds = Credentials.from_authorized_user_file(self.token_path, self.scopes)
+                creds = Credentials.from_authorized_user_file(
+                    self.token_path, self._escopos_do_token())
 
         return creds
 
     def generate_token(self):
-        """Abre o navegador e gera um novo token OAuth2."""
+        """Abre o navegador e gera um novo token OAuth2.
+
+        Faz backup do token anterior em `.bak` antes de sobrescrever: um
+        consentimento interrompido no meio deixaria o canal sem token nenhum.
+        """
+        import shutil
+
         print("🌐 Iniciando autenticação no Google...")
+        if os.path.exists(self.token_path):
+            shutil.copy2(self.token_path, self.token_path + ".bak")
+
         flow = InstalledAppFlow.from_client_secrets_file(self.client_secrets_file, self.scopes)
-        creds = flow.run_local_server(port=0)
+        creds = flow.run_local_server(port=0, prompt="consent", access_type="offline")
 
         with open(self.token_path, "w") as token:
             token.write(creds.to_json())
+        os.chmod(self.token_path, 0o600)
 
         print(f"✅ Token gerado e salvo em: {self.token_path}")
+
+        negados = set(self.scopes) - set(creds.granted_scopes or creds.scopes or [])
+        if negados:
+            print(f"⚠️  Escopos NEGADOS: {sorted(negados)}")
+        else:
+            print("✅ Todos os escopos concedidos.")
+
+    def status_token(self) -> dict:
+        """Diagnostica o token sem abrir navegador nem chamar a API.
+
+        Serve ao `GET /youtube/{slug}/token`: diz se o arquivo existe, se as
+        credenciais ainda valem e quais escopos foram concedidos. Nunca dispara
+        o fluxo de consentimento — por isso não usa `_get_credentials()`.
+        """
+        info = {"token_path": self.token_path, "existe": os.path.exists(self.token_path)}
+        if not info["existe"]:
+            return info
+
+        try:
+            creds = Credentials.from_authorized_user_file(
+                self.token_path, self._escopos_do_token())
+        except Exception as e:
+            info["erro"] = f"{type(e).__name__}: {e}"
+            return info
+
+        concedidos = set(creds.granted_scopes or creds.scopes or [])
+        faltando = sorted(set(SCOPES) - concedidos)
+        # Sem estes dois a Analytics API recusa tudo com 403 — é o que separa
+        # um token que só sobe vídeo de um que também lê métricas.
+        analytics = {"https://www.googleapis.com/auth/yt-analytics.readonly",
+                     "https://www.googleapis.com/auth/yt-analytics-monetary.readonly"}
+        info.update({
+            "valido": bool(creds.valid),
+            "expirado": bool(creds.expired),
+            "tem_refresh_token": bool(creds.refresh_token),
+            "escopos_concedidos": sorted(concedidos),
+            "escopos_faltando": faltando,
+            "pode_ler_analytics": not (analytics - concedidos),
+            "precisa_regerar": bool(faltando),
+        })
+        return info
 
     # ---------------------------------------------------------
     # CONVERSÃO DE FUSO HORÁRIO
@@ -275,11 +372,21 @@ class YouTube:
             print(f"[YouTube] ❌ Falha ao compor thumbnail: {type(e).__name__}: {e}")
             return None
 
-    def upload_thumbnail(self, video_id: str, thumbnail_path: str):
-        """Faz upload da thumbnail para o vídeo especificado."""
+    THUMBNAIL_MAX_TENTATIVAS = 5
+
+    def upload_thumbnail(self, video_id: str, thumbnail_path: str) -> bool:
+        """Faz upload da thumbnail para o vídeo especificado.
+
+        Chamado DEPOIS do vídeo já estar no canal, então uma falha aqui não
+        pode derrubar o processo: o vídeo existe e a thumbnail é reenviável a
+        qualquer momento (por esta função ou pelo Studio). Por isso tenta
+        algumas vezes e devolve False em vez de levantar exceção.
+        """
+        import time
+
         if not os.path.exists(thumbnail_path):
             print(f"[YouTube] Thumbnail não encontrada: {thumbnail_path}")
-            return
+            return False
 
         creds = self._get_credentials()
         youtube = build("youtube", "v3", credentials=creds)
@@ -287,10 +394,22 @@ class YouTube:
         ext = os.path.splitext(thumbnail_path)[1].lower()
         mimetype = "image/png" if ext == ".png" else "image/jpeg"
 
-        media = MediaFileUpload(thumbnail_path, mimetype=mimetype, resumable=True)
-        youtube.thumbnails().set(videoId=video_id, media_body=media).execute()
-
-        print(f"✅ Thumbnail enviada: {os.path.basename(thumbnail_path)}")
+        for tentativa in range(1, self.THUMBNAIL_MAX_TENTATIVAS + 1):
+            try:
+                # O MediaFileUpload é recriado a cada tentativa de propósito:
+                # um upload não-retomável que falhou deixa o objeto inutilizável.
+                media = MediaFileUpload(thumbnail_path, mimetype=mimetype, resumable=True)
+                youtube.thumbnails().set(videoId=video_id, media_body=media).execute()
+                print(f"✅ Thumbnail enviada: {os.path.basename(thumbnail_path)}")
+                return True
+            except Exception as e:
+                print(f"  [thumbnail] tentativa {tentativa}/"
+                      f"{self.THUMBNAIL_MAX_TENTATIVAS} falhou: {type(e).__name__}")
+                if tentativa == self.THUMBNAIL_MAX_TENTATIVAS:
+                    print(f"⚠️  Thumbnail NÃO enviada. Suba manualmente: {thumbnail_path}")
+                    return False
+                time.sleep(2 ** tentativa)
+        return False
 
     # ---------------------------------------------------------
     # UPLOAD DE VÍDEO
@@ -322,6 +441,136 @@ class YouTube:
             mantidas.append(tag)
             total += custo
         return mantidas
+
+    # Limites do YouTube que só aparecem como HTTP 400 depois do upload começar.
+    TITLE_MAX_CHARS = 100
+    DESCRIPTION_MAX_CHARS = 5000
+    THUMBNAIL_MAX_BYTES = 2 * 1024 * 1024
+
+    def validar(self, check_video: bool = True) -> list[str]:
+        """Checa os metadados ANTES de renderizar/subir. Devolve lista de problemas.
+
+        Toda regra aqui é de algo que só falharia depois do upload ter começado
+        — ou, pior, que subiria errado em silêncio. Rodar isto custa
+        milissegundos; descobrir no fim de um render custa horas.
+
+        `check_video=False` ignora a existência do MP4, para validar metadados
+        antes de o arquivo existir (é o caso da checagem pré-render).
+        """
+        problemas = []
+
+        if check_video:
+            if not self.video_path:
+                problemas.append("video_path não configurado.")
+            elif not os.path.exists(self.video_path):
+                problemas.append(f"MP4 não existe: {self.video_path}")
+
+        titulo = self.title or ""
+        if not titulo.strip():
+            problemas.append("Título vazio.")
+        elif len(titulo) > self.TITLE_MAX_CHARS:
+            problemas.append(f"Título tem {len(titulo)} chars — o YouTube corta "
+                             f"em {self.TITLE_MAX_CHARS}.")
+
+        if len(self.description or "") > self.DESCRIPTION_MAX_CHARS:
+            problemas.append(f"Descrição tem {len(self.description)} chars "
+                             f"(limite {self.DESCRIPTION_MAX_CHARS}).")
+
+        # Mesma conta do `_tags_dentro_do_limite`: soma das tags + as vírgulas.
+        tags = self.tags or []
+        if isinstance(tags, str):
+            tags = [t.strip() for t in tags.split(",") if t.strip()]
+        custo = sum(len(t) for t in tags) + max(0, len(tags) - 1)
+        if custo > self.TAGS_MAX_CHARS:
+            problemas.append(f"Tags somam {custo} chars (limite "
+                             f"{self.TAGS_MAX_CHARS}) — as do fim seriam cortadas.")
+
+        problemas += self._validar_thumbnail()
+        problemas += self._validar_agendamento()
+
+        # Sem token, `_get_credentials()` chama `generate_token()`, que abre o
+        # navegador e BLOQUEIA esperando o clique. Num job de madrugada isso
+        # trava para sempre, depois do render inteiro.
+        if not os.path.exists(self.token_path):
+            problemas.append(f"Token OAuth não encontrado: {self.token_path} "
+                             "(o upload abriria o navegador pedindo login).")
+
+        return problemas
+
+    def _validar_thumbnail(self) -> list[str]:
+        """Checagens da thumbnail que não exigem gerá-la."""
+        th = self.thumbnail or {}
+        if not th:
+            return []
+
+        tipo = th.get("type", "file")
+        source = th.get("source")
+
+        # `ai` e `scene` produzem a imagem durante o upload; não há o que
+        # conferir antes, o arquivo ainda não existe.
+        if tipo in ("ai", "scene"):
+            if tipo == "ai" and not (th.get("prompt") or {}):
+                return ["thumbnail.type='ai' sem `prompt`."]
+            return []
+
+        if not source:
+            return [f"thumbnail.type={tipo!r} sem `source`."]
+
+        if tipo == "directory":
+            if not os.path.isdir(source):
+                return [f"Diretório de thumbnail não encontrado: {source}"]
+            válidas = (".jpg", ".jpeg", ".png", ".webp")
+            if not [f for f in os.listdir(source) if f.lower().endswith(válidas)]:
+                return [f"Nenhuma imagem válida em: {source}"]
+            return []
+
+        # type == "file"
+        if not os.path.exists(source):
+            return [f"Thumbnail não encontrada: {source}"]
+        if os.path.getsize(source) > self.THUMBNAIL_MAX_BYTES:
+            return [f"Thumbnail passa de 2MB ({os.path.getsize(source)/1e6:.1f} MB) "
+                    "— o YouTube recusa."]
+        return []
+
+    def _validar_agendamento(self) -> list[str]:
+        """Checagens do `publish_at`.
+
+        A regra que mais machuca: o agendamento SÓ vale com
+        `privacy_status='private'`. Com qualquer outro valor o upload descarta o
+        `publishAt` com um aviso e o vídeo fica VISÍVEL na hora — o oposto do
+        pretendido.
+        """
+        if not self.publish_at:
+            return []
+
+        problemas = []
+        tz = self.timezone or "America/Sao_Paulo"
+
+        if self.privacy_status != "private":
+            problemas.append(
+                f"publish_at com privacy_status={self.privacy_status!r} — o "
+                "agendamento é IGNORADO e o vídeo sai imediatamente. Use 'private'.")
+
+        try:
+            quando = datetime.datetime.strptime(self.publish_at, "%Y-%m-%d %H:%M:%S") \
+                .replace(tzinfo=ZoneInfo(tz))
+            faltam = (quando - datetime.datetime.now(ZoneInfo(tz))).total_seconds()
+            if faltam < 0:
+                problemas.append(f"publish_at já passou ({self.publish_at} {tz}) "
+                                 "— o YouTube publicaria na hora.")
+            elif faltam < 900:
+                problemas.append(f"publish_at em {faltam/60:.0f} min — o upload de "
+                                 "um arquivo grande pode não terminar a tempo.")
+        except Exception as e:
+            problemas.append(f"publish_at inválido ({self.publish_at!r} / {tz!r}): {e}")
+
+        # Canal em inglês com o timezone default brasileiro desloca a
+        # publicação em várias horas, silenciosamente.
+        if tz == "America/Sao_Paulo" and (self.default_language or "").startswith("en"):
+            problemas.append("timezone='America/Sao_Paulo' (o default) num canal em "
+                             "inglês — declare o fuso do público, ex. 'America/New_York'.")
+
+        return problemas
 
     def upload(self) -> str:
         """Realiza o upload do vídeo para o canal autenticado."""
@@ -362,20 +611,72 @@ class YouTube:
         if not os.path.exists(self.video_path):
             raise FileNotFoundError(f"Arquivo de vídeo não encontrado: {self.video_path}")
 
-        media = MediaFileUpload(self.video_path, chunksize=-1, resumable=True)
+        # "Conteúdo alterado ou sintético" (a pergunta de IA do Studio). Não se
+        # marca por default: a pergunta é sobre conteúdo confundível com a
+        # realidade (pessoa real, lugar real, simulação realista), e ilustração
+        # estilizada de gente fictícia não é nada disso — o YouTube isenta
+        # animação não realista explicitamente.
+        #
+        # O campo é WRITE-ONLY: `videos().list` NUNCA o devolve. A única forma
+        # de conferir depois é abrir o Studio.
+        if self.config.get("contains_synthetic_media"):
+            request_body["status"]["containsSyntheticMedia"] = True
+            print("🤖 Declarado 'Uso de IA' = Sim (pedido na config).")
 
-        print("📤 Iniciando upload...")
-        upload = youtube.videos().insert(
-            part="snippet,status",
-            body=request_body,
-            media_body=media
-        )
+        return self._upload_resiliente(request_body)
 
-        response = None
+    # Blocos de 10MB: o protocolo resumable do Google permite repetir apenas o
+    # bloco que falhou. Com `chunksize=-1` (arquivo inteiro numa requisição),
+    # qualquer queda de conexão joga fora tudo que já subiu — num MP4 de 800MB
+    # isso é meia hora de upload perdida.
+    UPLOAD_CHUNK_MB = 10
+    UPLOAD_MAX_TENTATIVAS = 12
+
+    def _upload_resiliente(self, request_body: dict) -> str:
+        """Sobe o MP4 em blocos, retomando de onde parou quando a conexão cai.
+
+        O `request` é criado UMA vez e reusado entre as tentativas — é isso que
+        preserva o progresso. Recriar o request começaria do zero e poderia
+        gerar um vídeo duplicado no canal.
+        """
+        import random as _random
+        import time
+
+        creds = self._get_credentials()
+        youtube = build("youtube", "v3", credentials=creds)
+
+        media = MediaFileUpload(self.video_path,
+                                chunksize=self.UPLOAD_CHUNK_MB * 1024 * 1024,
+                                resumable=True, mimetype="video/mp4")
+        request = youtube.videos().insert(part="snippet,status", body=request_body,
+                                          media_body=media)
+
+        total_mb = os.path.getsize(self.video_path) / 1e6
+        print(f"📤 Enviando {total_mb:.0f} MB em blocos de {self.UPLOAD_CHUNK_MB} MB...")
+
+        response, falhas, ultimo_pct = None, 0, -1
         while response is None:
-            status, response = upload.next_chunk()
-            if status and self.verbose:
-                print(f"Progresso: {int(status.progress() * 100)}%")
+            try:
+                status, response = request.next_chunk()
+                falhas = 0                      # progrediu: zera o contador
+                if status and self.verbose:
+                    pct = int(status.progress() * 100)
+                    if pct != ultimo_pct:
+                        print(f"  {pct:3d}%  ({status.resumable_progress/1e6:.0f}/"
+                              f"{total_mb:.0f} MB)", flush=True)
+                        ultimo_pct = pct
+            except Exception as e:
+                falhas += 1
+                if falhas > self.UPLOAD_MAX_TENTATIVAS:
+                    raise RuntimeError(
+                        f"Upload abortado após {self.UPLOAD_MAX_TENTATIVAS} "
+                        f"tentativas seguidas: {e}. O upload é retomável — rode "
+                        "de novo quando a conexão estabilizar.") from e
+                espera = min(60, 2 ** falhas) + _random.uniform(0, 1)
+                print(f"  [{type(e).__name__}] tentativa {falhas}/"
+                      f"{self.UPLOAD_MAX_TENTATIVAS}, aguardando {espera:.0f}s...",
+                      flush=True)
+                time.sleep(espera)
 
         print("✅ Upload concluído!")
         print(f"🔗 Link do vídeo: https://youtu.be/{response['id']}")

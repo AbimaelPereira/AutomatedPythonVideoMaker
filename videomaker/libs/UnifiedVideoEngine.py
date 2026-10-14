@@ -1649,7 +1649,10 @@ class UnifiedVideoEngine:
                 "transcript": transcript,
             }
 
-            response = requests.post(f"{api_url}/videos/", json=payload, timeout=10)
+            # A rota exige X-Service-Token (chamada de processo, não de usuário).
+            headers = {"X-Service-Token": os.getenv("SERVICE_TOKEN", "dev-service-token")}
+            response = requests.post(f"{api_url}/videos/", json=payload,
+                                     headers=headers, timeout=10)
             response.raise_for_status()
             video = response.json()
             print(f"[UVE] Registro do vídeo salvo no banco (id={video['id']}, youtube_id={youtube_id})")
@@ -1749,6 +1752,19 @@ class UnifiedVideoEngine:
         if AI_AVAILABLE:
             from libs.AIProviders.params import validate_video_ai_blocks
             validate_video_ai_blocks(scenes, (self.youtube_config or {}).get("thumbnail"))
+
+        # Metadados do YouTube também são checados AQUI, não no upload. Título
+        # com 104 chars, tags estourando 500 ou token OAuth ausente só
+        # apareceriam como erro no fim do upload — depois de 6-8h de render num
+        # vídeo longo. A checagem custa milissegundos.
+        #
+        # `check_video=False`: o MP4 ainda não existe neste ponto.
+        if self.youtube_config and self.video_data.get("debug") is not True:
+            problemas = YouTube(params=self.youtube_config).validar(check_video=False)
+            if problemas:
+                raise ValueError(
+                    "Metadados do YouTube inválidos (corrija antes de renderizar):\n  - "
+                    + "\n  - ".join(problemas))
 
         # PRÉ-PROCESSAMENTO: resolve imagens IA em visual_elements antes do pool
         try:

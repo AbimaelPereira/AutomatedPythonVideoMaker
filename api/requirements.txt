@@ -14,3 +14,10 @@ python-multipart==0.0.12
 pillow==10.4.0
 numpy<2
 srt==3.5.3
+
+# YouTube (módulo youtube/) — reusa libs/YouTube, libs/YouTubeReader e
+# libs/YouTubePlaylists do videomaker. Versões idênticas às do
+# videomaker/requirements.txt: o mesmo token OAuth é lido pelos dois lados.
+google-api-python-client==2.184.0
+google-auth==2.41.1
+google-auth-oauthlib==1.2.2
