@@ -16,7 +16,7 @@ from sqlmodel import Session
 from typing import Optional
 
 from database import get_session
-from middleware.auth import get_current_user
+from middleware.auth import get_current_user, require_service_token
 from auth.models import User
 from jobs.models import Job
 from jobs import worker
@@ -92,6 +92,31 @@ def _enfileirar(session: Session, user: User, background: BackgroundTasks,
     session.refresh(job)
     background.add_task(worker.run_job, job.id)
     return {"job_id": job.id, "status": job.status, "type": tipo}
+
+
+# ---------------------------------------------------------------------------
+# API interna — consumida por cron/scripts, autenticada por X-Service-Token
+# em vez de JWT de usuário (que expira em 15 min e não serve para cron).
+# Declarada ANTES das rotas /{slug}/... para não colidir no path matching.
+# ---------------------------------------------------------------------------
+@router.post("/internal/{slug}/sync", summary="Coletar dados do canal (cron)",
+             dependencies=[Depends(require_service_token)],
+             responses={404: {"description": "Canal sem channels_config ou sem token"}})
+def internal_sync(slug: str, body: SyncRequest = SyncRequest()):
+    """Igual ao `/sync?wait=true`, mas para chamadas de processo.
+
+    Síncrono de propósito: o cron precisa do código de saída e do resumo no
+    log, e não teria como acompanhar um `job_id` depois.
+
+    O `path` manda — é assim que a coleta continua caindo na pasta do canal
+    (ex. `PoG/data/canal.json`) em vez do default do pipeline.
+    """
+    try:
+        return service.sync(slug, path=body.path, inicio=body.inicio,
+                            fim=body.fim,
+                            com_analytics_por_video=body.com_analytics_por_video)
+    except CanalNaoEncontrado as e:
+        raise _nao_encontrado(e)
 
 
 # ---------------------------------------------------------------------------

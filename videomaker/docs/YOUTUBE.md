@@ -133,6 +133,12 @@ curl -X POST -H "$AUTH" -H 'Content-Type: application/json' \
   -d '{"inicio":"2026-08-01"}' \
   localhost:8000/youtube/psychology_of_the_gospel/sync
 
+# Para cron/scripts: X-Service-Token em vez de JWT (que expira em 15 min).
+# Sempre síncrono — o cron precisa do código de saída e do resumo no log.
+curl -X POST -H "X-Service-Token: $SERVICE_TOKEN" -H 'Content-Type: application/json' \
+  -d '{"path":"/caminho/do/canal/data/canal.json","inicio":"2026-08-01"}' \
+  localhost:8000/youtube/internal/psychology_of_the_gospel/sync
+
 # Síncrono: espera na request e devolve o resumo
 curl -X POST -H "$AUTH" -H 'Content-Type: application/json' \
   -d '{"inicio":"2026-08-01"}' \
@@ -145,7 +151,7 @@ retenção, receita) e grava num JSON.
 
 | Campo | Default | O que faz |
 |---|---|---|
-| `path` | `videomaker/output/analytics/{slug}.json` | destino do JSON; relativo resolve a partir de `videomaker/` |
+| `path` | `videomaker/output/analytics/{slug}.json` | destino do JSON; relativo resolve a partir de `videomaker/`. É assim que a coleta cai na pasta do canal (o cron do PoG passa `data/canal.json`) |
 | `inicio` | `2020-01-01` | início da janela do Analytics |
 | `fim` | hoje | fim da janela |
 | `com_analytics_por_video` | `true` | `false` corta 6 queries por vídeo (bem mais rápido, só metadados) |
@@ -162,6 +168,11 @@ truncado no lugar do snapshot anterior.
 curl -H "$AUTH" localhost:8000/youtube/{slug}/analytics
 curl -H "$AUTH" "localhost:8000/youtube/{slug}/analytics?resumo=true"   # sem a lista de vídeos
 ```
+
+> O cron do Psychology of the Gospel usa a rota interna e passa
+> `path` apontando para `PoG/data/canal.json` — o formato do JSON é o mesmo de
+> antes da centralização, então os docs de research do canal que leem esse
+> arquivo continuam valendo.
 
 **Uma consulta recusada não derruba a coleta.** O Analytics nega queries por
 motivos que variam por canal (sem monetização, dados insuficientes,
