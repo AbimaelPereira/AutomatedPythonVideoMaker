@@ -3,6 +3,7 @@ from sqlmodel import Session, select
 from pydantic import BaseModel
 from typing import Optional
 from database import get_session
+from middleware.auth import require_service_token
 from videos.models import Video
 from videos.service import create_video_after_upload
 
@@ -24,7 +25,10 @@ class VideoCreateRequest(BaseModel):
     transcript: Optional[str] = None
 
 
-@router.post("/", response_model=Video, status_code=201)
+# Quem chama é o videomaker (um processo), não um usuário com login — por isso
+# X-Service-Token e não JWT. Mesmo padrão de `assets/router.py`.
+@router.post("/", response_model=Video, status_code=201,
+             dependencies=[Depends(require_service_token)])
 def create_video(payload: VideoCreateRequest, session: Session = Depends(get_session)):
     return create_video_after_upload(session, **payload.model_dump())
 

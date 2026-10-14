@@ -1649,7 +1649,10 @@ class UnifiedVideoEngine:
                 "transcript": transcript,
             }
 
-            response = requests.post(f"{api_url}/videos/", json=payload, timeout=10)
+            # A rota exige X-Service-Token (chamada de processo, não de usuário).
+            headers = {"X-Service-Token": os.getenv("SERVICE_TOKEN", "dev-service-token")}
+            response = requests.post(f"{api_url}/videos/", json=payload,
+                                     headers=headers, timeout=10)
             response.raise_for_status()
             video = response.json()
             print(f"[UVE] Registro do vídeo salvo no banco (id={video['id']}, youtube_id={youtube_id})")
