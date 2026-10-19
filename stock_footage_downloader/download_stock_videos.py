@@ -4,7 +4,11 @@ Baixa vídeos de paisagem (horizontais, alta resolução) do Pexels e Pixabay.
 
 Uso:
     python download_stock_videos.py
-    python download_stock_videos.py --target 500 --out "/media/pendrive/Grupo Win Lite BR"
+    python download_stock_videos.py --target 200 --out /mnt/stock/StockVideos
+    python download_stock_videos.py --max-duration 0        # sem cortar
+
+Cada vídeo é cortado para no máximo 8s por padrão (trecho central, sem
+recodificar) — o pipeline usa os clipes como fundo de cenas curtas.
 
 Retomável: mantém um CSV de log + um arquivo de IDs já baixados. Se o script
 for interrompido, rode de novo com o mesmo --out que ele continua de onde parou.
@@ -17,6 +21,8 @@ import sys
 import time
 import random
 import signal
+import shutil
+import subprocess
 import requests
 
 # ----------------------------------------------------------------------------
@@ -25,8 +31,8 @@ import requests
 
 # Chaves lidas do ambiente (ex.: `export PEXELS_API_KEY=...`) para não ficarem
 # no repositório. Sem a chave, o provedor correspondente é simplesmente pulado.
-PEXELS_API_KEY = os.environ.get("PEXELS_API_KEY", "")
-PIXABAY_API_KEY = os.environ.get("PIXABAY_API_KEY", "")
+PEXELS_API_KEY = os.environ.get("PEXELS_API_KEY", "ulo7QvczWRO6NfW1htFxNWb469VMdaGf1wBLVLkeanIsE2fttcAVX28e")
+PIXABAY_API_KEY = os.environ.get("PIXABAY_API_KEY", "26625174-63040899434f534ce0d703fa6")
 
 PEXELS_SEARCH_URL = "https://api.pexels.com/videos/search"
 PIXABAY_SEARCH_URL = "https://pixabay.com/api/videos/"
@@ -46,6 +52,12 @@ PIXABAY_DELAY = 1.0
 DOWNLOAD_DELAY = 0.5
 MAX_RETRIES = 3
 REQUEST_TIMEOUT = 30
+
+# Corte: o pipeline usa os clipes como fundo em cenas curtas, então vídeo longo
+# é só espaço em disco. Cortamos um trecho do meio (a parte mais estável do
+# clipe, longe de fades de abertura/fechamento) sem recodificar.
+DEFAULT_MAX_DURATION = 8.0
+MIN_KEEPABLE_DURATION = 1.0   # abaixo disso o corte não vale a pena
 
 STATE_FILENAME = "downloaded_ids.txt"
 LOG_FILENAME = "metadata.csv"
@@ -331,6 +343,87 @@ def resolution_label_for(width, height, explicit_label=None):
 
 
 # ----------------------------------------------------------------------------
+# Corte para duração máxima
+# ----------------------------------------------------------------------------
+
+def probe_duration(path):
+    """Duração em segundos via ffprobe, ou None se não der para ler."""
+    try:
+        out = subprocess.run(
+            ["ffprobe", "-v", "error", "-show_entries", "format=duration",
+             "-of", "default=noprint_wrappers=1:nokey=1", path],
+            capture_output=True, text=True, timeout=30,
+        )
+        if out.returncode != 0:
+            return None
+        return float(out.stdout.strip())
+    except (ValueError, OSError, subprocess.SubprocessError):
+        return None
+
+
+def trim_to_max_duration(path, max_duration):
+    """Corta `path` no lugar para no máximo `max_duration` segundos.
+
+    Pega um trecho do meio do clipe e usa `-c copy`: sem recodificar, o corte
+    salta para o keyframe mais próximo, então a duração final pode passar um
+    pouco de `max_duration`. Em troca é instantâneo e não perde qualidade.
+
+    Devolve (foi_cortado, duracao_final). Em qualquer falha mantém o arquivo
+    original intacto — vídeo não cortado é melhor que vídeo corrompido.
+    """
+    duration = probe_duration(path)
+    if duration is None:
+        print(f"  Aviso: ffprobe não leu a duração, mantendo sem cortar.")
+        return False, None
+    if duration <= max_duration + 0.5:
+        return False, duration
+
+    # Trecho central: evita fade-in/fade-out das pontas.
+    start = max(0.0, (duration - max_duration) / 2.0)
+    tmp_path = path + ".trim.mp4"
+    cmd = [
+        "ffmpeg", "-nostdin", "-v", "error", "-y",
+        "-ss", f"{start:.3f}", "-i", path, "-t", f"{max_duration:.3f}",
+        "-c", "copy", "-avoid_negative_ts", "make_zero",
+        "-movflags", "+faststart", tmp_path,
+    ]
+    try:
+        res = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+    except (OSError, subprocess.SubprocessError) as exc:
+        print(f"  Aviso: ffmpeg falhou ({exc}), mantendo sem cortar.")
+        if os.path.exists(tmp_path):
+            os.remove(tmp_path)
+        return False, duration
+
+    if res.returncode != 0 or not os.path.exists(tmp_path):
+        print(f"  Aviso: ffmpeg retornou erro, mantendo sem cortar. {res.stderr.strip()[:200]}")
+        if os.path.exists(tmp_path):
+            os.remove(tmp_path)
+        return False, duration
+
+    new_duration = probe_duration(tmp_path)
+    # Um corte que zera o vídeo (keyframe ausente, container estranho) é pior
+    # que não cortar: descarta e fica com o original.
+    if new_duration is None or new_duration < MIN_KEEPABLE_DURATION:
+        print(f"  Aviso: corte saiu inválido ({new_duration}), mantendo original.")
+        os.remove(tmp_path)
+        return False, duration
+
+    os.replace(tmp_path, path)
+    return True, new_duration
+
+
+def check_ffmpeg():
+    """Avisa uma vez se faltar ffmpeg/ffprobe, em vez de errar a cada vídeo."""
+    missing = [t for t in ("ffmpeg", "ffprobe") if shutil.which(t) is None]
+    if missing:
+        print(f"Aviso: {', '.join(missing)} não encontrado(s) no PATH — "
+              f"os vídeos serão baixados sem corte.\n")
+        return False
+    return True
+
+
+# ----------------------------------------------------------------------------
 # Main
 # ----------------------------------------------------------------------------
 
@@ -339,6 +432,8 @@ def main():
     parser.add_argument("--target", type=int, default=DEFAULT_TARGET, help="Total de vídeos a baixar.")
     parser.add_argument("--out", type=str, default=DEFAULT_OUT_DIR, help="Pasta de destino dos vídeos.")
     parser.add_argument("--terms", type=str, nargs="*", default=None, help="Lista customizada de termos de busca.")
+    parser.add_argument("--max-duration", type=float, default=DEFAULT_MAX_DURATION,
+                        help=f"Corta cada vídeo para no máximo N segundos (0 desliga). Padrão: {DEFAULT_MAX_DURATION:g}.")
     args = parser.parse_args()
 
     out_dir = args.out
@@ -360,9 +455,14 @@ def main():
         if not key:
             print(f"{name} ausente: essa fonte será ignorada.")
 
+    max_duration = args.max_duration
+    if max_duration > 0 and not check_ffmpeg():
+        max_duration = 0
+
     print(f"Destino: {out_dir}")
     print(f"Meta: {target} vídeos | Já baixados anteriormente: {already}")
-    print(f"Termos: {', '.join(terms)}\n")
+    print(f"Termos: {', '.join(terms)}")
+    print(f"Corte: {f'{max_duration:g}s (trecho central)' if max_duration > 0 else 'desligado'}\n")
 
     if already >= target:
         print("Meta já atingida anteriormente. Nada a fazer.")
@@ -410,6 +510,16 @@ def main():
             time.sleep(DOWNLOAD_DELAY)
 
             if ok:
+                # Corta antes de registrar: a duração que vai para o CSV é a
+                # do arquivo que ficou no disco, não a do original remoto.
+                final_duration = item.get("duration_seconds", "")
+                if max_duration > 0:
+                    trimmed, new_duration = trim_to_max_duration(dest_path, max_duration)
+                    if new_duration is not None:
+                        final_duration = f"{new_duration:.2f}"
+                    if trimmed:
+                        print(f"  Cortado para {new_duration:.2f}s.")
+
                 seen_ids.add(uid)
                 append_downloaded_id(state_path, uid)
                 append_csv_log(log_path, {
@@ -419,7 +529,7 @@ def main():
                     "filename": filename,
                     "width": width,
                     "height": height,
-                    "duration_seconds": item.get("duration_seconds", ""),
+                    "duration_seconds": final_duration,
                     "resolution_label": resolution_label_for(width, height, item.get("resolution_label")),
                     "original_url": item.get("original_url", ""),
                     "download_url": item["download_url"],

@@ -26,7 +26,7 @@
         "background": {
             "visual": {
                 "type": "directory",
-                "source": "/media/abimael/PENDRIVE/stock_videos",
+                "source": "/mnt/stock/StockVideos",
                 "fill_strategy": "concat",
                 "shuffle": true,
                 "no_repeat_window": 20
