@@ -1,0 +1,21 @@
+{
+  "slug": "golden_07_subtitle_classic",
+  "output": { "ratio": "16:9", "quality": "draft" },
+  "_srt": "./tests/fixtures/assets/words.srt",
+  "global_settings": {
+    "transitions": { "enabled": false },
+    "subtitle": {
+      "enabled": true, "type": "classic", "uppercase": true,
+      "font_path": "./assets/fonts/Montserrat/Montserrat-Black.ttf",
+      "font_size": 70, "color": "white", "stroke_color": "black", "stroke_width": 3,
+      "placement": { "anchor": ["center", "bottom"], "region": "80%" }
+    }
+  },
+  "scenes": [
+    {
+      "id": "s1",
+      "duration": 4.0,
+      "background": { "visual": { "type": "color", "source": "#101010" } }
+    }
+  ]
+}

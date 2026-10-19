@@ -1,0 +1,17 @@
+{
+  "slug": "golden_05_placement_cover_radius",
+  "output": { "ratio": "9:16", "quality": "draft" },
+  "global_settings": { "transitions": { "enabled": false } },
+  "scenes": [
+    {
+      "id": "s1",
+      "duration": 3.0,
+      "background": { "visual": { "type": "color", "source": "#203040" } },
+      "visual_elements": [
+        { "type": "image", "source": "./tests/fixtures/assets/solid_1920x1080.png",
+          "border_radius": 48, "opacity": 0.9,
+          "placement": { "anchor": ["center", "center"], "width": "80%", "height": "40%" } }
+      ]
+    }
+  ]
+}

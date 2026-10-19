@@ -1,0 +1,14 @@
+{
+  "slug": "golden_02_bg_image_cover_focus",
+  "output": { "ratio": "16:9", "quality": "draft" },
+  "global_settings": { "transitions": { "enabled": false } },
+  "scenes": [
+    {
+      "id": "s1",
+      "duration": 3.0,
+      "background": { "visual": { "type": "file",
+        "source": "./tests/fixtures/assets/solid_1080x1920.png",
+        "focus": "center" } }
+    }
+  ]
+}

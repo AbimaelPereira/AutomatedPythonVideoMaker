@@ -1,0 +1,26 @@
+{
+  "slug": "golden_04_visual_animations_legacy",
+  "output": { "ratio": "16:9", "quality": "draft" },
+  "global_settings": { "transitions": { "enabled": false } },
+  "scenes": [
+    {
+      "id": "s1",
+      "duration": 3.0,
+      "background": { "visual": { "type": "color", "source": "#000000" } },
+      "visual_elements": [
+        { "type": "image", "source": "./tests/fixtures/assets/solid_800x800.png",
+          "placement": { "anchor": ["left", "top"], "width": "25%", "height": "40%" },
+          "animation": { "type": "zoom_in", "start_scale": 1.0, "end_scale": 1.2 } },
+        { "type": "image", "source": "./tests/fixtures/assets/solid_1920x1080.png",
+          "placement": { "anchor": ["right", "top"], "width": "25%", "height": "40%" },
+          "animation": { "type": "fade_in", "duration": 1.0 } },
+        { "type": "image", "source": "./tests/fixtures/assets/alpha_circle.png",
+          "placement": { "anchor": ["left", "bottom"], "width": "25%", "height": "40%" },
+          "animation": { "type": "fade_zoom_in", "start_scale": 1.0, "end_scale": 1.12, "fade_duration": 0.6 } },
+        { "type": "image", "source": "./tests/fixtures/assets/solid_800x800.png",
+          "placement": { "anchor": ["right", "bottom"], "width": "25%", "height": "40%" },
+          "animation": { "type": "zoom_pulse", "intensity": 0.08 } }
+      ]
+    }
+  ]
+}

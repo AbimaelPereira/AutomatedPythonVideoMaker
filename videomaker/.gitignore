@@ -57,3 +57,10 @@ libs/Whisper/__pycache__/
 **/__pycache__/
 
 prompts/
+# --- Testes (Fase 0 do Motion Engine) ---
+# Assets sintéticos e baselines são gerados localmente (ffmpeg/PIL) e dependem
+# da versão do ffmpeg da máquina — regerar, não versionar.
+/tests/fixtures/assets/
+/tests/baseline*/
+/tests/_work/
+/tests/out*/

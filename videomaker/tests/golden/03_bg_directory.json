@@ -1,0 +1,27 @@
+{
+  "slug": "golden_03_bg_directory",
+  "output": {
+    "ratio": "16:9",
+    "quality": "draft"
+  },
+  "global_settings": {
+    "transitions": {
+      "enabled": false
+    }
+  },
+  "scenes": [
+    {
+      "id": "s1",
+      "duration": 3.0,
+      "background": {
+        "visual": {
+          "type": "directory",
+          "source": "./tests/fixtures/assets/b_roll",
+          "fill_strategy": "concat",
+          "no_repeat_window": 0,
+          "shuffle": false
+        }
+      }
+    }
+  ]
+}

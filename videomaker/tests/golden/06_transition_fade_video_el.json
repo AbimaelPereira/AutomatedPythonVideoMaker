@@ -1,0 +1,51 @@
+{
+  "slug": "golden_06_transition_fade_video_el",
+  "output": {
+    "ratio": "16:9",
+    "quality": "draft"
+  },
+  "global_settings": {
+    "transitions": {
+      "enabled": true,
+      "type": "fade",
+      "visual": {
+        "fade_in_duration": 0.5,
+        "fade_out_duration": 0.5,
+        "color": [
+          0,
+          0,
+          0
+        ]
+      }
+    }
+  },
+  "scenes": [
+    {
+      "id": "s1",
+      "duration": 3.0,
+      "background": {
+        "visual": {
+          "type": "color",
+          "source": "#300000"
+        }
+      },
+      "visual_elements": [
+        {
+          "type": "directory",
+          "source": "./tests/fixtures/assets/b_roll",
+          "fill_strategy": "single",
+          "no_repeat_window": 0,
+          "placement": {
+            "anchor": [
+              "center",
+              "center"
+            ],
+            "width": "60%",
+            "height": "50%"
+          },
+          "shuffle": false
+        }
+      ]
+    }
+  ]
+}

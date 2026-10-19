@@ -1,0 +1,13 @@
+{
+  "slug": "golden_01_bg_color_zoom",
+  "output": { "ratio": "16:9", "quality": "draft" },
+  "global_settings": { "transitions": { "enabled": false } },
+  "scenes": [
+    {
+      "id": "s1",
+      "duration": 3.0,
+      "background": { "visual": { "type": "color", "source": "#102040",
+        "animation": { "type": "zoom", "intensity": 0.12 } } }
+    }
+  ]
+}
