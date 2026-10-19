@@ -1,4 +1,5 @@
 import os
+import sys
 import json
 import argparse
 from libs.UnifiedVideoEngine import UnifiedVideoEngine
@@ -7,6 +8,12 @@ from libs.UnifiedVideoEngine import UnifiedVideoEngine
 def main():
     parser = argparse.ArgumentParser(description="Automated Python Video Maker")
     parser.add_argument("json_file", help="Caminho para o arquivo JSON de geração do vídeo")
+    # Atalhos de iteração do Motion: resolver/validar o movimento custa
+    # milissegundos, renderizar custa minutos. Ver libs/Motion/inspect.py.
+    parser.add_argument("--timeline-only", action="store_true",
+                        help="resolve e imprime as timelines de motion e sai (gera só a narração)")
+    parser.add_argument("--validate", action="store_true",
+                        help="só valida o schema de motion (sem TTS e sem render)")
     args = parser.parse_args()
 
     # Resolve para absoluto antes do chdir, para que caminhos relativos passados
@@ -29,6 +36,17 @@ def main():
         print(f"Erro de Sintaxe no JSON: {e}")
         return
 
+    if args.validate or args.timeline_only:
+        from libs.Motion.inspect import inspect_json
+
+        count = len(video_list) if isinstance(video_list, list) else 1
+        status = 0
+        for index in range(count):
+            status |= inspect_json(args.json_file, video_index=index,
+                                   use_tts=not args.validate,
+                                   validate_only=args.validate)
+        return status
+
     if not isinstance(video_list, list):
         video_list = [video_list]
 
@@ -46,4 +64,5 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    # `--validate`/`--timeline-only` devolvem código de saída (útil em CI/pre-commit).
+    sys.exit(main() or 0)

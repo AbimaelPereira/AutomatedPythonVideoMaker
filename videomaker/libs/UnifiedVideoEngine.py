@@ -316,6 +316,37 @@ def _render_backend() -> str:
     return os.getenv("RENDER_BACKEND", "auto").strip().lower()
 
 
+def _motion_words(subtitle_file):
+    """Palavras com tempo (p/ âncoras de `motion`), ou None.
+
+    Atalho sobre `libs.Motion.words_from_srt` para os dois caminhos de render
+    lerem o SRT do mesmo jeito. Nunca levanta.
+    """
+    try:
+        from libs.Motion import words_from_srt
+        return words_from_srt(subtitle_file)
+    except Exception as e:
+        print(f"[UVE] Motion indisponível para âncoras ({e})")
+        return None
+
+
+def _resolve_motion_timelines(*, scene, elements, boxes, resolution,
+                              scene_duration, words, effective_gs):
+    """Uma Timeline (ou None) por elemento — ou None se nenhum tem `motion`.
+
+    Erro de JSON sobe (P3); indisponibilidade do pacote não derruba o render.
+    """
+    if not any(isinstance(el, dict) and el.get("motion") for el in elements):
+        return None
+    from libs.Motion import motion_defaults, resolve_scene_motion
+
+    return resolve_scene_motion(
+        scene=scene, elements=elements, boxes=boxes, resolution=resolution,
+        scene_duration=float(scene_duration), words=words,
+        defaults=motion_defaults(effective_gs, scene),
+    )
+
+
 def _try_ffmpeg_scene(*, scene, effective_gs, scene_dir, scene_id, scene_duration,
                       resolution_output, scene_quality, layout_params,
                       subtitle_file, remote_asset_manager, narration_path,
@@ -338,6 +369,11 @@ def _try_ffmpeg_scene(*, scene, effective_gs, scene_dir, scene_id, scene_duratio
         return None
 
     scene_layout = _resolve_scene_layout_params(layout_params, scene)
+
+    # Tempos palavra-a-palavra para as âncoras de `motion`. O SRT é o MESMO que
+    # alimenta a legenda, mas a leitura acontece ANTES do `if` de legenda: o
+    # movimento pode ser ancorado na fala mesmo com a legenda desligada.
+    motion_words = _motion_words(subtitle_file)
 
     subtitle_cfg = None
     if _subtitles_enabled(effective_gs, scene) and subtitle_file:
@@ -430,6 +466,14 @@ def _try_ffmpeg_scene(*, scene, effective_gs, scene_dir, scene_id, scene_duratio
         plans = SceneBridge.resolve_visual_boxes(elements, paths, scene_layout,
                                                  segments=el_segments)
 
+        # `motion` precisa da caixa já resolvida (x/y em "%" são fração dela),
+        # então entra depois do layout e antes do render.
+        timelines = _resolve_motion_timelines(
+            scene=scene, elements=elements, boxes=[p["box"] for p in plans],
+            resolution=resolution_output, scene_duration=scene_duration,
+            words=motion_words, effective_gs=effective_gs,
+        ) or [None] * len(elements)
+
         prepared = []
         for el, path, plan, segments in zip(elements, paths, plans, el_segments):
             item = dict(el)
@@ -454,6 +498,10 @@ def _try_ffmpeg_scene(*, scene, effective_gs, scene_dir, scene_id, scene_duratio
                     box[2], box[3], radius, scene_dir
                 )
             prepared.append(item)
+
+        for item, timeline in zip(prepared, timelines):
+            if timeline is not None:
+                item["_motion"] = timeline
 
         # --- legendas ---
         ass_path = fontsdir = None
@@ -583,7 +631,8 @@ def _process_scene_worker(scene_data_bundle):
 
         visual_clip = _create_visual_elements_clip_worker(
             scene, scene_duration, scene_dir, resolution_output,
-            remote_asset_manager, layout_params
+            remote_asset_manager, layout_params,
+            motion_words=_motion_words(subtitle_file), effective_gs=effective_gs,
         )
 
         subtitle_clip = None
@@ -724,8 +773,15 @@ def _wrap_visual_layer(positioned_clips, element_data_list, resolution_output, s
 
 
 def _create_visual_elements_clip_worker(scene_data, scene_duration, scene_dir,
-                                        resolution_output, remote_asset_manager, layout_params):
-    """Versão worker de _create_visual_elements_clip."""
+                                        resolution_output, remote_asset_manager,
+                                        layout_params, motion_words=None,
+                                        effective_gs=None):
+    """Versão worker de _create_visual_elements_clip.
+
+    `motion_words` são os tempos palavra-a-palavra do SRT da cena (ou None),
+    usados pelas âncoras de `motion`. Default None para o caminho sequencial e
+    qualquer chamador antigo continuarem funcionando sem alteração.
+    """
     elements = scene_data.get("visual_elements", [])
     if not elements:
         return None
@@ -1025,7 +1081,9 @@ class UnifiedVideoEngine:
     # VISUAL ELEMENTS
     # ------------------------------------------------------------------
 
-    def _create_visual_elements_clip(self, scene_data, scene_duration, scene_dir, layout_config=None):
+    def _create_visual_elements_clip(self, scene_data, scene_duration, scene_dir,
+                                     layout_config=None, motion_words=None,
+                                     effective_gs=None):
         layout_config = layout_config or self.layout_config
         elements = scene_data.get("visual_elements", [])
         if not elements:
@@ -1895,7 +1953,10 @@ class UnifiedVideoEngine:
                     scene_layout_config = SimpleNamespace(**scene_layout_params)
 
                     visual_clip = self._create_visual_elements_clip(
-                        scene, scene_duration, scene_dir, layout_config=scene_layout_config
+                        scene, scene_duration, scene_dir,
+                        layout_config=scene_layout_config,
+                        motion_words=_motion_words(subtitle_file),
+                        effective_gs=effective_gs,
                     )
 
                     subtitle_clip = None
