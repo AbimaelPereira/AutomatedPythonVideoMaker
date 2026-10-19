@@ -26,7 +26,7 @@ sys.path.insert(0, VIDEOMAKER)
 from tests.compare_ssim import ssim_all          # noqa: E402
 
 MIN_SSIM = 0.98
-CASES = ["teste_01.json", "teste_02.json"]
+CASES = ["teste_01.json", "teste_02.json", "teste_03.json"]
 
 
 def _render(json_path: str, backend: str, out_dir: str) -> list:

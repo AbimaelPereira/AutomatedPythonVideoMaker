@@ -1,0 +1,39 @@
+{
+  "slug": "motion_teste_03",
+  "output": { "ratio": "16:9", "quality": "draft" },
+  "global_settings": { "transitions": { "enabled": false } },
+  "scenes": [
+    {
+      "id": "s1",
+      "duration": 4.0,
+      "background": { "visual": { "type": "color", "source": "#101820" } },
+      "visual_elements": [
+        {
+          "type": "text_box",
+          "content": "MOTION NO CAMINHO RÁPIDO",
+          "style": {
+            "font_path": "./assets/fonts/Montserrat/Montserrat-Black.ttf",
+            "font_size": 70, "text_color": "#ffffff",
+            "background_color": "transparent", "padding": [10, 20]
+          },
+          "placement": { "anchor": ["center", "35%"], "width": "80%" },
+          "motion": [
+            { "name": "entra", "at": 0.2, "duration": 0.6, "preset": "rise" },
+            { "at": { "after": "entra", "offset": 0.4 }, "preset": "punch" }
+          ]
+        },
+        {
+          "type": "text_box",
+          "content": "legenda secundária",
+          "style": {
+            "font_path": "./assets/fonts/Montserrat/Montserrat-Regular.ttf",
+            "font_size": 44, "text_color": "#9fd3ff",
+            "background_color": "transparent", "padding": [8, 16]
+          },
+          "placement": { "anchor": ["center", "60%"], "width": "50%" },
+          "motion": [ { "at": 1.0, "duration": 0.5, "preset": "slide_in_left" } ]
+        }
+      ]
+    }
+  ]
+}

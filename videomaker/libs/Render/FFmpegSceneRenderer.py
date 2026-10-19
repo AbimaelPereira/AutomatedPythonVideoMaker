@@ -26,7 +26,8 @@ _SUPPORTED_ANIMATIONS = {
 }
 
 # Tipos de elemento visual suportados.
-_SUPPORTED_VISUAL_TYPES = {"image", "remote_asset", "color", "video", "directory"}
+_SUPPORTED_VISUAL_TYPES = {"image", "remote_asset", "color", "video", "directory",
+                           "text_box"}
 
 
 def _anim_type(element: dict) -> str:

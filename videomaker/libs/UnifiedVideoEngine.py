@@ -479,7 +479,8 @@ def _try_ffmpeg_scene(*, scene, effective_gs, scene_dir, scene_id, scene_duratio
             else:
                 el_segments.append(None)
                 paths.append(SceneBridge.resolve_element_path(
-                    el, scene_dir, remote_asset_manager))
+                    el, scene_dir, remote_asset_manager,
+                    resolution=resolution_output))
 
         plans = SceneBridge.resolve_visual_boxes(elements, paths, scene_layout,
                                                  segments=el_segments)

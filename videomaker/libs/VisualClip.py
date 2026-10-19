@@ -513,152 +513,10 @@ class VisualClip:
         return ImageClip(temp_path, transparent=True).set_duration(self.duration)
 
     def _create_text_box_clip(self):
-        content = self.data.get("content", "")
-        style = self.data.get("style", {})
-        font_size = style.get("font_size", 50)
-        pad = style.get("padding", [10, 20])  # [V_pad, H_pad]
-
-        # Supersampling: o LayoutEngine redimensiona o clip para caber em
-        # `placement.width` (área segura), o que frequentemente faz UPSCALE do
-        # bitmap PIL → texto borrado. Renderizamos numa escala maior (SS) para
-        # que o resize do LayoutEngine seja sempre DOWNSCALE (nítido). O fator é
-        # limitado para a largura supersampleada não passar da largura da tela.
-        canvas_w = self.resolution[0]
-        ss = 4
-        # Estima a largura nativa para limitar o SS dentro do canvas
-        base_font = self._resolve_font(style, font_size)
-        dummy = ImageDraw.Draw(Image.new("RGBA", (1, 1)))
-        try:
-            bb = dummy.textbbox((0, 0), content, font=base_font)
-            native_w = (bb[2] - bb[0]) + pad[1] * 2
-        except Exception:
-            native_w = dummy.textsize(content, font=base_font)[0] + pad[1] * 2
-        if native_w > 0:
-            ss = max(1, min(ss, int(canvas_w / native_w)))
-
-        font_size_ss = font_size * ss
-        pad_ss = [pad[0] * ss, pad[1] * ss]
-        font = self._resolve_font(style, font_size_ss)
-
-        # Contorno e sombra (usados em thumbnail para destacar o texto sobre
-        # imagem). Ambos crescem a caixa: sem folga extra o traço e a sombra
-        # seriam cortados na borda do bitmap.
-        stroke_width = int(round(float(style.get("stroke_width", 0) or 0) * ss))
-        stroke_color = style.get("stroke_color", "black")
-
-        shadow = style.get("shadow") or {}
-        shadow_offset = shadow.get("offset", [0, 0])
-        try:
-            sh_dx = int(round(float(shadow_offset[0]) * ss))
-            sh_dy = int(round(float(shadow_offset[1]) * ss))
-        except Exception:
-            sh_dx = sh_dy = 0
-        sh_blur = float(shadow.get("blur", 0) or 0) * ss
-        sh_color = shadow.get("color", "black")
-        sh_opacity = min(1.0, max(0.0, float(shadow.get("opacity", 1.0))))
-        has_shadow = bool(shadow) and (sh_dx or sh_dy or sh_blur)
-
-        align = str(style.get("align", "left")).lower()
-        line_spacing = float(style.get("line_spacing", 1.0) or 1.0)
-        # PIL mede o espaçamento entre linhas em pixels absolutos; o JSON o
-        # expressa como multiplicador do tamanho da fonte (mais intuitivo e
-        # independente da escala de supersampling).
-        spacing_px = int(round(font_size_ss * (line_spacing - 1.0)))
-
-        # 1. Calcular BBox e Dimensões (na escala SS)
-        # `multiline_textbbox` cobre também o caso de uma linha só, então
-        # substitui o textbbox anterior sem mudar o resultado do caso legado.
-        try:
-            bbox = dummy.multiline_textbbox(
-                (0, 0), content, font=font, spacing=spacing_px, align=align,
-                stroke_width=stroke_width,
-            )
-            w, h = bbox[2] - bbox[0], bbox[3] - bbox[1]
-        except Exception:
-            try:
-                bbox = dummy.textbbox((0, 0), content, font=font)
-                w, h = bbox[2] - bbox[0], bbox[3] - bbox[1]
-            except Exception:
-                w, h = dummy.textsize(content, font=font)
-                bbox = (0, 0, w, h)
-
-        # Folga para a sombra deslocada/borrada não estourar a caixa.
-        blur_pad = int(round(sh_blur * 3)) if has_shadow else 0
-        extra_x = (abs(sh_dx) + blur_pad) if has_shadow else 0
-        extra_y = (abs(sh_dy) + blur_pad) if has_shadow else 0
-
-        box_w = w + pad_ss[1] * 2 + extra_x * 2
-        box_h = h + pad_ss[0] * 2 + extra_y * 2
-
-        # 2. Criar Imagem e Desenhar Fundo
-        img = Image.new("RGBA", (int(box_w), int(box_h)), (0, 0, 0, 0))
-        draw = ImageDraw.Draw(img)
-
-        background_color = style.get("background_color", "white")
-
-        if background_color != "transparent":
-            draw.rounded_rectangle([(0, 0), (box_w, box_h)], radius=style.get("border_radius", 0) * ss, fill=background_color)
-
-        # 3. Desenhar Texto
-        # bbox[0]/bbox[1] compensam o offset interno da fonte (bearing), que em
-        # geral é negativo ou pequeno.
-        text_x_pos = pad_ss[1] + extra_x - bbox[0]
-        text_y_pos = pad_ss[0] + extra_y - bbox[1]
-
-        text_color = style.get("text_color", "black")
-
-        draw_kwargs = {"font": font, "spacing": spacing_px, "align": align}
-
-        # 3a. Sombra — desenhada ANTES do texto, numa camada própria para poder
-        # ser borrada sem afetar o texto nítido por cima.
-        if has_shadow:
-            shadow_layer = Image.new("RGBA", img.size, (0, 0, 0, 0))
-            shadow_draw = ImageDraw.Draw(shadow_layer)
-            shadow_draw.multiline_text(
-                (text_x_pos + sh_dx, text_y_pos + sh_dy), content,
-                fill=sh_color, stroke_width=stroke_width, stroke_fill=sh_color,
-                **draw_kwargs,
-            )
-            if sh_blur > 0:
-                from PIL import ImageFilter
-                shadow_layer = shadow_layer.filter(ImageFilter.GaussianBlur(sh_blur))
-            if sh_opacity < 1.0:
-                alpha = shadow_layer.getchannel("A").point(
-                    lambda v: int(v * sh_opacity))
-                shadow_layer.putalpha(alpha)
-            img = Image.alpha_composite(img, shadow_layer)
-            draw = ImageDraw.Draw(img)
-
-        # 3b. Texto (com contorno, quando houver)
-        if stroke_width > 0:
-            draw_kwargs["stroke_width"] = stroke_width
-            draw_kwargs["stroke_fill"] = stroke_color
-
-        draw.multiline_text((text_x_pos, text_y_pos), content,
-                            fill=text_color, **draw_kwargs)
-
-        # --- [NOVO] Lógica de Riscado (Strikethrough) ---
-        if style.get("strikethrough", False):
-            # Calcula a posição Y da linha (aproximadamente no meio da altura visual do texto)
-            # O fator 0.6 costuma alinhar melhor visualmente com a 'cintura' das letras
-            line_y = pad_ss[0] + extra_y + (h * 0.6)
-
-            # Espessura da linha proporcional ao tamanho da fonte
-            line_width = max(2, int(font_size_ss / 15))
-
-            # Desenha a linha
-            draw.line(
-                [(text_x_pos, line_y), (text_x_pos + w, line_y)],
-                fill=text_color,
-                width=line_width
-            )
-        # -----------------------------------------------
-
-        temp_path = os.path.join(self.temp_dir, f"textbox_{id(self)}.png")
-        img.save(temp_path)
+        path = render_text_box_png(self.data, self.resolution, self.temp_dir)
         # transparent=True preserva o alpha como máscara MoviePy. Sem isso,
         # `background_color: "transparent"` virava um retângulo preto opaco.
-        return ImageClip(temp_path, transparent=True).set_duration(self.duration)
+        return ImageClip(path, transparent=True).set_duration(self.duration)
 
     def _apply_layout(self, clip):
         layout = self.data.get("layout", {})
@@ -735,3 +593,177 @@ class VisualClip:
             clip = self._make_zoom_clip(clip, anim_type, anim)
 
         return clip
+
+def draw_text_box(data: dict, resolution: tuple):
+    """Desenha um `text_box` e devolve a imagem PIL.
+
+    Era o corpo de `VisualClip._create_text_box_clip`; virou função de módulo
+    para o caminho ffmpeg poder gerar o MESMO bitmap (ver `render_text_box_png`).
+    Nada do desenho mudou.
+    """
+    content = data.get("content", "")
+    style = data.get("style", {})
+    font_size = style.get("font_size", 50)
+    pad = style.get("padding", [10, 20])  # [V_pad, H_pad]
+
+    # Supersampling: o LayoutEngine redimensiona o clip para caber em
+    # `placement.width` (área segura), o que frequentemente faz UPSCALE do
+    # bitmap PIL → texto borrado. Renderizamos numa escala maior (SS) para
+    # que o resize do LayoutEngine seja sempre DOWNSCALE (nítido). O fator é
+    # limitado para a largura supersampleada não passar da largura da tela.
+    canvas_w = resolution[0]
+    ss = 4
+    # Estima a largura nativa para limitar o SS dentro do canvas
+    base_font = VisualClip._resolve_font(style, font_size)
+    dummy = ImageDraw.Draw(Image.new("RGBA", (1, 1)))
+    try:
+        bb = dummy.textbbox((0, 0), content, font=base_font)
+        native_w = (bb[2] - bb[0]) + pad[1] * 2
+    except Exception:
+        native_w = dummy.textsize(content, font=base_font)[0] + pad[1] * 2
+    if native_w > 0:
+        ss = max(1, min(ss, int(canvas_w / native_w)))
+
+    font_size_ss = font_size * ss
+    pad_ss = [pad[0] * ss, pad[1] * ss]
+    font = VisualClip._resolve_font(style, font_size_ss)
+
+    # Contorno e sombra (usados em thumbnail para destacar o texto sobre
+    # imagem). Ambos crescem a caixa: sem folga extra o traço e a sombra
+    # seriam cortados na borda do bitmap.
+    stroke_width = int(round(float(style.get("stroke_width", 0) or 0) * ss))
+    stroke_color = style.get("stroke_color", "black")
+
+    shadow = style.get("shadow") or {}
+    shadow_offset = shadow.get("offset", [0, 0])
+    try:
+        sh_dx = int(round(float(shadow_offset[0]) * ss))
+        sh_dy = int(round(float(shadow_offset[1]) * ss))
+    except Exception:
+        sh_dx = sh_dy = 0
+    sh_blur = float(shadow.get("blur", 0) or 0) * ss
+    sh_color = shadow.get("color", "black")
+    sh_opacity = min(1.0, max(0.0, float(shadow.get("opacity", 1.0))))
+    has_shadow = bool(shadow) and (sh_dx or sh_dy or sh_blur)
+
+    align = str(style.get("align", "left")).lower()
+    line_spacing = float(style.get("line_spacing", 1.0) or 1.0)
+    # PIL mede o espaçamento entre linhas em pixels absolutos; o JSON o
+    # expressa como multiplicador do tamanho da fonte (mais intuitivo e
+    # independente da escala de supersampling).
+    spacing_px = int(round(font_size_ss * (line_spacing - 1.0)))
+
+    # 1. Calcular BBox e Dimensões (na escala SS)
+    # `multiline_textbbox` cobre também o caso de uma linha só, então
+    # substitui o textbbox anterior sem mudar o resultado do caso legado.
+    try:
+        bbox = dummy.multiline_textbbox(
+            (0, 0), content, font=font, spacing=spacing_px, align=align,
+            stroke_width=stroke_width,
+        )
+        w, h = bbox[2] - bbox[0], bbox[3] - bbox[1]
+    except Exception:
+        try:
+            bbox = dummy.textbbox((0, 0), content, font=font)
+            w, h = bbox[2] - bbox[0], bbox[3] - bbox[1]
+        except Exception:
+            w, h = dummy.textsize(content, font=font)
+            bbox = (0, 0, w, h)
+
+    # Folga para a sombra deslocada/borrada não estourar a caixa.
+    blur_pad = int(round(sh_blur * 3)) if has_shadow else 0
+    extra_x = (abs(sh_dx) + blur_pad) if has_shadow else 0
+    extra_y = (abs(sh_dy) + blur_pad) if has_shadow else 0
+
+    box_w = w + pad_ss[1] * 2 + extra_x * 2
+    box_h = h + pad_ss[0] * 2 + extra_y * 2
+
+    # 2. Criar Imagem e Desenhar Fundo
+    img = Image.new("RGBA", (int(box_w), int(box_h)), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
+
+    background_color = style.get("background_color", "white")
+
+    if background_color != "transparent":
+        draw.rounded_rectangle([(0, 0), (box_w, box_h)], radius=style.get("border_radius", 0) * ss, fill=background_color)
+
+    # 3. Desenhar Texto
+    # bbox[0]/bbox[1] compensam o offset interno da fonte (bearing), que em
+    # geral é negativo ou pequeno.
+    text_x_pos = pad_ss[1] + extra_x - bbox[0]
+    text_y_pos = pad_ss[0] + extra_y - bbox[1]
+
+    text_color = style.get("text_color", "black")
+
+    draw_kwargs = {"font": font, "spacing": spacing_px, "align": align}
+
+    # 3a. Sombra — desenhada ANTES do texto, numa camada própria para poder
+    # ser borrada sem afetar o texto nítido por cima.
+    if has_shadow:
+        shadow_layer = Image.new("RGBA", img.size, (0, 0, 0, 0))
+        shadow_draw = ImageDraw.Draw(shadow_layer)
+        shadow_draw.multiline_text(
+            (text_x_pos + sh_dx, text_y_pos + sh_dy), content,
+            fill=sh_color, stroke_width=stroke_width, stroke_fill=sh_color,
+            **draw_kwargs,
+        )
+        if sh_blur > 0:
+            from PIL import ImageFilter
+            shadow_layer = shadow_layer.filter(ImageFilter.GaussianBlur(sh_blur))
+        if sh_opacity < 1.0:
+            alpha = shadow_layer.getchannel("A").point(
+                lambda v: int(v * sh_opacity))
+            shadow_layer.putalpha(alpha)
+        img = Image.alpha_composite(img, shadow_layer)
+        draw = ImageDraw.Draw(img)
+
+    # 3b. Texto (com contorno, quando houver)
+    if stroke_width > 0:
+        draw_kwargs["stroke_width"] = stroke_width
+        draw_kwargs["stroke_fill"] = stroke_color
+
+    draw.multiline_text((text_x_pos, text_y_pos), content,
+                        fill=text_color, **draw_kwargs)
+
+    # --- [NOVO] Lógica de Riscado (Strikethrough) ---
+    if style.get("strikethrough", False):
+        # Calcula a posição Y da linha (aproximadamente no meio da altura visual do texto)
+        # O fator 0.6 costuma alinhar melhor visualmente com a 'cintura' das letras
+        line_y = pad_ss[0] + extra_y + (h * 0.6)
+
+        # Espessura da linha proporcional ao tamanho da fonte
+        line_width = max(2, int(font_size_ss / 15))
+
+        # Desenha a linha
+        draw.line(
+            [(text_x_pos, line_y), (text_x_pos + w, line_y)],
+            fill=text_color,
+            width=line_width
+        )
+    # -----------------------------------------------
+    return img
+
+
+def render_text_box_png(data: dict, resolution: tuple, out_dir: str) -> str:
+    """Caminho de um PNG com o `text_box` desenhado (com cache em disco).
+
+    Os DOIS caminhos de render usam este bitmap: o MoviePy embrulha num
+    ImageClip, o ffmpeg usa como input. Sem isso, um `text_box` derrubava a cena
+    inteira para o MoviePy — e texto é justamente o elemento que mais se anima.
+
+    O nome é o hash de conteúdo+estilo+resolução: o mesmo text_box não é
+    redesenhado a cada cena, e o resultado é determinístico (princípio P6 — o
+    `id(self)` de antes mudava a cada execução).
+    """
+    import hashlib
+    import json as _json
+
+    key = hashlib.sha1(
+        _json.dumps([data.get("content"), data.get("style"), list(resolution)],
+                    sort_keys=True, ensure_ascii=False, default=str).encode("utf-8")
+    ).hexdigest()[:16]
+    os.makedirs(out_dir, exist_ok=True)
+    path = os.path.join(out_dir, f"textbox_{key}.png")
+    if not os.path.exists(path):
+        draw_text_box(data, resolution).save(path)
+    return path

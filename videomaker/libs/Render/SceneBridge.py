@@ -30,7 +30,20 @@ _VIDEO_EXTS = {".mp4", ".mov", ".mkv", ".webm", ".avi"}
 # MÍDIA
 # ---------------------------------------------------------------------------
 
-def resolve_element_path(element: dict, scene_dir: str, remote_asset_manager) -> str:
+def render_text_box_png(element: dict, scene_dir: str, resolution: tuple) -> str:
+    """PNG de um `text_box`, pelo MESMO desenho do caminho MoviePy.
+
+    Delega para `VisualClip.render_text_box_png` (com cache em disco), em vez de
+    reimplementar o layout de texto — qualquer divergência apareceria como texto
+    em posição/tamanho diferente entre os dois backends.
+    """
+    from libs.VisualClip import render_text_box_png as _render
+
+    return _render(element, resolution, scene_dir)
+
+
+def resolve_element_path(element: dict, scene_dir: str, remote_asset_manager,
+                         resolution: tuple = None) -> str:
     """Caminho local do arquivo de um visual_element (baixa se remoto)."""
     from libs.MediaDownloader import MediaDownloader
 
@@ -44,6 +57,10 @@ def resolve_element_path(element: dict, scene_dir: str, remote_asset_manager) ->
         if path and str(path).startswith(("http://", "https://")):
             return MediaDownloader.resolve_source_path(path, scene_dir)
         raise Unsupported(f"imagem não encontrada: {path}")
+
+    if el_type == "text_box":
+        # Vira um PNG em disco e segue como qualquer imagem daqui para a frente.
+        return render_text_box_png(element, scene_dir, resolution or (1920, 1080))
 
     if el_type == "color":
         # Não há arquivo: o clip é uma cor sólida dimensionada pelo placement.
