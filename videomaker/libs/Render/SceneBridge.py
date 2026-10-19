@@ -189,9 +189,18 @@ def resolve_visual_boxes(elements: list, paths: list, layout_params: dict,
                 raise Unsupported(f"dimensões ilegíveis em {segs[0].get('path')}")
         elif os.path.splitext(path)[1].lower() in _VIDEO_EXTS:
             w, h = _video_size(path)
+        elif el.get("type") == "text_box":
+            # O PNG em disco é supersampled (até 4x, ver draw_text_box) para o
+            # downscale do LayoutEngine sair nítido — não é o tamanho lógico do
+            # texto. Quando não há `width` no placement (sem downscale previsto),
+            # o tamanho de exibição tem que ser o lógico, senão o texto satura
+            # 4x maior que o `font_size` pedido.
+            from libs.VisualClip import VisualClip
+            w, h = VisualClip.calculate_text_box_size(el)
         else:
             w, h = _image_size(path)
         items.append({
+            "type": el.get("type"),
             "original_size": (w, h),
             "placement": el.get("placement"),
             "layout": el.get("layout", {}),

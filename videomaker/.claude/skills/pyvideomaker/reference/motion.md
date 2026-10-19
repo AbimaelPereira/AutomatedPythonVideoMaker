@@ -10,8 +10,9 @@ ancorado numa palavra da narração (ver
 > com erro apontando o elemento.
 
 Os dois caminhos de render suportam `motion` por inteiro, então usá-lo **não**
-joga a cena no caminho lento (a única exceção é `rotation`, ainda não
-implementada em filtro).
+joga a cena no caminho lento. A única exceção é `blur` **animado**: o `gblur` do
+ffmpeg não aceita expressão em `sigma`, então a cena cai no MoviePy (`blur` com
+valor fixo é rápido). `rotation` roda nos dois caminhos.
 
 ## Forma mínima
 
