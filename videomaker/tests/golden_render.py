@@ -142,6 +142,8 @@ def main():
     ap.add_argument("--save", required=True, help="diretório de saída dos MP4s")
     ap.add_argument("--only", default=None,
                     help="renderiza só os golden cujo nome contém este texto")
+    ap.add_argument("--json", default=None, action="append",
+                    help="renderiza este JSON em vez dos golden (repetível)")
     args = ap.parse_args()
 
     # O engine assume cwd = videomaker/ (assets, cache e tokens são relativos).
@@ -150,7 +152,8 @@ def main():
     from tests.fixtures.make_fixtures import build
     build()
 
-    files = sorted(glob.glob(os.path.join(GOLDEN_DIR, "*.json")))
+    files = [os.path.abspath(p) for p in args.json] if args.json else \
+        sorted(glob.glob(os.path.join(GOLDEN_DIR, "*.json")))
     if args.only:
         files = [f for f in files if args.only in os.path.basename(f)]
     if not files:

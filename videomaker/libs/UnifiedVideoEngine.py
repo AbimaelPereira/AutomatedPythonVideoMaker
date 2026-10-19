@@ -361,6 +361,7 @@ def _try_ffmpeg_scene(*, scene, effective_gs, scene_dir, scene_id, scene_duratio
         return None
 
     try:
+        from libs.Motion.errors import MotionError
         from libs.Render.FFmpegSceneRenderer import FFmpegSceneRenderer
         from libs.Render.FilterGraphBuilder import Unsupported
         from libs.Render import SceneBridge
@@ -521,6 +522,10 @@ def _try_ffmpeg_scene(*, scene, effective_gs, scene_dir, scene_id, scene_duratio
         )
         return (time.time() - t0, out_path)
 
+    except MotionError:
+        # JSON de `motion` inválido é erro do autor do JSON, não incompatibilidade
+        # de backend: cair no MoviePy esconderia o problema (princípio P3).
+        raise
     except Unsupported as e:
         if backend == "ffmpeg":
             raise RuntimeError(f"RENDER_BACKEND=ffmpeg mas a cena falhou: {e}")

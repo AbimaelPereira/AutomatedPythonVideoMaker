@@ -244,14 +244,75 @@ class FilterGraphBuilder:
 
     # -- overlay -----------------------------------------------------------
 
-    def overlay(self, base: str, top: str, x: int, y: int,
-                enable: tuple = None) -> str:
+    def overlay(self, base: str, top: str, x, y,
+                enable=None, eval_frame: bool = False) -> str:
+        """Compõe `top` sobre `base`.
+
+        `x`/`y` aceitam número (posição fixa) ou EXPRESSÃO já escapada, vinda do
+        `libs.Motion.compile_ffmpeg` — nesse caso `eval_frame=True` é obrigatório,
+        senão o ffmpeg avalia a expressão uma única vez e o elemento fica parado
+        no valor do primeiro frame.
+
+        `enable` aceita a tupla `(t0, t1)` legada ou uma expressão pronta.
+        """
         out = self._label("o")
+        xs = x if isinstance(x, str) else str(int(x))
+        ys = y if isinstance(y, str) else str(int(y))
+
         enable_expr = ""
-        if enable:
+        if isinstance(enable, str):
+            enable_expr = f":enable='{enable}'"
+        elif enable:
             t0, t1 = enable
             enable_expr = f":enable='between(t\\,{t0:.3f}\\,{t1:.3f})'"
-        self.add_chain(f"[{base}][{top}]overlay={int(x)}:{int(y)}{enable_expr}[{out}]")
+
+        ev = ":eval=frame" if eval_frame else ""
+        self.add_chain(f"[{base}][{top}]overlay=x='{xs}':y='{ys}'{ev}"
+                       f"{enable_expr}[{out}]")
+        return out
+
+    # -- motion (libs/Motion) ---------------------------------------------
+
+    def scale_anim(self, src: str, w_expr: str, h_expr: str) -> str:
+        """Escala animada quadro a quadro (propriedade `scale` do motion).
+
+        `flags=bilinear` (e não bicubic) porque isto roda em TODO frame; o
+        `setsar=1` evita que o overlay herde um SAR estranho do redimensionamento.
+        As expressões já chegam com `trunc(x/2)*2` de `compile_ffmpeg.scale_exprs`:
+        dimensão ímpar quebra o `yuv420p`.
+        """
+        out = self._label("sa")
+        self.add_chain(
+            f"[{src}]scale=w='{w_expr}':h='{h_expr}'"
+            f":eval=frame:flags=bilinear,setsar=1[{out}]"
+        )
+        return out
+
+    def zoom_track(self, src: str, scale_expr: str,
+                   out_w: int = None, out_h: int = None) -> str:
+        """`zoom` do motion: mesma janela fixa do zoom legado, curva arbitrária."""
+        return self._zoom_expr(src, f"({scale_expr})", out_w, out_h)
+
+    def fade_out(self, src: str, duration: float, start: float = 0.0) -> str:
+        out = self._label("f")
+        self.add_chain(
+            f"[{src}]format=rgba,fade=t=out:st={start:.3f}:d={duration:.3f}:alpha=1[{out}]"
+        )
+        return out
+
+    def alpha_expr(self, src: str, expr: str) -> str:
+        """Opacidade por expressão arbitrária, via `geq` no canal alpha.
+
+        Caminho GERAL (e caro): avalia a expressão por pixel. Só é usado quando
+        a cadeia de `fade` não dá conta — ver `compile_ffmpeg.opacity_plan`. O
+        alpha existente é multiplicado, não substituído, para não apagar a
+        transparência própria do PNG.
+        """
+        out = self._label("ga")
+        self.add_chain(
+            f"[{src}]format=rgba,geq=r='r(X\\,Y)':g='g(X\\,Y)':b='b(X\\,Y)'"
+            f":a='({expr})*alpha(X\\,Y)'[{out}]"
+        )
         return out
 
     def scale_to(self, src: str, w: int, h: int) -> str:

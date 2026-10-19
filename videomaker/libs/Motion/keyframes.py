@@ -56,8 +56,19 @@ class Track:
 
     # -- consulta ----------------------------------------------------------
 
+    def is_constant(self) -> bool:
+        """True se o valor nunca muda (mas pode ser diferente da base).
+
+        Permite compilar a track como uma CONSTANTE em vez de uma árvore de
+        `if` — ex.: um `opacity` fixo em 0,4 declarado via motion.
+        """
+        if not self.keys:
+            return True
+        first = self.keys[0].value
+        return all(abs(k.value - first) < 1e-9 for k in self.keys)
+
     def is_static(self) -> bool:
-        """True se a track não muda nada (todos os valores iguais à base).
+        """True se a track não muda NADA (constante e igual à base).
 
         Permite desligar o filtro/callable correspondente e não pagar o custo.
         """

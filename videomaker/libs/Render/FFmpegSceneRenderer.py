@@ -12,6 +12,7 @@ vídeo visualmente errado; um falso negativo só perde performance.
 import os
 import subprocess
 
+from libs.Motion import compile_ffmpeg as motion_ff
 from libs.Render.FilterGraphBuilder import FilterGraphBuilder, Unsupported
 from libs.Subtitle.AssBuilder import AssBuilder
 
@@ -30,6 +31,15 @@ _SUPPORTED_VISUAL_TYPES = {"image", "remote_asset", "color", "video", "directory
 
 def _anim_type(element: dict) -> str:
     return (element.get("animation") or {}).get("type") or "none"
+
+
+def _anchor_of(element: dict) -> tuple:
+    """`placement.anchor` do elemento, para compensar a âncora quando `scale`
+    muda o tamanho do overlay. Default: centro (o que o layout usa)."""
+    anchor = (element.get("placement") or {}).get("anchor")
+    if isinstance(anchor, (list, tuple)) and len(anchor) >= 2:
+        return (str(anchor[0]), str(anchor[1]))
+    return ("center", "center")
 
 
 def _has_filters(d) -> bool:
@@ -135,6 +145,11 @@ class FFmpegSceneRenderer:
             anim = _anim_type(el)
             if anim not in _SUPPORTED_ANIMATIONS:
                 return (False, f"visual_elements[{i}].animation '{anim}' não suportado")
+            # `_SUPPORTED_ANIMATIONS` governa só a chave LEGADA `animation`;
+            # `motion` é um caminho paralelo, com gate próprio.
+            ok, why = motion_ff.check_element(el, path=f"visual_elements[{i}]")
+            if not ok:
+                return (False, why)
             focus = el.get("focus")
             if focus not in (None, "center", "face"):
                 return (False, f"visual_elements[{i}].focus '{focus}' não suportado")
@@ -314,12 +329,38 @@ class FFmpegSceneRenderer:
                 lbl = g.zoom(lbl, float(a.get("start_scale", 1.0)),
                              float(a.get("end_scale", 1.12)), duration, bw, bh)
 
+            # --- motion: zoom (mesma janela fixa do zoom legado) ---
+            timeline = el.get("_motion")
+            if timeline is not None:
+                ok, why = motion_ff.check(timeline)
+                if not ok:
+                    raise Unsupported(why)
+                zoom = motion_ff.zoom_expr(timeline, t_var=g._ZOOM_T)
+                if zoom:
+                    if el_anim in ("zoom_in", "zoom_out", "zoom_pulse",
+                                   "fade_zoom_in"):
+                        raise Unsupported("elemento com `animation` de zoom e "
+                                          "`motion.zoom` ao mesmo tempo")
+                    lbl = g.zoom_track(lbl, zoom, bw, bh)
+
             radius = int(el.get("border_radius") or 0)
             if radius > 0:
                 mask = el.get("_mask_png")
                 if not mask or not os.path.exists(mask):
                     raise Unsupported("border_radius sem máscara gerada")
                 lbl = g.rounded_mask(lbl, mask, bw, bh)
+
+            # --- motion: scale ---
+            # DEPOIS do border_radius de propósito: a máscara é aplicada no
+            # tamanho da caixa e escala junto com o conteúdo. Antes, a máscara
+            # ficaria fixa enquanto o conteúdo cresce e os cantos arredondados
+            # "cortariam" o elemento no meio.
+            scaled = False
+            if timeline is not None:
+                exprs = motion_ff.scale_exprs(timeline, (bx, by, bw, bh))
+                if exprs:
+                    lbl = g.scale_anim(lbl, exprs[0], exprs[1])
+                    scaled = True
 
             opacity = el.get("opacity")
             if opacity is not None and float(opacity) < 1.0:
@@ -333,7 +374,36 @@ class FFmpegSceneRenderer:
                 lbl = g.fade_in(lbl, float(a.get("fade_duration", 0.6)),
                                 float(a.get("start_at", 0.0)))
 
-            cur = g.overlay(cur, lbl, bx, by)
+            # --- motion: opacity ---
+            if timeline is not None:
+                plan = motion_ff.opacity_plan(timeline)
+                if plan and plan["kind"] == "fade":
+                    for kind, start, dur in plan["segments"]:
+                        lbl = (g.fade_in(lbl, dur, start) if kind == "in"
+                               else g.fade_out(lbl, dur, start))
+                elif plan:
+                    # `geq` roda por pixel: em 1080p pode custar mais que o
+                    # resto do filtergraph inteiro. Fica logado para a conta
+                    # aparecer no profile em vez de virar lentidão misteriosa.
+                    print("[FFmpegSceneRenderer] ⚠️ opacidade de motion pelo "
+                          "caminho geral (geq) — mais caro; prefira easing "
+                          "linear entre 0 e 1 para cair na cadeia de `fade`")
+                    lbl = g.alpha_expr(lbl, plan["expr"])
+
+            # --- motion: posição + visibilidade ---
+            position = enable = None
+            if timeline is not None:
+                position = motion_ff.position_exprs(
+                    timeline, (bx, by, bw, bh),
+                    anchor=_anchor_of(el), scaled=scaled,
+                )
+                enable = motion_ff.enable_expr(timeline)
+
+            if position:
+                cur = g.overlay(cur, lbl, position[0], position[1],
+                                enable=enable, eval_frame=True)
+            else:
+                cur = g.overlay(cur, lbl, bx, by, enable=enable)
 
         # --- legendas ---
         if ass_path and os.path.exists(ass_path):
