@@ -1,0 +1,123 @@
+{
+  "slug": "exemplo_motion_stagger",
+  "output": {
+    "ratio": "9:16",
+    "quality": "draft"
+  },
+  "global_settings": {
+    "transitions": {
+      "enabled": false
+    },
+    "motion": {
+      "default_ease": "out_cubic",
+      "default_duration": 0.5
+    }
+  },
+  "scenes": [
+    {
+      "id": "s1",
+      "duration": 5.0,
+      "motion": {
+        "stagger": 0.25,
+        "stagger_group": "cards"
+      },
+      "background": {
+        "visual": {
+          "type": "color",
+          "source": "#141414"
+        }
+      },
+      "visual_elements": [
+        {
+          "type": "image",
+          "source": "./assets/image/card_01.png",
+          "stagger_group": "cards",
+          "border_radius": 24,
+          "placement": {
+            "anchor": [
+              "center",
+              "20%"
+            ],
+            "width": "60%",
+            "height": "18%"
+          },
+          "motion": [
+            {
+              "at": 0.2,
+              "preset": "rise"
+            }
+          ]
+        },
+        {
+          "type": "image",
+          "source": "./assets/image/card_02.png",
+          "stagger_group": "cards",
+          "border_radius": 24,
+          "placement": {
+            "anchor": [
+              "center",
+              "42%"
+            ],
+            "width": "60%",
+            "height": "18%"
+          },
+          "motion": [
+            {
+              "at": 0.2,
+              "preset": "rise"
+            }
+          ]
+        },
+        {
+          "type": "image",
+          "source": "./assets/image/card_03.png",
+          "stagger_group": "cards",
+          "border_radius": 24,
+          "placement": {
+            "anchor": [
+              "center",
+              "64%"
+            ],
+            "width": "60%",
+            "height": "18%"
+          },
+          "motion": [
+            {
+              "at": 0.2,
+              "preset": "rise"
+            }
+          ]
+        },
+        {
+          "type": "image",
+          "source": "./assets/image/selo.png",
+          "placement": {
+            "anchor": [
+              "right",
+              "bottom"
+            ],
+            "width": "20%"
+          },
+          "motion": {
+            "visible": {
+              "from": 1.0,
+              "to": "end"
+            },
+            "actions": [
+              {
+                "at": 1.0,
+                "duration": 0.4,
+                "preset": "pop_in"
+              },
+              {
+                "at": 1.6,
+                "preset": "float"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "debug": true
+}

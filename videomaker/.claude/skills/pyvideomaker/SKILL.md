@@ -21,6 +21,8 @@ e armadilhas conhecidas. Exemplos prontos e copiáveis ficam em `examples/`.
 | [reference/background.md](reference/background.md) | `background.visual` (tipos, `fit_mode`, `animation`), `background.audio` (ducking), remote assets. |
 | [reference/ai.md](reference/ai.md) | Geração por IA em fundo, `visual_elements` e thumbnail: formato único (`parameters`), default do canal (`global_settings.ai`), fallback de modelo, cache. |
 | [reference/visual_elements.md](reference/visual_elements.md) | Tipos de overlay (image/video/directory/text_box/color/gradient/remote_asset), `opacity`, `border_radius`, `animation`, `filters`. |
+| [reference/motion.md](reference/motion.md) | `motion`: keyframes, easing, presets, `visible`, stagger — movimento rico em `visual_elements`. **Substitui `animation` (legado).** |
+| [reference/sync_narracao.md](reference/sync_narracao.md) | Ancorar o movimento na fala (`{"word": …}`, `{"sentence": …}`), escolha da palavra âncora, `on_missing`, loop de iteração (`--timeline-only`). |
 | [reference/placement.md](reference/placement.md) | Bloco `placement` (`anchor`/`width`/`region`) — compartilhado por `visual_elements` e `subtitle`; área segura/paddings. |
 | [reference/subtitle.md](reference/subtitle.md) | Legendas: `classic` vs `karaoke`, modos legado/linhas, paletas. **Fonte da verdade para `subtitle`.** |
 | [reference/filters.md](reference/filters.md) | `light_leak`, `particles`, `brightness_pulse`, `light_sweep` — `overlay` vs `modifier`. |
@@ -36,6 +38,10 @@ e armadilhas conhecidas. Exemplos prontos e copiáveis ficam em `examples/`.
 | [examples/teste_placement_16x9.json](examples/teste_placement_16x9.json) | `placement` em visual + legenda lado a lado, 16:9. |
 | [examples/teste_thumbnail_scene.json](examples/teste_thumbnail_scene.json) | Thumbnail composta (`youtube.thumbnail.type: "scene"`) com fundo de IA + degradê + caixa de texto. |
 | [examples/teste_visual_elements.json](examples/teste_visual_elements.json) | image/video/text_box/color, `border_radius`, `animation`, `opacity`, `filters`. |
+| [examples/teste_motion.json](examples/teste_motion.json) | `motion`: presets, keyframes explícitos, `{"after": …}`, `visible`, `zoom`. |
+| [examples/teste_motion_stagger.json](examples/teste_motion_stagger.json) | `stagger` entre elementos de um grupo + `loop` (`float`). |
+| [examples/teste_motion_text_box.json](examples/teste_motion_text_box.json) | `text_box` animado pelo caminho rápido. |
+| [examples/teste_motion_narracao.json](examples/teste_motion_narracao.json) | Movimento ancorado em palavras da narração (`{"word": …}`, `{"sentence": …}`). |
 | [examples/teste_transitions.json](examples/teste_transitions.json) | Transição global (`zoom`), override por cena (`fade`), desativação por cena. |
 | [examples/teste_chapters.json](examples/teste_chapters.json) | `chapters` com trilha de fundo diferente por capítulo. |
 | [examples/teste_canal_completo.json](examples/teste_canal_completo.json) | `output` 2K + `chapters` + `youtube` juntos num só JSON. |
@@ -63,12 +69,12 @@ Tudo funciona nos dois; a diferença é só tempo. O log diz qual foi usado
 | `filters` (`light_leak`, `particles`, …) | remover, ou aceitar o custo |
 | `transitions` `type: "zoom"` | `type: "fade"` |
 | `transitions` com `audio` (sfx) | transição sem áudio |
-| `visual_elements` `type: "text_box"` | `image` / `remote_asset` / `color` |
 | `background.visual` `type: "ai"` com `content_type: "video"` | `content_type: "image"` |
 
 Já são rápidos: fundo `color`/`image`/`remote_asset`/`ai`, `cover` com
 `focus: "face"`, `fit_mode: "contain"` em fundo de imagem ou IA, modo cover (`placement.width`+`height`), `zoom_in`, `zoom_out`,
-`zoom_pulse`, `fade_in`, `fade_zoom_in`, `border_radius`, `opacity`, legendas
+`zoom_pulse`, `fade_in`, `fade_zoom_in`, `border_radius`, `opacity`,
+`type: "text_box"`, o bloco `motion` inteiro (exceto `rotation`), legendas
 `classic` e `karaoke` (inclusive com `shadow.blur`) e transição `fade`.
 
 **Mídia de vídeo também é rápida** (`type: "video"` e `type: "directory"`, tanto
@@ -132,6 +138,9 @@ arquivos intermediários ficam em `output/{slug}/` para inspeção (ou em
 - [ ] Todo bloco de IA tem `model`/`width`/`seed`/… **dentro de `parameters`** —
       chave solta aborta o vídeo. Canal com estilo fixo: `global_settings.ai.parameters`
       com `model` e `enable_fallback: false`. Ver [reference/ai.md](reference/ai.md).
+- [ ] Um `visual_element` usa `animation` **ou** `motion`, nunca os dois (aborta).
+- [ ] Âncoras de `motion` conferidas com `python main.py meu.json --timeline-only`
+      antes de renderizar. Ver [reference/sync_narracao.md](reference/sync_narracao.md).
 - [ ] `animation`, `fit_mode` e `fill_color` do fundo ficam **dentro de
       `background.visual`** — em `background` direto são ignorados sem erro.
 - [ ] `chapters` (se usado) tem `background.audio` dentro de `global_settings` de cada capítulo, não fora.

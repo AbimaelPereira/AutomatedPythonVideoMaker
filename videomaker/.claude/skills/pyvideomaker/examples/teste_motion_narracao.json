@@ -1,0 +1,47 @@
+{
+  "slug": "exemplo_motion_narracao",
+  "debug": true,
+  "output": { "ratio": "9:16", "quality": "draft" },
+  "global_settings": {
+    "tts": { "provider": "edge", "voice": "pt-BR-AntonioNeural" },
+    "motion": { "on_missing": "proportional", "default_ease": "out_cubic" },
+    "transitions": { "enabled": false }
+  },
+  "scenes": [
+    {
+      "id": "cena_01",
+      "narration": {
+        "text": "Hoje o dinheiro muda de mão. Porém o lucro de um bilhão não aparece sozinho."
+      },
+      "background": { "visual": { "type": "color", "source": "#0b1a2b" } },
+      "visual_elements": [
+        {
+          "type": "image",
+          "source": "./assets/image/nota.png",
+          "placement": { "anchor": ["center", "30%"], "width": "55%" },
+          "motion": [
+            { "name": "entra", "at": { "word": "dinheiro", "offset": -0.12 },
+              "duration": 0.55, "ease": "out_back", "preset": "pop_in" },
+            { "at": { "word": "mão", "align": "end" }, "duration": 0.4,
+              "preset": "slide_out_up" }
+          ]
+        },
+        {
+          "type": "image",
+          "source": "./assets/image/grafico.png",
+          "placement": { "anchor": ["center", "62%"], "width": "70%" },
+          "motion": {
+            "visible": { "from": { "sentence": 2 }, "to": "end" },
+            "actions": [
+              { "name": "sobe", "at": { "sentence": 2 }, "duration": 0.6,
+                "preset": "rise" },
+              { "at": { "word": "bilhão" }, "duration": 0.3, "preset": "punch" },
+              { "at": { "after": "sobe", "offset": 0.1 }, "preset": "ken_burns_in" }
+            ]
+          }
+        }
+      ],
+      "subtitle": { "enabled": true, "type": "classic" }
+    }
+  ]
+}

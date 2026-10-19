@@ -19,7 +19,21 @@ DEBUG=1 python main.py jsons/myjson.json
 MAX_PARALLEL_SCENES=4 python main.py jsons/myjson.json
 ```
 
-Não há suítes de testes. Os testes são feitos manualmente executando `main.py` com um arquivo JSON.
+### Testes
+
+```bash
+python tests/fixtures/make_fixtures.py          # gera os assets sintéticos (1x)
+pytest -m "not slow"                            # suíte rápida (~5 s)
+pytest                                          # inclui paridade entre backends (~2 min)
+
+# Rede de segurança visual: nenhum JSON legado pode mudar um pixel
+RENDER_BACKEND=ffmpeg python tests/golden_render.py --save tests/baseline/
+RENDER_BACKEND=ffmpeg python tests/golden_render.py --save tests/atual/
+python tests/compare_ssim.py tests/baseline/ tests/atual/
+```
+
+`tests/fixtures/assets/` e `tests/baseline/` são gerados localmente (dependem da
+versão do ffmpeg da máquina) e por isso não são versionados.
 
 ## Estrutura do JSON
 
@@ -108,6 +122,32 @@ seu jeito (MoviePy: `subclip`/`concatenate`; ffmpeg: inputs + `concat`).
   `BackgroundEngine` — que é criado por cena — e por isso nunca evitava repetição de fato.
 - Metadados (duração/dimensões) vêm do `MediaProbe` via `ffprobe`, com cache em
   `cache/media_probe.json` por `path+mtime+size`. Nenhum arquivo é decodificado para saber a duração.
+
+### Movimento (`motion`)
+
+`visual_elements[].motion` descreve movimento com keyframes, easing, várias
+ações por elemento, janela de exibição (`visible`) e âncoras na narração
+(`{"word": "lucro"}`). É a evolução de `animation` (5 tipos fixos, lineares,
+sempre do início ao fim da cena), que continua suportado — mas um elemento usa
+**um ou outro**: declarar os dois aborta o vídeo.
+
+Núcleo em `libs/Motion/`, Python puro e testável em milissegundos. A função
+`resolve_motion()` é o único ponto de entrada dos dois backends de render, que
+recebem a mesma `Timeline` resolvida — é o que garante que ffmpeg e MoviePy não
+divirjam (verificado por SSIM ≥ 0,98 em `tests/test_parity.py`).
+
+Os tempos palavra-a-palavra vêm do SRT que o `NarrationEngine` já gravava para a
+legenda; o `motion` passou a consumi-lo também, inclusive com a legenda
+desligada.
+
+```bash
+python main.py meu.json --validate        # só o schema (sem TTS, sem render)
+python main.py meu.json --timeline-only   # resolve as âncoras e imprime a timeline
+MOTION_DEBUG=1 python main.py meu.json    # mesma tabela + filter_complex no render
+```
+
+Documentação para quem escreve JSON:
+`.claude/skills/pyvideomaker/reference/motion.md` e `sync_narracao.md`.
 
 ### Posicionamento unificado (`placement`)
 
@@ -238,6 +278,12 @@ main.py
         │     └── FiltersEngine   # animações zoom e contain-blur
         ├── VisualClip            # processa overlays de visual_elements
         ├── LayoutEngine          # posiciona/redimensiona elementos visuais (stack ou explícito)
+        ├── Motion/               # movimento declarativo dos visual_elements (bloco `motion`)
+        │     ├── schema/presets/easing/keyframes  # Python puro, sem MoviePy nem ffmpeg
+        │     ├── anchors         # âncoras na fala (SRT palavra-a-palavra)
+        │     ├── compile_ffmpeg  # Timeline → expressões de filtro (caminho rápido)
+        │     ├── compile_moviepy # Timeline → callables (paridade)
+        │     └── inspect         # `--timeline-only` / MOTION_DEBUG=1
         ├── SubtitleEngine        # despacha por subtitle.type → ClassicSubtitle | KaraokeSubtitle
         ├── TransitionEngine      # transições fade/zoom nas cenas
         │     ├── Fade / Zoom

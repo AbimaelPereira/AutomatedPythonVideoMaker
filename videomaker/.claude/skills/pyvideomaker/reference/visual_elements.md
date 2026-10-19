@@ -174,6 +174,11 @@ janela de tamanho fixo — para não distorcer com a animação.
 
 ## `animation`
 
+> **Legado.** Para movimento novo prefira [`motion`](motion.md): keyframes,
+> easing, várias ações por elemento, janelas de tempo e âncoras na narração.
+> `animation` continua funcionando e não será removida, mas um elemento usa um
+> **ou** outro — declarar os dois aborta o vídeo.
+
 ```jsonc
 "animation": { "type": "zoom_in", "start_scale": 1.0, "end_scale": 1.15, "start_at": 0 }
 ```

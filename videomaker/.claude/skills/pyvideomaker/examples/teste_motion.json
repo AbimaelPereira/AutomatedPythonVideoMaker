@@ -1,0 +1,147 @@
+{
+  "slug": "exemplo_motion",
+  "output": {
+    "ratio": "16:9",
+    "quality": "draft"
+  },
+  "global_settings": {
+    "transitions": {
+      "enabled": false
+    },
+    "motion": {
+      "default_ease": "out_cubic",
+      "default_duration": 0.5
+    }
+  },
+  "scenes": [
+    {
+      "id": "s1",
+      "duration": 4.0,
+      "background": {
+        "visual": {
+          "type": "color",
+          "source": "#0d1b2a"
+        }
+      },
+      "visual_elements": [
+        {
+          "type": "image",
+          "source": "./assets/image/card_01.png",
+          "placement": {
+            "anchor": [
+              "left",
+              "center"
+            ],
+            "width": "22%"
+          },
+          "motion": [
+            {
+              "name": "entrada",
+              "at": 0.2,
+              "duration": 0.6,
+              "ease": "out_back",
+              "preset": "slide_in_right"
+            },
+            {
+              "at": {
+                "after": "entrada",
+                "offset": 0.3
+              },
+              "duration": 0.4,
+              "ease": "out_quad",
+              "tracks": {
+                "scale": [
+                  1.0,
+                  1.12,
+                  1.0
+                ]
+              }
+            },
+            {
+              "at": 3.4,
+              "duration": 0.5,
+              "preset": "fade_out"
+            }
+          ]
+        },
+        {
+          "type": "image",
+          "source": "./assets/image/selo.png",
+          "placement": {
+            "anchor": [
+              "center",
+              "center"
+            ],
+            "width": "22%"
+          },
+          "motion": {
+            "visible": {
+              "from": 0.5,
+              "to": 3.5
+            },
+            "actions": [
+              {
+                "at": 0.5,
+                "duration": 0.6,
+                "preset": "pop_in"
+              },
+              {
+                "at": 1.6,
+                "duration": 1.2,
+                "ease": "in_out_sine",
+                "tracks": {
+                  "y": [
+                    [
+                      "0%",
+                      0
+                    ],
+                    [
+                      "50%",
+                      "-20%"
+                    ],
+                    [
+                      "100%",
+                      0
+                    ]
+                  ]
+                }
+              }
+            ]
+          }
+        },
+        {
+          "type": "image",
+          "source": "./assets/image/card_02.png",
+          "border_radius": 32,
+          "placement": {
+            "anchor": [
+              "right",
+              "center"
+            ],
+            "width": "25%",
+            "height": "45%"
+          },
+          "motion": [
+            {
+              "at": 0.0,
+              "duration": 4.0,
+              "ease": "linear",
+              "tracks": {
+                "zoom": [
+                  1.0,
+                  1.18
+                ]
+              }
+            },
+            {
+              "at": 0.0,
+              "duration": 0.8,
+              "preset": "fade_in"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "debug": true
+}
