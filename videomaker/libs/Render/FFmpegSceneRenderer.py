@@ -350,18 +350,6 @@ class FFmpegSceneRenderer:
                     raise Unsupported("border_radius sem máscara gerada")
                 lbl = g.rounded_mask(lbl, mask, bw, bh)
 
-            # --- motion: scale ---
-            # DEPOIS do border_radius de propósito: a máscara é aplicada no
-            # tamanho da caixa e escala junto com o conteúdo. Antes, a máscara
-            # ficaria fixa enquanto o conteúdo cresce e os cantos arredondados
-            # "cortariam" o elemento no meio.
-            scaled = False
-            if timeline is not None:
-                exprs = motion_ff.scale_exprs(timeline, (bx, by, bw, bh))
-                if exprs:
-                    lbl = g.scale_anim(lbl, exprs[0], exprs[1])
-                    scaled = True
-
             opacity = el.get("opacity")
             if opacity is not None and float(opacity) < 1.0:
                 lbl = g.opacity(lbl, float(opacity))
@@ -389,6 +377,24 @@ class FFmpegSceneRenderer:
                           "caminho geral (geq) — mais caro; prefira easing "
                           "linear entre 0 e 1 para cair na cadeia de `fade`")
                     lbl = g.alpha_expr(lbl, plan["expr"])
+
+            # --- motion: scale ---
+            # Fica por ÚLTIMO, depois do border_radius e de qualquer `fade`.
+            #
+            # Depois do border_radius porque a máscara é aplicada no tamanho da
+            # caixa e deve escalar junto com o conteúdo (senão os cantos
+            # arredondados cortariam o elemento no meio).
+            #
+            # Depois do `fade` por um motivo medido: o filtro `fade` NÃO
+            # reconfigura quando o tamanho do quadro muda — ele congela a saída
+            # no tamanho do primeiro frame. Com `scale=eval=frame` antes dele, um
+            # `pop_in` (0,82 → 1,0) renderizava o elemento 18% menor para sempre.
+            scaled = False
+            if timeline is not None:
+                exprs = motion_ff.scale_exprs(timeline, (bx, by, bw, bh))
+                if exprs:
+                    lbl = g.scale_anim(lbl, exprs[0], exprs[1])
+                    scaled = True
 
             # --- motion: posição + visibilidade ---
             position = enable = None
@@ -454,6 +460,11 @@ class FFmpegSceneRenderer:
             "-movflags", "+faststart",
             out_path,
         ]
+
+        if os.getenv("MOTION_DEBUG", "0").strip().lower() in ("1", "true", "yes"):
+            # O filtergraph é a única coisa que explica um movimento errado no
+            # caminho rápido; sem ele o diagnóstico vira adivinhação.
+            print(f"[FFmpegSceneRenderer] filter_complex:\n{filter_complex}\n")
 
         try:
             subprocess.run(cmd, check=True, capture_output=True, text=True)

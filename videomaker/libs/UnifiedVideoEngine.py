@@ -18,6 +18,7 @@ from libs.utils import (deep_merge, load_channel_config, resolve_output_resoluti
                         USE_INTERMEDIATE_ENCODE)
 from libs.Profiler import Profiler
 from libs.VisualClip import VisualClip, force_rgb, apply_border_radius_clip, apply_animation_in_window, apply_visual_filters
+from libs.Motion import compile_moviepy as motion_mp
 from libs.Subtitle.SubtitleEngine import SubtitleEngine
 from libs.MediaDownloader import MediaDownloader
 from libs.LayoutEngine import LayoutEngine
@@ -314,6 +315,22 @@ def _render_backend() -> str:
     - moviepy: desliga o caminho rápido (comparação A/B)
     """
     return os.getenv("RENDER_BACKEND", "auto").strip().lower()
+
+
+def _layout_box(layout: dict) -> tuple:
+    """(x, y, w, h) do resultado do LayoutEngine — a caixa que o motion usa
+    como base para `%`, para a compensação de `scale` e para o deslocamento."""
+    (w, h) = layout["final_size"]
+    (x, y) = layout["final_position"]
+    return (int(x), int(y), int(w), int(h))
+
+
+def _element_anchor(element: dict) -> tuple:
+    """`placement.anchor` do elemento (default: centro, como o layout)."""
+    anchor = (element.get("placement") or {}).get("anchor")
+    if isinstance(anchor, (list, tuple)) and len(anchor) >= 2:
+        return (str(anchor[0]), str(anchor[1]))
+    return ("center", "center")
 
 
 def _motion_words(subtitle_file):
@@ -742,6 +759,32 @@ def _process_scene_worker(scene_data_bundle):
         return (scene_index, None, {})
 
 
+def _declares_motion_alpha(element: dict) -> bool:
+    """O `motion` do elemento cria máscara alpha? (olha o JSON, não a timeline)
+
+    Vale para track de opacidade (inclusive via preset) e para `visible`, que no
+    caminho MoviePy também é implementado por máscara. Usado por
+    `_wrap_visual_layer`, que roda antes de qualquer timeline estar à mão.
+    """
+    motion = element.get("motion")
+    if not motion:
+        return False
+    if isinstance(motion, dict) and motion.get("visible"):
+        return True
+    actions = motion if isinstance(motion, (list, tuple)) else motion.get("actions") or []
+    from libs.Motion.presets import PRESETS
+
+    for action in actions:
+        if not isinstance(action, dict):
+            continue
+        if "opacity" in (action.get("tracks") or {}):
+            return True
+        preset = PRESETS.get(action.get("preset"))
+        if preset and "opacity" in preset["tracks"]:
+            return True
+    return False
+
+
 def _wrap_visual_layer(positioned_clips, element_data_list, resolution_output, scene_duration):
     """Empacota os clips de visual_elements já posicionados.
 
@@ -763,7 +806,10 @@ def _wrap_visual_layer(positioned_clips, element_data_list, resolution_output, s
             return True
         if e.get('type') == 'text_box':
             return (e.get('style') or {}).get('background_color') == 'transparent'
-        return False
+        # `motion` com track de opacidade cria máscara alpha, exatamente como o
+        # fade legado: achatar num composite opaco resolveria essa máscara
+        # contra PRETO e o fade começaria escuro em vez de transparente.
+        return _declares_motion_alpha(e)
 
     has_fade = any(
         e.get('animation', {}).get('type') in ('fade_in', 'fade_zoom_in')
@@ -827,6 +873,13 @@ def _create_visual_elements_clip_worker(scene_data, scene_duration, scene_dir,
     try:
         layout_results = LayoutEngine.process_stack_layout(valid_element_data_for_layout, layout_config)
 
+        timelines = _resolve_motion_timelines(
+            scene=scene_data, elements=valid_element_data_for_layout,
+            boxes=[_layout_box(layout) for layout in layout_results],
+            resolution=resolution_output, scene_duration=scene_duration,
+            words=motion_words, effective_gs=effective_gs,
+        ) or [None] * len(valid_element_data_for_layout)
+
         final_clips = []
         for i, clip in enumerate(valid_clips_info):
             if i >= len(layout_results):
@@ -849,15 +902,30 @@ def _create_visual_elements_clip_worker(scene_data, scene_duration, scene_dir,
                 deferred_anim = layout.get('deferred_animation')
                 if deferred_anim:
                     clip_resized = apply_animation_in_window(clip_resized, deferred_anim)
+                # `motion.zoom` ocupa o mesmo lugar do zoom legado: antes do
+                # border_radius, dentro da janela da caixa.
+                timeline = timelines[i] if i < len(timelines) else None
+                clip_resized = motion_mp.apply_zoom(clip_resized, timeline)
                 border_radius = layout.get('border_radius', 0)
                 if border_radius and border_radius > 0:
                     clip_resized = apply_border_radius_clip(clip_resized, int(border_radius))
+                # `motion.scale` DEPOIS da máscara, para os cantos arredondados
+                # escalarem junto (mesma ordem do caminho ffmpeg).
+                clip_resized = motion_mp.apply_scale(clip_resized, timeline)
                 clip_resized = apply_visual_filters(
                     clip_resized, valid_element_data_for_layout[i].get('filters'))
                 opacity = valid_element_data_for_layout[i].get('opacity')
                 if opacity is not None and float(opacity) < 1.0:
                     clip_resized = clip_resized.set_opacity(float(opacity))
-                clip_positioned = clip_resized.set_position(layout['final_position'])
+                clip_resized = motion_mp.apply_opacity(clip_resized, timeline)
+                if timeline is not None:
+                    clip_positioned = motion_mp.apply_visible(
+                        clip_resized.set_position(motion_mp.position(
+                            timeline, _layout_box(layout),
+                            anchor=_element_anchor(valid_element_data_for_layout[i]))),
+                        timeline)
+                else:
+                    clip_positioned = clip_resized.set_position(layout['final_position'])
                 final_clips.append(clip_positioned)
             except Exception as e:
                 print(f"[Worker] Falha ao posicionar elemento {i + 1}: {e}")
@@ -1134,6 +1202,13 @@ class UnifiedVideoEngine:
                 valid_element_data_for_layout, layout_config
             )
 
+            timelines = _resolve_motion_timelines(
+                scene=scene_data, elements=valid_element_data_for_layout,
+                boxes=[_layout_box(layout) for layout in layout_results],
+                resolution=self.resolution_output, scene_duration=scene_duration,
+                words=motion_words, effective_gs=effective_gs,
+            ) or [None] * len(valid_element_data_for_layout)
+
             final_clips = []
             for i, clip in enumerate(valid_clips_info):
                 if i >= len(layout_results):
@@ -1156,15 +1231,30 @@ class UnifiedVideoEngine:
                     deferred_anim = layout.get('deferred_animation')
                     if deferred_anim:
                         clip_resized = apply_animation_in_window(clip_resized, deferred_anim)
+                    # `motion.zoom` ocupa o mesmo lugar do zoom legado: antes do
+                    # border_radius, dentro da janela da caixa.
+                    timeline = timelines[i] if i < len(timelines) else None
+                    clip_resized = motion_mp.apply_zoom(clip_resized, timeline)
                     border_radius = layout.get('border_radius', 0)
                     if border_radius and border_radius > 0:
                         clip_resized = apply_border_radius_clip(clip_resized, int(border_radius))
+                    # `motion.scale` DEPOIS da máscara, para os cantos arredondados
+                    # escalarem junto (mesma ordem do caminho ffmpeg).
+                    clip_resized = motion_mp.apply_scale(clip_resized, timeline)
                     clip_resized = apply_visual_filters(
                         clip_resized, valid_element_data_for_layout[i].get('filters'))
                     opacity = valid_element_data_for_layout[i].get('opacity')
                     if opacity is not None and float(opacity) < 1.0:
                         clip_resized = clip_resized.set_opacity(float(opacity))
-                    clip_positioned = clip_resized.set_position(layout['final_position'])
+                    clip_resized = motion_mp.apply_opacity(clip_resized, timeline)
+                    if timeline is not None:
+                        clip_positioned = motion_mp.apply_visible(
+                            clip_resized.set_position(motion_mp.position(
+                                timeline, _layout_box(layout),
+                                anchor=_element_anchor(valid_element_data_for_layout[i]))),
+                            timeline)
+                    else:
+                        clip_positioned = clip_resized.set_position(layout['final_position'])
                     final_clips.append(clip_positioned)
                     print(f"[UVE] Elemento {i + 1} posicionado: {layout['final_size']} @ {layout['final_position']}")
                 except Exception as e:
