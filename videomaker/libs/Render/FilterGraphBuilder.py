@@ -384,12 +384,26 @@ class FilterGraphBuilder:
         return out
 
     def rounded_mask(self, src: str, mask_png: str, w: int, h: int) -> str:
-        """Aplica cantos arredondados via máscara PNG (alpha) pré-gerada."""
+        """Aplica cantos arredondados via máscara PNG (alpha) pré-gerada.
+
+        A máscara é redimensionada com `scale2ref`, ou seja, pelo tamanho REAL
+        da stream de entrada — não pelo (w, h) que o layout calculou. Os dois
+        quase sempre coincidem, mas quando divergem o `alphamerge` falha com
+        "Input frame sizes do not match" e derruba a cena inteira. Já aconteceu
+        com uma caixa de altura ímpar: a fonte `color` do lavfi arredondou 307
+        para 306 e a máscara continuou em 307.
+        """
         idx = self.add_input(["-loop", "1", "-i", mask_png])
-        mask_scaled = self._label("m")
-        self.add_chain(f"[{idx}:v]scale={int(w)}:{int(h)},format=gray[{mask_scaled}]")
+        mask_in = self._label("m")
+        self.add_chain(f"[{idx}:v]scale={int(w)}:{int(h)},format=gray[{mask_in}]")
+
         out = self._label("r")
-        self.add_chain(f"[{src}]format=rgba[{out}_p];[{out}_p][{mask_scaled}]alphamerge[{out}]")
+        self.add_chain(
+            f"[{src}]format=rgba[{out}_p];"
+            f"[{mask_in}][{out}_p]scale2ref=flags=neighbor[{out}_m][{out}_r];"
+            f"[{out}_m]format=gray[{out}_mg];"
+            f"[{out}_r][{out}_mg]alphamerge[{out}]"
+        )
         return out
 
     def subtitles(self, src: str, ass_path: str, fontsdir: str = None) -> str:

@@ -292,11 +292,19 @@ class FFmpegSceneRenderer:
 
             if el.get("type") == "color":
                 # Cor sólida: gerada por lavfi no tamanho da caixa, sem arquivo.
+                #
+                # A fonte `color` do lavfi nasce em yuv420p, que não comporta
+                # dimensão ÍMPAR: pedir 864x307 devolve, em silêncio, 864x306.
+                # Um pixel a menos basta para o `alphamerge` do border_radius
+                # falhar ("Input frame sizes do not match"), porque a máscara
+                # PNG foi gerada no tamanho exato da caixa. Gerar em rgba
+                # preserva a altura pedida.
                 color = el.get("color", "#000000")
                 color = color if str(color).startswith("#") else f"#{color}"
                 idx = g.add_input([
                     "-f", "lavfi", "-t", f"{duration:.3f}",
-                    "-i", f"color=c={color.replace('#', '0x')}:s={bw}x{bh}:r={fps}",
+                    "-i", (f"color=c={color.replace('#', '0x')}:s={bw}x{bh}"
+                           f":r={fps},format=rgba"),
                 ])
                 lbl = g.set_sar(f"{idx}:v")
             elif el.get("_segments"):

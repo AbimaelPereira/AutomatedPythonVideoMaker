@@ -256,3 +256,31 @@ def test_check_element_rejects_animation_and_motion_together():
 def test_check_element_passes_plain_motion():
     assert cf.check_element({"motion": [{"preset": "pop_in"}]}) == (True, "")
     assert cf.check_element({"type": "image"}) == (True, "")
+
+
+# ---------------------------------------------------------------------------
+# REGRESSÃO: variável de tempo por filtro
+# ---------------------------------------------------------------------------
+
+def test_opacity_geq_defaults_to_the_geq_time_variable():
+    """O `geq` expõe o tempo como `T`; com `t` ele diz "Unknown function".
+
+    Regressão real: o compilador era testado passando `t_var="T"` à mão, mas o
+    renderer chamava `opacity_plan()` sem argumento e recebia `t`. Todo JSON com
+    opacidade não-linear quebrava no ffmpeg.
+    """
+    timeline = _timeline([{"at": 0.0, "duration": 1.0, "ease": "out_bounce",
+                           "tracks": {"opacity": [0, 1]}}])
+    plan = cf.opacity_plan(timeline)
+    assert plan["kind"] == "geq"
+    assert "T" in plan["expr"] and "(t)" not in plan["expr"]
+
+    # Prova final: o ffmpeg aceita a expressão exatamente como ela sai daqui.
+    proc = subprocess.run([
+        "ffmpeg", "-v", "error",
+        "-f", "lavfi", "-i", "color=c=red:size=4x4:rate=10:duration=1",
+        "-vf", (f"format=rgba,geq=r='r(X\\,Y)':g='g(X\\,Y)':b='b(X\\,Y)'"
+                f":a='({plan['expr']})*alpha(X\\,Y)'"),
+        "-frames:v", "1", "-f", "null", "-",
+    ], capture_output=True)
+    assert proc.returncode == 0, proc.stderr.decode()[:400]

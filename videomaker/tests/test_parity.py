@@ -78,3 +78,24 @@ def test_backends_agree(case):
             assert value >= minimum, f"{case}/{name}: SSIM {value:.5f} < {minimum}"
     finally:
         shutil.rmtree(work, ignore_errors=True)
+
+
+# ---------------------------------------------------------------------------
+# REGRESSÃO: dimensão ímpar na fonte de cor
+# ---------------------------------------------------------------------------
+
+def test_lavfi_color_keeps_odd_height():
+    """`color` do lavfi nasce em yuv420p e ARREDONDA altura ímpar sem avisar.
+
+    Regressão real: uma caixa de 864x307 virava 864x306 e o `alphamerge` do
+    `border_radius` falhava, porque a máscara PNG tinha a altura exata. O
+    `format=rgba` logo na fonte preserva o tamanho pedido.
+    """
+    cmd = [
+        "ffmpeg", "-v", "info",
+        "-f", "lavfi", "-i", "color=c=red:size=864x307:rate=5:duration=0.2,format=rgba",
+        "-vf", "showinfo", "-f", "null", "-",
+    ]
+    proc = subprocess.run(cmd, capture_output=True, text=True)
+    assert proc.returncode == 0, proc.stderr[-400:]
+    assert "s:864x307" in proc.stderr, "a altura ímpar foi arredondada"

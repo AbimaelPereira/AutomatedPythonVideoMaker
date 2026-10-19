@@ -23,9 +23,13 @@ from libs.Motion.keyframes import Track
 # tem limite de tamanho de expressão.
 MAX_KEYFRAMES = 24
 
-# Variável de tempo de cada filtro. `zoompan` não expõe `t`: conta frames de
-# saída em `on` (ver FilterGraphBuilder._ZOOM_T).
+# Variável de tempo de cada filtro — NÃO é a mesma em todos:
+#   scale / overlay / rotate → `t`
+#   geq                      → `T` (maiúsculo; `t` é "função desconhecida")
+#   zoompan                  → nem um nem outro: conta frames de saída em `on`
+#                              (ver FilterGraphBuilder._ZOOM_T)
 T_DEFAULT = "t"
+T_GEQ = "T"
 
 
 def esc(expr: str) -> str:
@@ -255,7 +259,7 @@ def position_exprs(timeline, box: tuple, *, anchor=("center", "center"),
     return (x_expr, y_expr)
 
 
-def opacity_plan(timeline, *, t_var: str = T_DEFAULT) -> dict:
+def opacity_plan(timeline, *, t_var: str = T_GEQ) -> dict:
     """Como aplicar a opacidade animada. None = nada a fazer.
 
     Duas estratégias, nessa ordem:
