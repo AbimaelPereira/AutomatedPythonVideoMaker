@@ -26,15 +26,15 @@ def _ease_hint(name) -> str:
 # Valor de repouso de cada propriedade animável. Serve de base para os deltas
 # (x/y são deslocamentos sobre a caixa do layout) e para `is_static`.
 BASES = {
-    "x": 0.0, "y": 0.0, "rotation": 0.0,
+    "x": 0.0, "y": 0.0, "rotation": 0.0, "blur": 0.0,
     "scale": 1.0, "zoom": 1.0, "opacity": 1.0,
 }
 
 PROPS = tuple(BASES.keys())
 
-# Propriedades cujo valor é adimensional (multiplicador ou 0–1): `%` nelas é
-# apenas /100, e não fração da caixa.
-_SCALAR_PROPS = {"scale", "zoom", "opacity"}
+# Propriedades cujo valor é adimensional (multiplicador, 0–1 ou sigma): `%`
+# nelas é apenas /100, e não fração da caixa.
+_SCALAR_PROPS = {"scale", "zoom", "opacity", "blur"}
 
 
 @dataclass(frozen=True)

@@ -21,7 +21,8 @@ from libs.Motion.keyframes import BASES, Keyframe, Timeline, Track
 from libs.Motion.timeline import DEFAULTS, build_timeline, effective_defaults
 
 __all__ = [
-    "resolve_motion", "resolve_scene_motion", "has_motion", "motion_defaults",
+    "resolve_motion", "resolve_scene_motion", "resolve_background_motion",
+    "has_motion", "motion_defaults",
     "words_from_srt", "narration_text_of",
     "AnchorResolver", "AnchorNotFound", "MotionError", "ValidationError",
     "Timeline", "Track", "Keyframe", "BASES", "DEFAULTS",
@@ -183,3 +184,23 @@ def resolve_scene_motion(*, scene: dict, elements: list, boxes: list,
         print_scene(str((scene or {}).get("id", "?")), timelines,
                     words=words, duration=float(scene_duration))
     return timelines
+
+
+def resolve_background_motion(*, bg_cfg: dict, resolution: tuple,
+                              scene_duration: float, scene: dict = None,
+                              words: list = None, defaults: dict = None):
+    """`Timeline` do `background.visual.motion`, ou None.
+
+    A caixa é a TELA inteira — num fundo não existe caixa de layout. As
+    propriedades que fazem sentido aqui são `zoom` (ken burns com keyframes),
+    `x`/`y` (pan direcional) e `blur`; `scale`/`opacity` também funcionam, mas
+    num fundo que cobre a tela só revelariam o preto por baixo.
+    """
+    if not has_motion(bg_cfg):
+        return None
+    return resolve_motion(
+        element=bg_cfg, box=(0, 0, int(resolution[0]), int(resolution[1])),
+        resolution=resolution, scene_duration=float(scene_duration),
+        words=words, narration_text=narration_text_of(scene),
+        defaults=defaults, json_path="background.visual",
+    )

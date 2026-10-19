@@ -86,7 +86,8 @@ Modificadores, combináveis com qualquer forma de objeto:
 | `scale` | multiplicador | 1.0 | **transborda** a caixa (pop, punch) |
 | `zoom` | multiplicador | 1.0 | **fica dentro** da caixa, recortando (ken burns) |
 | `opacity` | 0–1 | 1.0 | |
-| `rotation` | graus | 0 | ⚠️ ainda não implementada — joga a cena no MoviePy |
+| `rotation` | graus | 0 | anti-horário; o elemento gira em torno do próprio centro |
+| `blur` | sigma (px) | 0 | desfoque gaussiano. **Animado só no MoviePy** (ver abaixo) |
 
 > `scale` e `zoom` não são a mesma coisa e nunca devem ser trocados: `scale`
 > faz o elemento crescer **para fora** da caixa (motion de interface); `zoom`
@@ -143,6 +144,27 @@ nomes mais próximos.
 ```jsonc
 { "preset": "pop_in", "tracks": { "scale": [0.5, 1.0] } }   // opacity continua vindo do preset
 ```
+
+## `motion` no fundo
+
+`background.visual` também aceita `motion`. A "caixa" é a tela inteira, então as
+propriedades úteis são `zoom` (ken burns com keyframes e easing, em vez do
+`animation.type: "zoom"` linear), `blur` e `rotation`:
+
+```jsonc
+"background": {
+  "visual": {
+    "type": "file", "source": "./assets/image/fundo.jpg",
+    "motion": [
+      { "at": 0, "until": "end", "ease": "in_out_sine",
+        "tracks": { "zoom": [1.0, 1.25] } }
+    ]
+  }
+}
+```
+
+Funciona nos dois caminhos de render e convive com `animation` do fundo (que é
+aplicada depois) — mas declarar os dois na mesma cena raramente é o que se quer.
 
 ## `visible` — janela de exibição
 
@@ -215,4 +237,8 @@ MOTION_DEBUG=1 python main.py meu.json    # imprime a timeline durante o render
 - Opacidade com easing não-linear ou entre valores intermediários (0,3 → 0,8)
   usa um caminho de filtro mais caro; prefira `linear` entre 0 e 1 quando o
   tempo de render importar.
-- `rotation` ainda não tem equivalente em filtro: a cena cai no MoviePy.
+- `blur` com valor **fixo** é rápido; `blur` que **muda ao longo do tempo** joga
+  a cena no MoviePy (o `gblur` do ffmpeg não aceita expressão em `sigma`).
+- Com `rotation`, o elemento é sempre centrado na própria caixa — `anchor`
+  lateral deixa de valer para a compensação, porque o quadro girado tem margem
+  dos dois lados.

@@ -13,6 +13,8 @@ Importa MoviePy (ao contrário do resto do pacote Motion), então só é carrega
 no caminho legado.
 """
 
+import math
+
 from moviepy.editor import CompositeVideoClip
 
 
@@ -56,6 +58,93 @@ def apply_scale(clip, timeline):
     return clip.resize(lambda t: timeline.sample("scale", t))
 
 
+def rotation_canvas(box: tuple) -> tuple:
+    """(lado, esquerda, topo) do canvas quadrado que comporta o giro.
+
+    Um retângulo girado ocupa até a sua DIAGONAL. As contas são IDÊNTICAS às do
+    `FilterGraphBuilder.rotate_anim` (mesmo `ceil`, mesmo ajuste para par,
+    mesma divisão inteira) de propósito: um pixel de diferença no tamanho do
+    canvas desloca o centro de meio pixel, e num elemento com textura de grade
+    isso já derruba o SSIM de paridade entre os backends.
+    """
+    _, _, bw, bh = box
+    side = int(math.ceil(math.hypot(bw, bh)))
+    side += side % 2
+    return (side, (side - int(bw)) // 2, (side - int(bh)) // 2)
+
+
+def apply_rotation(clip, timeline, box: tuple = None):
+    """`rotation` em graus, anti-horário (igual ao filtro `rotate`).
+
+    Não usa `vfx.rotate`: com ângulo múltiplo de 90° ele pega um atalho que faz
+    `np.transpose` com 3 eixos e QUEBRA em clipe com máscara (a máscara é 2D) —
+    `ValueError: axes don't match array`. Aqui a rotação é feita com PIL, no
+    quadro e na máscara, dentro de um canvas de tamanho fixo.
+    """
+    if not has(timeline, "rotation"):
+        return clip
+
+    import numpy as np
+    from PIL import Image
+
+    box = box or (0, 0, clip.w, clip.h)
+    side, left, top = rotation_canvas(box)
+    if side > clip.w or side > clip.h:
+        # Canvas com folga para a diagonal; `opacity=0` deixa a borda
+        # transparente (e cria a máscara, se ainda não houver).
+        clip = clip.margin(left=left, right=side - clip.w - left,
+                           top=top, bottom=side - clip.h - top, opacity=0)
+
+    def rotate_frame(get_frame, t):
+        angle = timeline.sample("rotation", t)
+        frame = get_frame(t)
+        if abs(angle) < 1e-6:
+            return frame
+        is_mask = frame.ndim == 2
+        array = np.uint8(frame * 255) if is_mask else np.uint8(frame)
+        # BILINEAR (e não BICUBIC) para bater com a interpolação do filtro
+        # `rotate` do ffmpeg, que é bilinear por padrão — com bicúbico a borda
+        # do elemento girado fica visivelmente mais dura num backend que no
+        # outro e o SSIM de paridade cai.
+        rotated = Image.fromarray(array).rotate(
+            angle, resample=Image.BILINEAR, expand=False)
+        out = np.asarray(rotated)
+        return out.astype(float) / 255.0 if is_mask else out
+
+    clip = clip.fl(rotate_frame, apply_to=["mask"], keep_duration=True)
+    return clip
+
+
+def apply_blur(clip, timeline):
+    """`blur` animado (sigma do gaussiano), via PIL quadro a quadro.
+
+    O MoviePy não tem desfoque nativo; `GaussianBlur` do PIL é o equivalente
+    mais próximo do `gblur` do ffmpeg (mesmo sigma, mesma família de kernel).
+    """
+    if not has(timeline, "blur"):
+        return clip
+
+    import numpy as np
+    from PIL import Image, ImageFilter
+
+    def blur_frame(get_frame, t):
+        sigma = max(0.0, timeline.sample("blur", t))
+        frame = get_frame(t)
+        if sigma < 0.05:
+            return frame
+        # A máscara chega como float 0–1 e 2D; o quadro, como uint8 RGB.
+        is_mask = frame.ndim == 2
+        array = np.uint8(frame * 255) if is_mask else np.uint8(frame)
+        blurred = Image.fromarray(array).filter(ImageFilter.GaussianBlur(sigma))
+        out = np.asarray(blurred)
+        return out.astype(float) / 255.0 if is_mask else out
+
+    # `apply_to=["mask"]` é o que faz as BORDAS desfocarem: o `gblur` do ffmpeg
+    # borra o canal alpha junto com a cor, e sem isso um backend entregaria
+    # borda nítida e o outro borda suave.
+    return clip.fl(blur_frame, apply_to=["mask"], keep_duration=True)
+
+
 def apply_opacity(clip, timeline):
     """`opacity` animada, pela MÁSCARA.
 
@@ -86,7 +175,8 @@ def position(timeline, box: tuple, *, anchor=("center", "center")):
     bx, by, bw, bh = box
     moves = has(timeline, "x") or has(timeline, "y")
     scaled = has(timeline, "scale")
-    if not moves and not scaled:
+    rotated = has(timeline, "rotation")
+    if not moves and not scaled and not rotated:
         return (bx, by)
 
     ax = str(anchor[0]) if len(anchor) > 0 else "center"
@@ -95,16 +185,28 @@ def position(timeline, box: tuple, *, anchor=("center", "center")):
     def at(t):
         dx = timeline.sample("x", t) if moves else 0.0
         dy = timeline.sample("y", t) if moves else 0.0
+        width, height = bw, bh
         if scaled:
             factor = timeline.sample("scale", t)
-            grow_w, grow_h = bw * factor - bw, bh * factor - bh
-            if ax == "right":
+            width, height = bw * factor, bh * factor
+        if rotated:
+            # Canvas FIXO da rotação (ver rotation_canvas) — não varia com o
+            # ângulo, então basta somá-lo ao crescimento da escala.
+            side = rotation_canvas(box)[0]
+            width = width + (side - bw)
+            height = height + (side - bh)
+        if scaled or rotated:
+            grow_w, grow_h = width - bw, height - bh
+            # Com rotação, a âncora é sempre o CENTRO: o quadro ampliado tem
+            # margem dos dois lados, então encostar "à direita" não faria
+            # sentido (mesma regra do caminho ffmpeg).
+            if ax == "right" and not rotated:
                 dx -= grow_w
-            elif ax != "left":
+            elif ax != "left" or rotated:
                 dx -= grow_w / 2.0
-            if ay == "bottom":
+            if ay == "bottom" and not rotated:
                 dy -= grow_h
-            elif ay != "top":
+            elif ay != "top" or rotated:
                 dy -= grow_h / 2.0
         return (bx + dx, by + dy)
 

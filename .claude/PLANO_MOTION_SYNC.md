@@ -826,18 +826,38 @@ feature não existe na prática.
 ## 6. Checklist de execução
 
 ```
-[ ] Fase 0  fixtures + 6 golden + compare_ssim + baseline gravado
-[ ] Fase 1  libs/Motion/{easing,keyframes,presets,schema,timeline,errors}
-[ ]         test_motion_core.py ≥ 40 casos, paridade das curvas verde
-[ ] Fase 2  anchors.py + encanamento do SRT (3 pontos) + inspect.py + CLI
-[ ]         test_anchors.py verde
-[ ] Fase 3  compile_ffmpeg.py + overlay/scale_anim no builder + gate
-[ ]         SSIM vs baseline ≥ 0.995  (nenhuma regressão)
-[ ] Fase 4  compile_moviepy.py + _wrap_visual_layer + paridade SSIM ≥ 0.98
-[ ] Fase 5  presets completos + stagger + loop + text_box no caminho rápido
-[ ] Fase 6  reference/motion.md, reference/sync_narracao.md, SKILL.md, exemplos
-[ ] Fase 7  rotation, background motion, blur, beat
+[x] Fase 0  fixtures + 8 golden + compare_ssim + baseline gravado
+[x] Fase 1  libs/Motion/{easing,keyframes,presets,schema,timeline,errors}
+[x]         test_motion_core.py (106 casos), paridade das 21 curvas verde
+[x] Fase 2  anchors.py + encanamento do SRT + inspect.py + CLI
+[x]         test_anchors.py verde (32 casos)
+[x] Fase 3  compile_ffmpeg.py + overlay/scale_anim no builder + gate
+[x]         SSIM vs baseline = 1.00000  (nenhuma regressão)
+[x] Fase 4  compile_moviepy.py + _wrap_visual_layer + paridade SSIM ≥ 0.98
+[x] Fase 5  presets completos + stagger + loop + text_box no caminho rápido
+[x] Fase 6  reference/motion.md, reference/sync_narracao.md, SKILL.md, exemplos
+[~] Fase 7  rotation ✅, background motion ✅, blur ✅ (animado só no MoviePy),
+            beat ⬜ (não implementado — ver nota abaixo)
 ```
+
+## 7. O que a execução mudou em relação ao plano
+
+Registrado porque contradiz o texto acima, que ficou como estava quando foi escrito.
+
+| ponto do plano | o que se verificou na prática |
+|---|---|
+| §3.5: ordem `… → border_radius → scale_anim` | `scale_anim` teve de ir para **depois de todo `fade`**: o filtro `fade` não reconfigura quando o quadro muda de tamanho e CONGELA a saída no tamanho do primeiro frame (um `pop_in` renderizava 18% menor para sempre) |
+| §4 Fase 7: `rotate=…:ow=hypot(iw\,ih)` | com saída maior que a entrada e `c=none`, o `rotate` do ffmpeg 4.x **não limpa a margem**: o elemento girando deixa um rastro em leque. Solução: `pad` transparente até a diagonal **antes** do `rotate`, com `ow=iw:oh=ih` |
+| §4 Fase 7: `blur` animado (`gblur=sigma='EXPR':eval=frame`) | o `gblur` **não aceita expressão** em `sigma` (nem `eval`) no ffmpeg 4.x. Blur constante é filtro normal; blur **animado** é recusado pelo gate e vai para o MoviePy (PIL por frame) |
+| §4 Fase 4: `visible` via `set_start`/`set_end` | dentro de um `CompositeVideoClip` isso passa a dar tempo LOCAL ao clipe e **atrasa toda a animação** pelo início da janela. Implementado por máscara, que preserva o tempo absoluto |
+| §2.3: `rotation` previsto só para a Fase 7 | implementado nos dois backends; o gate não recusa mais |
+| §4 Fase 7: âncora por batida da música (`{"beat": 8}`) | **não implementado** — exigiria detecção de onsets (`librosa`/energia) no `background.audio`, uma dependência e um pipeline de análise fora do escopo do resto |
+| §4 Fase 0: 6 golden JSONs | viraram 8 (legenda classic e karaokê ganharam arquivos próprios, alimentados por um SRT sintético) |
+
+Armadilha herdada, encontrada no caminho: `background.visual.type: "file"` só é
+entendido pelo caminho ffmpeg — o `BackgroundEngine` (MoviePy) espera `"image"`
+e cai no fundo preto. Não foi alterado (está fora do escopo deste plano), mas
+qualquer JSON que precise valer nos dois caminhos deve usar `"image"`.
 
 Comando de verificação completo:
 

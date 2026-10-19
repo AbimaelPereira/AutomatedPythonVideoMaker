@@ -125,6 +125,9 @@ def _flat_values(raw):
 
 def _validate_range(prop: str, raw, path: str, errors: list):
     for value in _flat_values(raw):
+        if prop == "blur" and value < 0:
+            errors.append(ValidationError(f"blur não pode ser negativo: {value}",
+                                          path))
         if prop == "opacity" and not (0.0 <= value <= 1.0):
             errors.append(ValidationError(f"opacity fora de 0–1: {value}", path))
         if prop in ("scale", "zoom") and value <= 0:

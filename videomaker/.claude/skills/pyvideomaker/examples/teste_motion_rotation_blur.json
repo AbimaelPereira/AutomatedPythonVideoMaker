@@ -1,0 +1,94 @@
+{
+  "slug": "exemplo_motion_rotation_blur",
+  "output": {
+    "ratio": "16:9",
+    "quality": "draft"
+  },
+  "global_settings": {
+    "transitions": {
+      "enabled": false
+    }
+  },
+  "scenes": [
+    {
+      "id": "s1",
+      "duration": 4.0,
+      "background": {
+        "visual": {
+          "type": "image",
+          "source": "./assets/image/fundo.jpg",
+          "motion": [
+            {
+              "at": 0.0,
+              "duration": 4.0,
+              "ease": "linear",
+              "tracks": {
+                "zoom": [
+                  1.0,
+                  1.2
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "visual_elements": [
+        {
+          "type": "image",
+          "source": "./assets/image/card_01.png",
+          "placement": {
+            "anchor": [
+              "left",
+              "center"
+            ],
+            "width": "25%",
+            "height": "40%"
+          },
+          "motion": [
+            {
+              "at": 0.2,
+              "duration": 2.0,
+              "ease": "in_out_cubic",
+              "tracks": {
+                "rotation": [
+                  0,
+                  180
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "type": "image",
+          "source": "./assets/image/selo.png",
+          "placement": {
+            "anchor": [
+              "right",
+              "center"
+            ],
+            "width": "25%"
+          },
+          "motion": [
+            {
+              "at": 0.2,
+              "duration": 1.2,
+              "ease": "out_cubic",
+              "tracks": {
+                "blur": [
+                  6,
+                  6
+                ]
+              }
+            },
+            {
+              "at": 0.2,
+              "duration": 0.8,
+              "preset": "fade_in"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "debug": true
+}

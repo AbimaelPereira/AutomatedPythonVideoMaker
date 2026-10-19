@@ -37,6 +37,7 @@ def _render_scene(engine, scene, scene_index: int, srt_path: str) -> str:
         _subtitles_enabled, _try_ffmpeg_scene, force_rgb,
     )
     from libs.Background.BackgroundEngine import BackgroundEngine
+    from libs.Motion import words_from_srt
     from libs.Transitions.TransitionEngine import TransitionEngine
     from moviepy.editor import CompositeVideoClip
 
@@ -67,7 +68,8 @@ def _render_scene(engine, scene, scene_index: int, srt_path: str) -> str:
         ai_cache=engine.ai_cache, remote_asset_manager=engine.remote_asset_manager,
     )
     background_clip = bg_engine.build_scene_background(
-        effective_gs, scene, duration, scene_dir, engine.output_dir
+        effective_gs, scene, duration, scene_dir, engine.output_dir,
+        motion_words=words_from_srt(srt_path),
     )
     visual_clip = _create_visual_elements_clip_worker(
         scene, duration, scene_dir, engine.resolution_output,

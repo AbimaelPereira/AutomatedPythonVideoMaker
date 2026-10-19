@@ -262,6 +262,18 @@ class FFmpegSceneRenderer:
             elif not bg.get("_contain"):
                 cur = g.cover(cur, duration)
 
+        bg_timeline = bg.get("_motion")
+        if bg_timeline is not None:
+            ok, why = motion_ff.check(bg_timeline)
+            if not ok:
+                raise Unsupported(f"background.visual.{why}")
+            zoom = motion_ff.zoom_expr(bg_timeline, t_var=g._ZOOM_T)
+            if zoom:
+                cur = g.zoom_track(cur, zoom)
+            sigma = motion_ff.blur_sigma(bg_timeline)
+            if sigma:
+                cur = g.blur(cur, sigma)
+
         anim = (bg.get("animation") or {})
         if anim.get("type") == "zoom":
             intensity = float(anim.get("intensity", 0.1))
@@ -397,12 +409,31 @@ class FFmpegSceneRenderer:
                     lbl = g.scale_anim(lbl, exprs[0], exprs[1])
                     scaled = True
 
+            # --- motion: blur (sigma fixo; animado já foi recusado) ---
+            if timeline is not None:
+                sigma = motion_ff.blur_sigma(timeline)
+                if sigma:
+                    lbl = g.blur(lbl, sigma)
+
+            # --- motion: rotation ---
+            # Depois da scale: o `rotate` amplia o quadro para a diagonal
+            # (`ow=hypot(iw,ih)`) e, a partir daqui, o overlay precisa ser
+            # centrado pelo tamanho real do quadro — por isso força a
+            # compensação por `overlay_w/h` com âncora central.
+            rotated = False
+            if timeline is not None:
+                angle = motion_ff.rotation_expr(timeline)
+                if angle:
+                    lbl = g.rotate_anim(lbl, angle, (bx, by, bw, bh))
+                    rotated = True
+
             # --- motion: posição + visibilidade ---
             position = enable = None
             if timeline is not None:
                 position = motion_ff.position_exprs(
                     timeline, (bx, by, bw, bh),
-                    anchor=_anchor_of(el), scaled=scaled,
+                    anchor=("center", "center") if rotated else _anchor_of(el),
+                    scaled=scaled or rotated,
                 )
                 enable = motion_ff.enable_expr(timeline)
 

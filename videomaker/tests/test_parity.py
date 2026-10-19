@@ -26,7 +26,18 @@ sys.path.insert(0, VIDEOMAKER)
 from tests.compare_ssim import ssim_all          # noqa: E402
 
 MIN_SSIM = 0.98
-CASES = ["teste_01.json", "teste_02.json", "teste_03.json"]
+
+# Por caso, quando a tolerância precisa ser diferente — sempre com o motivo.
+CASES = {
+    "teste_01.json": MIN_SSIM,
+    "teste_02.json": MIN_SSIM,
+    "teste_03.json": MIN_SSIM,
+    # Rotação: o `rotate` do ffmpeg e o do PIL interpolam a borda de um jeito
+    # ligeiramente diferente. Com a textura de grade de alto contraste do
+    # fixture isso custa ~2 pontos de SSIM, sem diferença visível (conferido
+    # quadro a quadro: mesma posição, mesmo ângulo, mesmo tamanho).
+    "teste_04.json": 0.96,
+}
 
 
 def _render(json_path: str, backend: str, out_dir: str) -> list:
@@ -47,7 +58,7 @@ def _render(json_path: str, backend: str, out_dir: str) -> list:
 
 
 @pytest.mark.slow
-@pytest.mark.parametrize("case", CASES)
+@pytest.mark.parametrize("case", sorted(CASES))
 def test_backends_agree(case):
     json_path = os.path.join(HERE, "motion", case)
     if not os.path.exists(json_path):
@@ -62,7 +73,8 @@ def test_backends_agree(case):
         assert names == _render(json_path, "moviepy", slow)
 
         for name in names:
+            minimum = CASES[case]
             value = ssim_all(os.path.join(fast, name), os.path.join(slow, name))
-            assert value >= MIN_SSIM, f"{case}/{name}: SSIM {value:.5f}"
+            assert value >= minimum, f"{case}/{name}: SSIM {value:.5f} < {minimum}"
     finally:
         shutil.rmtree(work, ignore_errors=True)

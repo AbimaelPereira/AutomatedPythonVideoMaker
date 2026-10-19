@@ -42,6 +42,7 @@ e armadilhas conhecidas. Exemplos prontos e copiáveis ficam em `examples/`.
 | [examples/teste_motion_stagger.json](examples/teste_motion_stagger.json) | `stagger` entre elementos de um grupo + `loop` (`float`). |
 | [examples/teste_motion_text_box.json](examples/teste_motion_text_box.json) | `text_box` animado pelo caminho rápido. |
 | [examples/teste_motion_narracao.json](examples/teste_motion_narracao.json) | Movimento ancorado em palavras da narração (`{"word": …}`, `{"sentence": …}`). |
+| [examples/teste_motion_rotation_blur.json](examples/teste_motion_rotation_blur.json) | `rotation`, `blur` e `motion` no próprio `background.visual`. |
 | [examples/teste_transitions.json](examples/teste_transitions.json) | Transição global (`zoom`), override por cena (`fade`), desativação por cena. |
 | [examples/teste_chapters.json](examples/teste_chapters.json) | `chapters` com trilha de fundo diferente por capítulo. |
 | [examples/teste_canal_completo.json](examples/teste_canal_completo.json) | `output` 2K + `chapters` + `youtube` juntos num só JSON. |
@@ -70,6 +71,7 @@ Tudo funciona nos dois; a diferença é só tempo. O log diz qual foi usado
 | `transitions` `type: "zoom"` | `type: "fade"` |
 | `transitions` com `audio` (sfx) | transição sem áudio |
 | `background.visual` `type: "ai"` com `content_type: "video"` | `content_type: "image"` |
+| `motion` com `blur` **animado** | `blur` constante (`[6, 6]`), ou aceitar o custo |
 
 Já são rápidos: fundo `color`/`image`/`remote_asset`/`ai`, `cover` com
 `focus: "face"`, `fit_mode: "contain"` em fundo de imagem ou IA, modo cover (`placement.width`+`height`), `zoom_in`, `zoom_out`,

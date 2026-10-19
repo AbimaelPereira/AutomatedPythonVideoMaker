@@ -216,10 +216,35 @@ def test_check_refuses_too_many_keyframes():
     assert not ok and "keyframes" in why
 
 
-def test_check_refuses_rotation_until_phase_7():
-    ok, why = cf.check_element({"motion": [{"duration": 0.5,
-                                            "tracks": {"rotation": [0, 90]}}]})
-    assert not ok and "rotation" in why
+def test_rotation_compiles_to_radians():
+    """O JSON declara graus; o filtro `rotate` só entende radianos."""
+    import math
+
+    timeline = _timeline([{"at": 0.0, "duration": 1.0, "ease": "linear",
+                           "tracks": {"rotation": [0, 90]}}])
+    expr = cf.rotation_expr(timeline, t_var="T")
+    assert _bare_commas(expr) == 0
+    # `_eval_at` quantiza em 16 bits sobre uma faixa de 3000 px → passo de
+    # ~0,046; por isso a tolerância é folgada aqui (o valor em si é exato).
+    assert _eval_at(expr, 1.0) == pytest.approx(math.pi / 2, abs=0.06)
+
+
+def test_blur_constant_is_supported_animated_is_not():
+    """`gblur` só aceita sigma fixo — blur animado vai para o MoviePy."""
+    constant = _timeline([{"at": 0.0, "duration": 1.0, "tracks": {"blur": [6, 6]}}])
+    assert cf.blur_sigma(constant) == pytest.approx(6.0)
+    assert cf.check(constant)[0]
+
+    animated = _timeline([{"at": 0.0, "duration": 1.0, "tracks": {"blur": [8, 0]}}])
+    ok, why = cf.check(animated)
+    assert not ok and "blur" in why
+
+
+def test_check_accepts_rotation_and_blur():
+    assert cf.check_element({"motion": [{"duration": 0.5,
+                                         "tracks": {"rotation": [0, 90]}}]}) == (True, "")
+    assert cf.check_element({"motion": [{"duration": 0.5,
+                                         "tracks": {"blur": [6, 6]}}]}) == (True, "")
 
 
 def test_check_element_rejects_animation_and_motion_together():

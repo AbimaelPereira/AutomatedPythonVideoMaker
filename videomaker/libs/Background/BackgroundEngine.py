@@ -539,7 +539,11 @@ class BackgroundEngine:
         return engine.compose(bg_clip, filters_cfg, float(scene_duration))
 
     def build_scene_background(self, global_settings: Dict, scene_data: Dict, scene_duration: float,
-                               scene_dir: str, video_dir: str):
+                               scene_dir: str, video_dir: str,
+                               motion_words: list = None):
+        """`motion_words` são os tempos palavra-a-palavra do SRT da cena, usados
+        pelas âncoras de `background.visual.motion`. Default None (sem âncora de
+        fala) para os chamadores antigos seguirem funcionando."""
         print(f"[BackgroundEngine] Criando fundo para duração: {scene_duration:.2f}s")
 
         global_background = global_settings.get("background", {}) or {}
@@ -580,6 +584,27 @@ class BackgroundEngine:
             traceback.print_exc()
             print("[BackgroundEngine] Fallback: preto")
             bg_clip = ColorClip(size=self.resolution_output, color=(0, 0, 0)).set_duration(scene_duration)
+
+        # `motion` no fundo (keyframes/easing). Mesma Timeline do caminho
+        # ffmpeg — só a materialização muda. Ver libs/Motion/compile_moviepy.
+        if visual_config.get("motion"):
+            try:
+                from libs.Motion import (motion_defaults,
+                                         resolve_background_motion)
+                from libs.Motion import compile_moviepy as motion_mp
+
+                timeline = resolve_background_motion(
+                    bg_cfg=visual_config, resolution=self.resolution_output,
+                    scene_duration=scene_duration, scene=scene_data,
+                    words=motion_words,
+                    defaults=motion_defaults(global_settings, scene_data),
+                )
+                if timeline is not None:
+                    bg_clip = motion_mp.apply_zoom(bg_clip, timeline)
+                    bg_clip = motion_mp.apply_blur(bg_clip, timeline)
+                    bg_clip = motion_mp.apply_rotation(bg_clip, timeline)
+            except Exception as e:
+                print(f"[BackgroundEngine] motion do fundo falhou ({e}); ignorado")
 
         animation_config = visual_config.get("animation", {})
         if animation_config and animation_config.get("type", "none") != "none":

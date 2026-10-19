@@ -115,8 +115,12 @@ def check(timeline) -> tuple:
         return (True, "")
 
     for prop, track in timeline.tracks.items():
-        if prop == "rotation" and not track.is_static():
-            return (False, "motion.rotation ainda não tem equivalente em filtro")
+        # `gblur` recebe `sigma` como float fixo: não há `eval=frame` nem
+        # comando de runtime no ffmpeg 4.x. Blur CONSTANTE é filtro normal;
+        # blur ANIMADO só existe no MoviePy (PIL por frame).
+        if prop == "blur" and not track.is_constant():
+            return (False, "motion.blur animado não tem equivalente em filtro "
+                           "(gblur não aceita expressão em sigma)")
         if len(track.keys) > MAX_KEYFRAMES:
             return (False, f"motion.{prop} com {len(track.keys)} keyframes "
                            f"(teto de {MAX_KEYFRAMES} no caminho ffmpeg)")
@@ -150,11 +154,6 @@ def check_element(element: dict, *, path: str = "") -> tuple:
     motion = normalize(element["motion"])
     schema_check(motion, f"{path}.motion" if path else "motion")
 
-    for i, action in enumerate(motion.get("actions") or []):
-        tracks = (action or {}).get("tracks") or {}
-        if "rotation" in tracks:
-            return (False, f"{path}.motion.actions[{i}].rotation ainda não tem "
-                           f"equivalente em filtro")
     return (True, "")
 
 
@@ -174,6 +173,31 @@ def zoom_expr(timeline, *, t_var: str) -> str:
     if track is None:
         return None
     return track_expr(track, t_var=t_var)
+
+
+def rotation_expr(timeline, *, t_var: str = T_DEFAULT) -> str:
+    """Expressão de `rotation` em RADIANOS para o filtro `rotate`, ou None.
+
+    O JSON declara graus (mais legível); a conversão fica aqui, num lugar só.
+    """
+    track = _active(timeline, "rotation")
+    if track is None:
+        return None
+    import math
+
+    return track_expr(track, t_var=t_var, scale=math.pi / 180.0)
+
+
+def blur_sigma(timeline) -> float:
+    """Sigma CONSTANTE do `gblur`, ou None.
+
+    Só o caso constante: o `check()` já recusou a cena quando o blur é animado,
+    porque o `gblur` não aceita expressão em `sigma`.
+    """
+    track = _active(timeline, "blur")
+    if track is None or not track.is_constant():
+        return None
+    return max(0.0, track.keys[0].value)
 
 
 def scale_exprs(timeline, box: tuple, *, t_var: str = T_DEFAULT) -> tuple:

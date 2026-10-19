@@ -293,6 +293,46 @@ class FilterGraphBuilder:
         """`zoom` do motion: mesma janela fixa do zoom legado, curva arbitrária."""
         return self._zoom_expr(src, f"({scale_expr})", out_w, out_h)
 
+    def rotate_anim(self, src: str, angle_expr: str, box: tuple) -> str:
+        """Rotação animada (propriedade `rotation` do motion).
+
+        O quadro é PRÉ-PREENCHIDO com borda transparente até caber a diagonal
+        (um retângulo girado 45° ocupa `hypot(w,h)`) e só então rotacionado,
+        com `ow=iw:oh=ih`.
+
+        Por que não `ow='hypot(iw,ih)'`, que seria o caminho óbvio: com a área
+        de saída maior que a de entrada e `c=none`, o `rotate` do ffmpeg 4.x
+        não limpa a margem — ela mantém o conteúdo do quadro ANTERIOR, e o
+        elemento girando deixa um rastro de cópias de si mesmo em leque. Com a
+        margem já presente na ENTRADA, cada quadro é desenhado inteiro e o
+        rastro some.
+
+        A expressão chega em RADIANOS (o `rotate` não trabalha em graus).
+        """
+        import math
+
+        w, h = int(box[2]), int(box[3])
+        side = int(math.ceil(math.hypot(w, h)))
+        side += side % 2                      # ímpar quebra o yuv420p adiante
+        x, y = (side - w) // 2, (side - h) // 2
+        out = self._label("rot")
+        self.add_chain(
+            f"[{src}]format=rgba,"
+            f"pad={side}:{side}:{x}:{y}:color=0x00000000,"
+            f"rotate=a='{angle_expr}':c=none:ow=iw:oh=ih[{out}]"
+        )
+        return out
+
+    def blur(self, src: str, sigma: float) -> str:
+        """Desfoque gaussiano de sigma fixo (propriedade `blur` do motion).
+
+        O `gblur` só aceita `sigma` como número — não há `eval=frame`. Blur que
+        muda ao longo do tempo é recusado pelo gate e vai para o MoviePy.
+        """
+        out = self._label("gb")
+        self.add_chain(f"[{src}]gblur=sigma={float(sigma):.3f}[{out}]")
+        return out
+
     def fade_out(self, src: str, duration: float, start: float = 0.0) -> str:
         out = self._label("f")
         self.add_chain(

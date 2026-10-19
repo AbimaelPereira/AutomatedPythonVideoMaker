@@ -463,6 +463,15 @@ def _try_ffmpeg_scene(*, scene, effective_gs, scene_dir, scene_id, scene_duratio
                         bg_path, resolution_output, bg_cfg.get("focus", "center")
                     )
 
+        # `motion` no fundo: a caixa é a tela inteira (ver resolve_background_motion).
+        if bg_cfg.get("motion"):
+            from libs.Motion import motion_defaults, resolve_background_motion
+            bg_resolved["_motion"] = resolve_background_motion(
+                bg_cfg=bg_cfg, resolution=resolution_output,
+                scene_duration=float(scene_duration), scene=scene,
+                words=motion_words, defaults=motion_defaults(effective_gs, scene),
+            )
+
         # --- visuais ---
         elements = list(scene.get("visual_elements") or [])
         paths = []
@@ -649,7 +658,8 @@ def _process_scene_worker(scene_data_bundle):
             remote_asset_manager=remote_asset_manager,
         )
         background_clip = bg_engine.build_scene_background(
-            effective_gs, scene, float(scene_duration), scene_dir, output_dir
+            effective_gs, scene, float(scene_duration), scene_dir, output_dir,
+            motion_words=_motion_words(subtitle_file),
         )
 
         visual_clip = _create_visual_elements_clip_worker(
@@ -913,6 +923,9 @@ def _create_visual_elements_clip_worker(scene_data, scene_duration, scene_dir,
                 # `motion.scale` DEPOIS da máscara, para os cantos arredondados
                 # escalarem junto (mesma ordem do caminho ffmpeg).
                 clip_resized = motion_mp.apply_scale(clip_resized, timeline)
+                clip_resized = motion_mp.apply_blur(clip_resized, timeline)
+                clip_resized = motion_mp.apply_rotation(
+                    clip_resized, timeline, _layout_box(layout))
                 clip_resized = apply_visual_filters(
                     clip_resized, valid_element_data_for_layout[i].get('filters'))
                 opacity = valid_element_data_for_layout[i].get('opacity')
@@ -1242,6 +1255,9 @@ class UnifiedVideoEngine:
                     # `motion.scale` DEPOIS da máscara, para os cantos arredondados
                     # escalarem junto (mesma ordem do caminho ffmpeg).
                     clip_resized = motion_mp.apply_scale(clip_resized, timeline)
+                    clip_resized = motion_mp.apply_blur(clip_resized, timeline)
+                    clip_resized = motion_mp.apply_rotation(
+                    clip_resized, timeline, _layout_box(layout))
                     clip_resized = apply_visual_filters(
                         clip_resized, valid_element_data_for_layout[i].get('filters'))
                     opacity = valid_element_data_for_layout[i].get('opacity')
@@ -2041,7 +2057,8 @@ class UnifiedVideoEngine:
                         remote_asset_manager=self.remote_asset_manager,
                     )
                     background_clip = bg_engine.build_scene_background(
-                        effective_gs, scene, float(scene_duration), scene_dir, self.output_dir
+                        effective_gs, scene, float(scene_duration), scene_dir,
+                        self.output_dir, motion_words=_motion_words(subtitle_file),
                     )
 
                     # A cena pode zerar/ajustar os paddings só para ela.
