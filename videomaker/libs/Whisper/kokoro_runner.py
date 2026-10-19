@@ -107,42 +107,17 @@ def synthesize(params: dict) -> str:
     return wav_path, duration
 
 
-def _sanitize_word_boundaries(word_boundaries: list, expected_word_count: int,
+def _sanitize_word_boundaries(word_boundaries: list, text: str,
                               audio_duration_ms: int) -> list:
     """
-    Remove artefatos de alucinação do Whisper (timestamps inválidos,
-    sobrepostos, além do fim do áudio, ou em excesso ao texto esperado).
-    Portado de TTS_GoogleCloud._sanitize_word_boundaries.
+    Delega ao sanitizador compartilhado, que filtra timestamps impossíveis e
+    alinha a transcrição ao texto sintetizado (removendo as repetições que o
+    Whisper alucina no fim de áudios TTS curtos).
     """
-    if not word_boundaries:
-        return []
-
-    sorted_wb = sorted(word_boundaries, key=lambda w: w["start"])
-    audio_limit = audio_duration_ms + 100  # 100ms de tolerância no fim
-
-    filtered = []
-    prev_end = -1
-    for w in sorted_wb:
-        if w["start"] < 0 or w["end"] <= w["start"]:
-            continue
-        if w["start"] < prev_end:
-            continue
-        if w["start"] >= audio_limit:
-            break
-        filtered.append(w)
-        prev_end = w["end"]
-
-    if expected_word_count > 0 and len(filtered) > expected_word_count + 2:
-        filtered = filtered[:expected_word_count + 2]
-
-    # Remove tokens com caracteres fora do alfabeto latino (CJK etc.) —
-    # alucinação típica do Whisper em áudio TTS curto.
-    def _is_latin(word: str) -> bool:
-        return all(ord(c) < 0x300 or c.isspace() or not c.isalpha() for c in word)
-
-    filtered = [w for w in filtered if _is_latin(w["word"])]
-
-    return filtered
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(
+        os.path.abspath(__file__)))))
+    from libs.Whisper.WordBoundarySanitizer import sanitize
+    return sanitize(word_boundaries, text, audio_duration_ms)
 
 
 def align_with_whisper(audio_path: str, params: dict, audio_duration_ms: int) -> list:
@@ -165,7 +140,11 @@ def align_with_whisper(audio_path: str, params: dict, audio_duration_ms: int) ->
             audio_path,
             word_timestamps=True,
             language=language,
-            initial_prompt=text,
+            # Sem `initial_prompt`: condicionar o decoder ao texto fazia o
+            # Whisper CONTINUAR o prompt quando o áudio acabava, repetindo as
+            # primeiras palavras da cena como se tivessem sido faladas. O texto
+            # agora entra só no saneamento, como referência de alinhamento.
+            condition_on_previous_text=False,
         )
 
         word_boundaries = []
@@ -180,8 +159,7 @@ def align_with_whisper(audio_path: str, params: dict, audio_duration_ms: int) ->
                     "end":   int(w["end"] * 1000),
                 })
 
-        expected = len((text or "").split())
-        return _sanitize_word_boundaries(word_boundaries, expected, audio_duration_ms)
+        return _sanitize_word_boundaries(word_boundaries, text or "", audio_duration_ms)
 
     except Exception as e:
         print(f"[kokoro_runner] Whisper falhou: {e}", file=sys.stderr)

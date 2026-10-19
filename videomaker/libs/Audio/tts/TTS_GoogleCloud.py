@@ -422,47 +422,21 @@ class GoogleCloudTTS:
     # ------------------------------------------------------------------
 
     @staticmethod
-    def _sanitize_word_boundaries(word_boundaries: list, expected_word_count: int,
+    def _sanitize_word_boundaries(word_boundaries: list, text: str,
                                   audio_duration_ms: int) -> list:
         """
-        Remove artefatos de alucinação do Whisper:
+        Delega ao sanitizador compartilhado (`libs/Whisper/WordBoundarySanitizer`),
+        o mesmo usado pelo provider kokoro.
 
-        1. Timestamps com start < 0 ou end <= start (inválidos)
-        2. Sobreposição com entrada anterior (start < prev_end)
-        3. Timestamps além da duração real do áudio — causa raiz das
-           repetições alucinadas no final (ex: "Apartamento" extra)
-        4. Palavras excedentes além do esperado pelo texto (margem +2)
-
-        audio_duration_ms: duração do MP3 em ms — âncora hard para truncar
-                           alucinações no final.
+        Filtra timestamps impossíveis (negativos, invertidos, além do fim do
+        áudio) e então ALINHA a transcrição ao texto sintetizado. O alinhamento
+        é o que elimina a alucinação clássica do Whisper em áudio TTS curto:
+        repetir as primeiras palavras da cena no fim, como se tivessem sido
+        faladas. O filtro anterior era só temporal/quantitativo e não pegava
+        isso, porque a repetição cai dentro da duração do áudio.
         """
-        if not word_boundaries:
-            return []
-
-        sorted_wb = sorted(word_boundaries, key=lambda w: w["start"])
-
-        # Margem de tolerância no fim do áudio (100ms) para não cortar a última palavra real
-        audio_limit = audio_duration_ms + 100
-
-        filtered = []
-        prev_end  = -1
-
-        for w in sorted_wb:
-            if w["start"] < 0 or w["end"] <= w["start"]:
-                continue
-            if w["start"] < prev_end:
-                continue
-            # Descarta qualquer palavra que começa além do fim do áudio
-            if w["start"] >= audio_limit:
-                break
-            filtered.append(w)
-            prev_end = w["end"]
-
-        # Trunca ao nº esperado de palavras + margem para pontuação/contrações
-        if expected_word_count > 0 and len(filtered) > expected_word_count + 2:
-            filtered = filtered[:expected_word_count + 2]
-
-        return filtered
+        from libs.Whisper.WordBoundarySanitizer import sanitize
+        return sanitize(word_boundaries, text, audio_duration_ms)
 
     def _generate_word_boundaries_whisper(self, audio_path: str, audio_duration_ms: int) -> list:
         """
@@ -494,7 +468,11 @@ class GoogleCloudTTS:
                 audio_path,
                 word_timestamps=True,
                 language=self.whisper_language,
-                initial_prompt=self.text or None,
+                # Sem `initial_prompt`: condicionar o decoder ao texto fazia o
+                # Whisper CONTINUAR o prompt quando o áudio acabava, repetindo
+                # as primeiras palavras da cena. O texto agora entra só no
+                # saneamento, como referência de alinhamento.
+                condition_on_previous_text=False,
             )
 
             word_boundaries = []
@@ -509,9 +487,8 @@ class GoogleCloudTTS:
                         "end":   int(w["end"]   * 1000),
                     })
 
-            expected = len(self.text.split()) if self.text else 0
             word_boundaries = self._sanitize_word_boundaries(
-                word_boundaries, expected, audio_duration_ms
+                word_boundaries, self.text or "", audio_duration_ms
             )
 
             if word_boundaries:
