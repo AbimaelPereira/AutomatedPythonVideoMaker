@@ -296,6 +296,8 @@ class NarrationEngine:
         "tts": {
             "provider": "kokoro",
             "voice": "pf_dora",           // pf_dora (F), pm_alex / pm_santa (M)
+                                          // ou um .pt de libs/Audio/tts/voices/
+                                          // (ex.: "mix_locutor.pt"). "voice_id" é aceito como alias.
             "lang_code": "p",             // p = português brasileiro
             "speed": 1.0,
             "whisper_model": "base",
@@ -310,7 +312,7 @@ class NarrationEngine:
         params = {
             "text":             text,
             "output_basename":  audio_basename,
-            "voice_id":         _resolve("voice", "pf_dora"),
+            "voice_id":         _resolve("voice", None) or _resolve("voice_id", "pf_dora"),
             "lang_code":        _resolve("lang_code", "p"),
             "speed":            float(_resolve("speed", 1.0)),
             "whisper_model":    _resolve("whisper_model", "base"),

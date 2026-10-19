@@ -65,7 +65,12 @@ class KaraokeSubtitle:
             "line_fill_ratio": None,           # teto de largura por linha (0–1)
             "lines_per_group": 3,              # linhas por tela antes de limpar
 
+            # Alinhamento horizontal das linhas dentro da faixa.
+            "align": "center",                 # center | left | right
+
             # Limites do dimensionamento dinâmico por palavra.
+            # Iguais entre si = tamanho FIXO: a quebra de linha passa a ser
+            # medida no tamanho real em que o texto será desenhado.
             "max_font_size": 300,
             "min_font_size": 24,
             # Espaçamento vertical entre linhas (fração da altura da linha).
@@ -226,7 +231,12 @@ class KaraokeSubtitle:
         # agrupamento.
         ref = self.palette[0]
         ref_font_path = ref.get("font_path", _DEFAULT_PALETTE[0]["font_path"])
-        ref_size = 100
+        # Com tamanho FIXO (min == max) mede-se no tamanho real em que o texto
+        # vai ser desenhado, e não numa referência de 100px reescalada depois —
+        # senão a linha estoura a faixa (ou sobra) porque a proporção
+        # largura/altura da fonte não é linear no corpo.
+        fixed = int(self.min_font_size) == int(self.max_font_size)
+        ref_size = int(self.max_font_size) if fixed else 100
 
         def text_width(text: str) -> int:
             font = utils.load_font(ref_font_path, ref_size)
@@ -499,9 +509,16 @@ class KaraokeSubtitle:
         # para dentro do leading sem deslocar nada, porque o posicionamento não
         # depende da tinta real da palavra.
         baseline = block_top + ref_cap
+        align = str(self.align or "center").lower()
         for line, m in zip(lines, metrics):
             line_w = sum(it["w"] for it in line)
-            x = box["x"] + max(0, (safe_w - line_w) // 2)
+            # `align` move a linha dentro da faixa; `center` é o histórico.
+            if align == "left":
+                x = box["x"]
+            elif align == "right":
+                x = box["x"] + max(0, safe_w - line_w)
+            else:
+                x = box["x"] + max(0, (safe_w - line_w) // 2)
             # `baseline` (tela) → origem do array: a baseline fica em
             # `cap_top + cap_height` dentro dele.
             wy = baseline - (m["cap_top"] + m["cap_height"])

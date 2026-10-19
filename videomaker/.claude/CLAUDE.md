@@ -152,6 +152,9 @@ em 1920×1080). Sobrescrevíveis em `global_settings` (`padding_top/bottom/side`
 - `"kokoro"` — Kokoro TTS, modelo local de 82M (gratuito, sem credenciais). Roda num
   subprocesso isolado no `venv-whisper` (numpy>=2, incompatível com o numpy 1.22 do
   pipeline principal). Vozes PT-BR: `pf_dora` (F), `pm_alex`/`pm_santa` (M); `lang_code: "p"`.
+  `voice_id` também aceita um `.pt` de `libs/Audio/tts/voices/` (nome do arquivo ou caminho
+  absoluto) — embeddings customizados feitos por mistura de vozes. Disponível:
+  `mix_locutor.pt` (pm_santa .5 + bm_george .3 + am_michael .2), timbre de locutor masculino.
   Legendas (word boundaries) vêm do Whisper, como no provider `google`. Veja
   `libs/Audio/tts/TTS_Kokoro.py` (wrapper) e `libs/Whisper/kokoro_runner.py` (síntese isolada).
   Instalação: `libs/Whisper/venv-whisper/bin/python -m pip install 'kokoro>=0.9.4' soundfile`.

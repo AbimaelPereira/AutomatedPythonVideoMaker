@@ -41,6 +41,12 @@ warnings.filterwarnings("ignore")
 RESULT_PREFIX = "__KOKORO_RESULT__"
 SAMPLE_RATE = 24000
 
+# Vozes customizadas (.pt) versionadas no projeto — misturas de embeddings.
+_VOICES_DIR = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+    "Audio", "tts", "voices",
+)
+
 # Cache de pipeline por lang_code (carregar o modelo é caro)
 _PIPELINES = {}
 
@@ -52,13 +58,29 @@ def _get_pipeline(lang_code: str):
     return _PIPELINES[lang_code]
 
 
+def _resolve_voice(voice):
+    """
+    Resolve a voz: nome embutido do Kokoro (str) ou caminho de um .pt com
+    embedding customizado (mistura de vozes) — nesse caso devolve o tensor.
+    """
+    if isinstance(voice, str) and voice.endswith(".pt"):
+        import torch
+        path = voice
+        if not os.path.isabs(path):
+            path = os.path.join(_VOICES_DIR, os.path.basename(path))
+        if not os.path.exists(path):
+            raise FileNotFoundError(f"Voz customizada não encontrada: {path}")
+        return torch.load(path, weights_only=True)
+    return voice
+
+
 def synthesize(params: dict) -> str:
     """Sintetiza o áudio com Kokoro e salva em .wav. Retorna o caminho."""
     import numpy as np
     import soundfile as sf
 
     text = params["text"]
-    voice = params.get("voice", "pf_dora")
+    voice = _resolve_voice(params.get("voice", "pf_dora"))
     lang_code = params.get("lang_code", "p")
     speed = float(params.get("speed", 1.0))
     output_basename = params["output_basename"]

@@ -36,6 +36,10 @@ class KokoroTTS:
 
     Português Brasileiro: lang_code="p", vozes pf_dora (F), pm_alex/pm_santa (M).
 
+    voice_id também aceita o nome de um .pt em libs/Audio/tts/voices/ (ou um
+    caminho absoluto) — embeddings customizados gerados por mistura de vozes.
+    Ex.: "mix_locutor.pt" (pm_santa .5 + bm_george .3 + am_michael .2).
+
     Saída de generate_audio_and_subtitles():
         {
             "audio_file":           str (.mp3),
