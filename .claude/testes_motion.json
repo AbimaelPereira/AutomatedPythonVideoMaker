@@ -4,11 +4,23 @@
     "channel_name": "pyvideomaker",
     "debug": true,
     "_comentario/": "TESTE 1 — compilador puro. Sem TTS, sem rede, sem assets: tudo é type:color. Determinístico, serve de golden. Deve renderizar 100% pelo caminho ffmpeg (RENDER_BACKEND=ffmpeg não pode cair para MoviePy).",
-    "output": { "ratio": "16:9", "quality": "draft" },
+    "output": {
+      "ratio": "16:9",
+      "quality": "draft"
+    },
     "global_settings": {
-      "subtitle": { "enabled": false },
-      "transitions": { "enabled": false },
-      "background": { "visual": { "type": "color", "source": "#101826" } },
+      "subtitle": {
+        "enabled": false
+      },
+      "transitions": {
+        "enabled": false
+      },
+      "background": {
+        "visual": {
+          "type": "color",
+          "source": "#101826"
+        }
+      },
       "motion": {
         "enabled": true,
         "default_ease": "out_cubic",
@@ -25,50 +37,140 @@
           {
             "type": "color",
             "color": "#2a56f0",
-            "placement": { "anchor": ["left", "12%"], "width": "55%", "height": "9%", "relative_to": "screen" },
+            "placement": {
+              "anchor": [
+                "left",
+                "12%"
+              ],
+              "width": "55%",
+              "height": "9%",
+              "relative_to": "screen"
+            },
             "motion": {
               "actions": [
-                { "at": 0.4, "duration": 1.6, "ease": "linear", "tracks": { "x": ["-100%", 0] } }
+                {
+                  "at": 0.4,
+                  "duration": 1.6,
+                  "ease": "linear",
+                  "tracks": {
+                    "x": [
+                      "-100%",
+                      0
+                    ]
+                  }
+                }
               ]
             }
           },
           {
             "type": "color",
             "color": "#3f6bff",
-            "placement": { "anchor": ["left", "26%"], "width": "55%", "height": "9%", "relative_to": "screen" },
+            "placement": {
+              "anchor": [
+                "left",
+                "26%"
+              ],
+              "width": "55%",
+              "height": "9%",
+              "relative_to": "screen"
+            },
             "motion": {
               "actions": [
-                { "at": 0.4, "duration": 1.6, "ease": "out_quad", "tracks": { "x": ["-100%", 0] } }
+                {
+                  "at": 0.4,
+                  "duration": 1.6,
+                  "ease": "out_quad",
+                  "tracks": {
+                    "x": [
+                      "-100%",
+                      0
+                    ]
+                  }
+                }
               ]
             }
           },
           {
             "type": "color",
             "color": "#7f9bff",
-            "placement": { "anchor": ["left", "40%"], "width": "55%", "height": "9%", "relative_to": "screen" },
+            "placement": {
+              "anchor": [
+                "left",
+                "40%"
+              ],
+              "width": "55%",
+              "height": "9%",
+              "relative_to": "screen"
+            },
             "motion": {
               "actions": [
-                { "at": 0.4, "duration": 1.6, "ease": "in_out_cubic", "tracks": { "x": ["-100%", 0] } }
+                {
+                  "at": 0.4,
+                  "duration": 1.6,
+                  "ease": "in_out_cubic",
+                  "tracks": {
+                    "x": [
+                      "-100%",
+                      0
+                    ]
+                  }
+                }
               ]
             }
           },
           {
             "type": "color",
             "color": "#ff5a3c",
-            "placement": { "anchor": ["left", "54%"], "width": "55%", "height": "9%", "relative_to": "screen" },
+            "placement": {
+              "anchor": [
+                "left",
+                "54%"
+              ],
+              "width": "55%",
+              "height": "9%",
+              "relative_to": "screen"
+            },
             "motion": {
               "actions": [
-                { "at": 0.4, "duration": 1.6, "ease": "out_back", "tracks": { "x": ["-100%", 0] } }
+                {
+                  "at": 0.4,
+                  "duration": 1.6,
+                  "ease": "out_back",
+                  "tracks": {
+                    "x": [
+                      "-100%",
+                      0
+                    ]
+                  }
+                }
               ]
             }
           },
           {
             "type": "color",
             "color": "#ffc53d",
-            "placement": { "anchor": ["left", "68%"], "width": "55%", "height": "9%", "relative_to": "screen" },
+            "placement": {
+              "anchor": [
+                "left",
+                "68%"
+              ],
+              "width": "55%",
+              "height": "9%",
+              "relative_to": "screen"
+            },
             "motion": {
               "actions": [
-                { "at": 0.4, "duration": 1.6, "ease": "out_elastic", "tracks": { "x": ["-100%", 0] } }
+                {
+                  "at": 0.4,
+                  "duration": 1.6,
+                  "ease": "out_elastic",
+                  "tracks": {
+                    "x": [
+                      "-100%",
+                      0
+                    ]
+                  }
+                }
               ]
             }
           }
@@ -83,7 +185,15 @@
             "type": "color",
             "color": "#2a56f0",
             "border_radius": 24,
-            "placement": { "anchor": ["center", "center"], "width": "22%", "height": "38%", "relative_to": "screen" },
+            "placement": {
+              "anchor": [
+                "center",
+                "center"
+              ],
+              "width": "22%",
+              "height": "38%",
+              "relative_to": "screen"
+            },
             "motion": {
               "actions": [
                 {
@@ -91,23 +201,60 @@
                   "at": 0.3,
                   "duration": 0.9,
                   "tracks": {
-                    "y": [[0, "60%", "out_back"], [1, 0]],
-                    "opacity": [0, 1],
-                    "scale": [0.85, 1.0]
+                    "y": [
+                      [
+                        0,
+                        "60%",
+                        "out_back"
+                      ],
+                      [
+                        1,
+                        0
+                      ]
+                    ],
+                    "opacity": [
+                      0,
+                      1
+                    ],
+                    "scale": [
+                      0.85,
+                      1.0
+                    ]
                   }
                 },
                 {
                   "name": "punch",
-                  "at": { "after": "sobe", "offset": 0.6 },
+                  "at": {
+                    "after": "sobe",
+                    "offset": 0.6
+                  },
                   "duration": 0.45,
                   "ease": "out_quad",
-                  "tracks": { "scale": [1.0, 1.14, 1.0] }
+                  "tracks": {
+                    "scale": [
+                      1.0,
+                      1.14,
+                      1.0
+                    ]
+                  }
                 },
                 {
-                  "at": { "after": "punch", "offset": 1.2 },
+                  "at": {
+                    "after": "punch",
+                    "offset": 1.2
+                  },
                   "duration": 0.6,
                   "ease": "in_cubic",
-                  "tracks": { "y": [0, "-70%"], "opacity": [1, 0] }
+                  "tracks": {
+                    "y": [
+                      0,
+                      "-70%"
+                    ],
+                    "opacity": [
+                      1,
+                      0
+                    ]
+                  }
                 }
               ]
             }
@@ -122,25 +269,69 @@
           {
             "type": "color",
             "color": "#2a56f0",
-            "placement": { "anchor": ["22%", "center"], "width": "30%", "height": "45%", "relative_to": "screen" },
+            "placement": {
+              "anchor": [
+                "22%",
+                "center"
+              ],
+              "width": "30%",
+              "height": "45%",
+              "relative_to": "screen"
+            },
             "motion": {
               "actions": [
-                { "at": 0.2, "duration": 1.2, "ease": "linear", "tracks": { "opacity": [0, 1] } },
-                { "at": 3.4, "duration": 1.2, "ease": "linear", "tracks": { "opacity": [1, 0] } }
+                {
+                  "at": 0.2,
+                  "duration": 1.2,
+                  "ease": "linear",
+                  "tracks": {
+                    "opacity": [
+                      0,
+                      1
+                    ]
+                  }
+                },
+                {
+                  "at": 3.4,
+                  "duration": 1.2,
+                  "ease": "linear",
+                  "tracks": {
+                    "opacity": [
+                      1,
+                      0
+                    ]
+                  }
+                }
               ]
             }
           },
           {
             "type": "color",
             "color": "#ff5a3c",
-            "placement": { "anchor": ["78%", "center"], "width": "30%", "height": "45%", "relative_to": "screen" },
+            "placement": {
+              "anchor": [
+                "78%",
+                "center"
+              ],
+              "width": "30%",
+              "height": "45%",
+              "relative_to": "screen"
+            },
             "motion": {
               "actions": [
                 {
                   "at": 0.2,
                   "duration": 4.0,
                   "ease": "in_out_sine",
-                  "tracks": { "opacity": [0.15, 1.0, 0.15, 1.0, 0.15] }
+                  "tracks": {
+                    "opacity": [
+                      0.15,
+                      1.0,
+                      0.15,
+                      1.0,
+                      0.15
+                    ]
+                  }
                 }
               ]
             }
@@ -156,10 +347,28 @@
             "type": "color",
             "color": "#2a56f0",
             "border_radius": 16,
-            "placement": { "anchor": ["22%", "center"], "width": "26%", "height": "40%", "relative_to": "screen" },
+            "placement": {
+              "anchor": [
+                "22%",
+                "center"
+              ],
+              "width": "26%",
+              "height": "40%",
+              "relative_to": "screen"
+            },
             "motion": {
               "actions": [
-                { "at": 0.5, "duration": 3.5, "ease": "in_out_cubic", "tracks": { "scale": [1.0, 1.8] } }
+                {
+                  "at": 0.5,
+                  "duration": 3.5,
+                  "ease": "in_out_cubic",
+                  "tracks": {
+                    "scale": [
+                      1.0,
+                      1.8
+                    ]
+                  }
+                }
               ]
             }
           },
@@ -167,10 +376,28 @@
             "type": "color",
             "color": "#ff5a3c",
             "border_radius": 16,
-            "placement": { "anchor": ["78%", "center"], "width": "26%", "height": "40%", "relative_to": "screen" },
+            "placement": {
+              "anchor": [
+                "78%",
+                "center"
+              ],
+              "width": "26%",
+              "height": "40%",
+              "relative_to": "screen"
+            },
             "motion": {
               "actions": [
-                { "at": 0.5, "duration": 3.5, "ease": "in_out_cubic", "tracks": { "zoom": [1.0, 1.8] } }
+                {
+                  "at": 0.5,
+                  "duration": 3.5,
+                  "ease": "in_out_cubic",
+                  "tracks": {
+                    "zoom": [
+                      1.0,
+                      1.8
+                    ]
+                  }
+                }
               ]
             }
           }
@@ -178,30 +405,61 @@
       }
     ]
   },
-
   {
     "slug": "motion_02_sync_narracao",
     "channel_name": "pyvideomaker",
     "debug": true,
     "_comentario/": "TESTE 2 — o ponto central: sincronia com a fala. Palavras-âncora escolhidas por serem longas e raras (casam bem no fuzzy). Rode antes com `python main.py tests/motion/testes_motion.json --timeline-only` e confira a tabela.",
-    "output": { "ratio": "16:9", "quality": "draft" },
+    "output": {
+      "ratio": "16:9",
+      "quality": "draft"
+    },
     "global_settings": {
-      "tts": { "provider": "edge", "voice": "pt-BR-AntonioNeural" },
+      "tts": {
+        "provider": "kokoro",
+        "voice": "pm_alex",
+        "lang_code": "p"
+      },
       "subtitle": {
         "enabled": true,
         "type": "karaoke",
         "min_chars_per_line": 6,
         "line_fill_ratio": 0.85,
         "lines_per_group": 2,
-        "placement": { "anchor": ["center", "bottom"], "region": "80%" },
+        "placement": {
+          "anchor": [
+            "center",
+            "bottom"
+          ],
+          "region": "80%"
+        },
         "palette": [
-          { "fill": "#FFFFFF", "stroke": "#000000", "stroke_width": 4 },
-          { "fill": "#FFC53D", "stroke": "#000000", "stroke_width": 4 }
+          {
+            "fill": "#FFFFFF",
+            "stroke": "#000000",
+            "stroke_width": 4
+          },
+          {
+            "fill": "#FFC53D",
+            "stroke": "#000000",
+            "stroke_width": 4
+          }
         ]
       },
-      "transitions": { "enabled": false },
-      "background": { "visual": { "type": "color", "source": "#0c1220" } },
-      "motion": { "enabled": true, "on_missing": "proportional", "default_ease": "out_cubic" }
+      "transitions": {
+        "enabled": false
+      },
+      "background": {
+        "visual": {
+          "type": "color",
+          "source": "#0c1220"
+        }
+      },
+      "motion": {
+        "enabled": true,
+        "on_missing": "proportional",
+        "default_ease": "out_cubic"
+      }
     },
     "scenes": [
       {
@@ -215,11 +473,22 @@
             "type": "color",
             "color": "#2a56f0",
             "border_radius": 20,
-            "placement": { "anchor": ["20%", "38%"], "width": "24%", "height": "26%", "relative_to": "screen" },
+            "placement": {
+              "anchor": [
+                "20%",
+                "38%"
+              ],
+              "width": "24%",
+              "height": "26%",
+              "relative_to": "screen"
+            },
             "motion": {
               "actions": [
                 {
-                  "at": { "word": "faturamento", "offset": -0.1 },
+                  "at": {
+                    "word": "faturamento",
+                    "offset": -0.1
+                  },
                   "duration": 0.5,
                   "ease": "out_back",
                   "preset": "pop_in"
@@ -231,11 +500,22 @@
             "type": "color",
             "color": "#3f6bff",
             "border_radius": 20,
-            "placement": { "anchor": ["50%", "38%"], "width": "24%", "height": "26%", "relative_to": "screen" },
+            "placement": {
+              "anchor": [
+                "50%",
+                "38%"
+              ],
+              "width": "24%",
+              "height": "26%",
+              "relative_to": "screen"
+            },
             "motion": {
               "actions": [
                 {
-                  "at": { "word": "margem", "offset": -0.1 },
+                  "at": {
+                    "word": "margem",
+                    "offset": -0.1
+                  },
                   "duration": 0.5,
                   "ease": "out_back",
                   "preset": "pop_in"
@@ -247,20 +527,41 @@
             "type": "color",
             "color": "#ff5a3c",
             "border_radius": 20,
-            "placement": { "anchor": ["80%", "38%"], "width": "24%", "height": "26%", "relative_to": "screen" },
+            "placement": {
+              "anchor": [
+                "80%",
+                "38%"
+              ],
+              "width": "24%",
+              "height": "26%",
+              "relative_to": "screen"
+            },
             "motion": {
               "actions": [
                 {
-                  "at": { "word": "recorrencia", "offset": -0.1 },
+                  "at": {
+                    "word": "recorrencia",
+                    "offset": -0.1
+                  },
                   "duration": 0.55,
                   "ease": "out_back",
                   "preset": "pop_in"
                 },
                 {
-                  "at": { "word": "recorrencia", "align": "end", "offset": 0.25 },
+                  "at": {
+                    "word": "recorrencia",
+                    "align": "end",
+                    "offset": 0.25
+                  },
                   "duration": 0.4,
                   "ease": "out_quad",
-                  "tracks": { "scale": [1.0, 1.12, 1.0] }
+                  "tracks": {
+                    "scale": [
+                      1.0,
+                      1.12,
+                      1.0
+                    ]
+                  }
                 }
               ]
             }
@@ -279,23 +580,45 @@
             "color": "#d7301a",
             "opacity": 0.85,
             "border_radius": 14,
-            "placement": { "anchor": ["center", "30%"], "width": "70%", "height": "14%", "relative_to": "screen" },
+            "placement": {
+              "anchor": [
+                "center",
+                "30%"
+              ],
+              "width": "70%",
+              "height": "14%",
+              "relative_to": "screen"
+            },
             "motion": {
-              "visible": { "from": { "phrase": "tarde demais" }, "to": { "word": "corrigir" } },
+              "visible": {
+                "from": {
+                  "phrase": "tarde demais"
+                },
+                "to": {
+                  "word": "corrigir"
+                }
+              },
               "actions": [
                 {
-                  "at": { "phrase": "tarde demais" },
+                  "at": {
+                    "phrase": "tarde demais"
+                  },
                   "duration": 0.4,
                   "preset": "slide_in_left"
                 },
                 {
-                  "at": { "word": "caixa" },
+                  "at": {
+                    "word": "caixa"
+                  },
                   "duration": 0.5,
                   "ease": "out_quad",
                   "preset": "shake"
                 },
                 {
-                  "at": { "word": "corrigir", "offset": -0.4 },
+                  "at": {
+                    "word": "corrigir",
+                    "offset": -0.4
+                  },
                   "duration": 0.4,
                   "preset": "fade_out"
                 }
@@ -314,28 +637,98 @@
           {
             "type": "color",
             "color": "#2a56f0",
-            "placement": { "anchor": ["center", "22%"], "width": "60%", "height": "10%", "relative_to": "screen" },
-            "motion": { "actions": [ { "at": { "sentence": 1 }, "duration": 0.45, "preset": "rise" } ] }
+            "placement": {
+              "anchor": [
+                "center",
+                "22%"
+              ],
+              "width": "60%",
+              "height": "10%",
+              "relative_to": "screen"
+            },
+            "motion": {
+              "actions": [
+                {
+                  "at": {
+                    "sentence": 1
+                  },
+                  "duration": 0.45,
+                  "preset": "rise"
+                }
+              ]
+            }
           },
           {
             "type": "color",
             "color": "#3f6bff",
-            "placement": { "anchor": ["center", "38%"], "width": "60%", "height": "10%", "relative_to": "screen" },
-            "motion": { "actions": [ { "at": { "sentence": 2 }, "duration": 0.45, "preset": "rise" } ] }
+            "placement": {
+              "anchor": [
+                "center",
+                "38%"
+              ],
+              "width": "60%",
+              "height": "10%",
+              "relative_to": "screen"
+            },
+            "motion": {
+              "actions": [
+                {
+                  "at": {
+                    "sentence": 2
+                  },
+                  "duration": 0.45,
+                  "preset": "rise"
+                }
+              ]
+            }
           },
           {
             "type": "color",
             "color": "#7f9bff",
-            "placement": { "anchor": ["center", "54%"], "width": "60%", "height": "10%", "relative_to": "screen" },
-            "motion": { "actions": [ { "at": { "sentence": 3 }, "duration": 0.45, "preset": "rise" } ] }
+            "placement": {
+              "anchor": [
+                "center",
+                "54%"
+              ],
+              "width": "60%",
+              "height": "10%",
+              "relative_to": "screen"
+            },
+            "motion": {
+              "actions": [
+                {
+                  "at": {
+                    "sentence": 3
+                  },
+                  "duration": 0.45,
+                  "preset": "rise"
+                }
+              ]
+            }
           },
           {
             "type": "color",
             "color": "#ffc53d",
-            "placement": { "anchor": ["center", "70%"], "width": "60%", "height": "10%", "relative_to": "screen" },
+            "placement": {
+              "anchor": [
+                "center",
+                "70%"
+              ],
+              "width": "60%",
+              "height": "10%",
+              "relative_to": "screen"
+            },
             "motion": {
               "actions": [
-                { "at": { "word": "ordem", "nth": 2, "offset": -0.15 }, "duration": 0.5, "preset": "pop_in" }
+                {
+                  "at": {
+                    "word": "ordem",
+                    "nth": 2,
+                    "offset": -0.15
+                  },
+                  "duration": 0.5,
+                  "preset": "pop_in"
+                }
               ]
             }
           }
@@ -347,15 +740,31 @@
           "text": "Esta cena existe para testar o caminho de erro, e nada mais do que isso."
         },
         "_comentario/": "PROPOSITAL: 'criptomoeda' não está na narração. Com on_missing=proportional o render não pode falhar; o log deve trazer o aviso e as palavras mais próximas. Troque para strict e confirme que aborta com o caminho JSON correto.",
-        "motion": { "on_missing": "proportional" },
+        "motion": {
+          "on_missing": "proportional"
+        },
         "visual_elements": [
           {
             "type": "color",
             "color": "#566178",
-            "placement": { "anchor": ["center", "center"], "width": "40%", "height": "20%", "relative_to": "screen" },
+            "placement": {
+              "anchor": [
+                "center",
+                "center"
+              ],
+              "width": "40%",
+              "height": "20%",
+              "relative_to": "screen"
+            },
             "motion": {
               "actions": [
-                { "at": { "word": "criptomoeda" }, "duration": 0.5, "preset": "fade_in" }
+                {
+                  "at": {
+                    "word": "criptomoeda"
+                  },
+                  "duration": 0.5,
+                  "preset": "fade_in"
+                }
               ]
             }
           }
@@ -363,61 +772,191 @@
       }
     ]
   },
-
   {
     "slug": "motion_03_presets_vertical",
     "channel_name": "pyvideomaker",
     "debug": true,
     "_comentario/": "TESTE 3 — biblioteca de presets, encadeamento por 'after' e stagger em 9:16. Alvo da Fase 5: o log NÃO pode conter 'usando MoviePy'.",
-    "output": { "ratio": "9:16", "quality": "draft" },
+    "output": {
+      "ratio": "9:16",
+      "quality": "draft"
+    },
     "global_settings": {
-      "tts": { "provider": "edge", "voice": "pt-BR-FranciscaNeural" },
-      "subtitle": { "enabled": false },
-      "transitions": { "enabled": false },
-      "background": { "visual": { "type": "color", "source": "#131c30" } },
+      "tts": {
+        "provider": "kokoro",
+        "voice": "pf_dora",
+        "lang_code": "p"
+      },
+      "subtitle": {
+        "enabled": false
+      },
+      "transitions": {
+        "enabled": false
+      },
+      "background": {
+        "visual": {
+          "type": "color",
+          "source": "#131c30"
+        }
+      },
       "padding_top": 160,
       "padding_bottom": 320,
       "padding_side": 80,
-      "motion": { "enabled": true, "default_ease": "out_cubic", "default_duration": 0.45 }
+      "motion": {
+        "enabled": true,
+        "default_ease": "out_cubic",
+        "default_duration": 0.45
+      }
     },
     "scenes": [
       {
         "id": "cena_01_stagger",
-        "narration": { "text": "Três passos, um de cada vez, na ordem exata em que precisam acontecer." },
+        "narration": {
+          "text": "Três passos, um de cada vez, na ordem exata em que precisam acontecer."
+        },
         "_comentario/": "stagger de cena: os três cards compartilham o grupo e entram escalonados em 0,09 s. Sem stagger eles entrariam juntos e o efeito some.",
-        "motion": { "stagger": 0.09, "stagger_group": "cards" },
+        "motion": {
+          "stagger": 0.09,
+          "stagger_group": "cards"
+        },
         "visual_elements": [
           {
-            "type": "color", "color": "#2a56f0", "border_radius": 28, "stagger_group": "cards",
-            "placement": { "anchor": ["center", "26%"], "width": "80%", "height": "16%", "relative_to": "screen" },
-            "motion": { "actions": [ { "at": { "word": "passos" }, "preset": "slide_in_right" } ] }
+            "type": "color",
+            "color": "#2a56f0",
+            "border_radius": 28,
+            "stagger_group": "cards",
+            "placement": {
+              "anchor": [
+                "center",
+                "26%"
+              ],
+              "width": "80%",
+              "height": "16%",
+              "relative_to": "screen"
+            },
+            "motion": {
+              "actions": [
+                {
+                  "at": {
+                    "word": "passos"
+                  },
+                  "preset": "slide_in_right"
+                }
+              ]
+            }
           },
           {
-            "type": "color", "color": "#3f6bff", "border_radius": 28, "stagger_group": "cards",
-            "placement": { "anchor": ["center", "46%"], "width": "80%", "height": "16%", "relative_to": "screen" },
-            "motion": { "actions": [ { "at": { "word": "passos" }, "preset": "slide_in_right" } ] }
+            "type": "color",
+            "color": "#3f6bff",
+            "border_radius": 28,
+            "stagger_group": "cards",
+            "placement": {
+              "anchor": [
+                "center",
+                "46%"
+              ],
+              "width": "80%",
+              "height": "16%",
+              "relative_to": "screen"
+            },
+            "motion": {
+              "actions": [
+                {
+                  "at": {
+                    "word": "passos"
+                  },
+                  "preset": "slide_in_right"
+                }
+              ]
+            }
           },
           {
-            "type": "color", "color": "#7f9bff", "border_radius": 28, "stagger_group": "cards",
-            "placement": { "anchor": ["center", "66%"], "width": "80%", "height": "16%", "relative_to": "screen" },
-            "motion": { "actions": [ { "at": { "word": "passos" }, "preset": "slide_in_right" } ] }
+            "type": "color",
+            "color": "#7f9bff",
+            "border_radius": 28,
+            "stagger_group": "cards",
+            "placement": {
+              "anchor": [
+                "center",
+                "66%"
+              ],
+              "width": "80%",
+              "height": "16%",
+              "relative_to": "screen"
+            },
+            "motion": {
+              "actions": [
+                {
+                  "at": {
+                    "word": "passos"
+                  },
+                  "preset": "slide_in_right"
+                }
+              ]
+            }
           }
         ]
       },
       {
         "id": "cena_02_encadeado",
-        "narration": { "text": "Entra, respira, pulsa e sai. Quatro momentos encadeados sem nenhum tempo escrito a mão." },
+        "narration": {
+          "text": "Entra, respira, pulsa e sai. Quatro momentos encadeados sem nenhum tempo escrito a mão."
+        },
         "_comentario/": "Nenhum 'at' numérico: tudo por 'after'. Se a narração mudar de duração, a coreografia inteira acompanha sozinha.",
         "visual_elements": [
           {
-            "type": "color", "color": "#ff5a3c", "border_radius": 40,
-            "placement": { "anchor": ["center", "center"], "width": "62%", "height": "34%", "relative_to": "screen" },
+            "type": "color",
+            "color": "#ff5a3c",
+            "border_radius": 40,
+            "placement": {
+              "anchor": [
+                "center",
+                "center"
+              ],
+              "width": "62%",
+              "height": "34%",
+              "relative_to": "screen"
+            },
             "motion": {
               "actions": [
-                { "name": "entra", "at": { "word": "entra" }, "duration": 0.5, "preset": "pop_in" },
-                { "name": "respira", "at": { "after": "entra" }, "duration": 1.0, "ease": "in_out_sine", "tracks": { "scale": [1.0, 1.04, 1.0] } },
-                { "name": "pulsa", "at": { "word": "pulsa" }, "duration": 0.4, "preset": "punch" },
-                { "at": { "word": "sai" }, "duration": 0.5, "preset": "slide_out_down" }
+                {
+                  "name": "entra",
+                  "at": {
+                    "word": "entra"
+                  },
+                  "duration": 0.5,
+                  "preset": "pop_in"
+                },
+                {
+                  "name": "respira",
+                  "at": {
+                    "after": "entra"
+                  },
+                  "duration": 1.0,
+                  "ease": "in_out_sine",
+                  "tracks": {
+                    "scale": [
+                      1.0,
+                      1.04,
+                      1.0
+                    ]
+                  }
+                },
+                {
+                  "name": "pulsa",
+                  "at": {
+                    "word": "pulsa"
+                  },
+                  "duration": 0.4,
+                  "preset": "punch"
+                },
+                {
+                  "at": {
+                    "word": "sai"
+                  },
+                  "duration": 0.5,
+                  "preset": "slide_out_down"
+                }
               ]
             }
           }
@@ -425,16 +964,40 @@
       },
       {
         "id": "cena_03_float_loop",
-        "narration": { "text": "E quando não há nada acontecendo, o movimento sutil mantém o quadro vivo." },
+        "narration": {
+          "text": "E quando não há nada acontecendo, o movimento sutil mantém o quadro vivo."
+        },
         "_comentario/": "Preset 'float' com loop: senoide lenta até o fim da cena. Em ffmpeg deve compilar com mod(), não com if aninhado.",
         "visual_elements": [
           {
-            "type": "color", "color": "#ffc53d", "border_radius": 999,
-            "placement": { "anchor": ["center", "40%"], "width": "44%", "height": "24%", "relative_to": "screen" },
+            "type": "color",
+            "color": "#ffc53d",
+            "border_radius": 999,
+            "placement": {
+              "anchor": [
+                "center",
+                "40%"
+              ],
+              "width": "44%",
+              "height": "24%",
+              "relative_to": "screen"
+            },
             "motion": {
               "actions": [
-                { "name": "ent", "at": 0.2, "duration": 0.5, "preset": "fade_in" },
-                { "at": { "after": "ent" }, "duration": 2.4, "preset": "float", "loop": true }
+                {
+                  "name": "ent",
+                  "at": 0.2,
+                  "duration": 0.5,
+                  "preset": "fade_in"
+                },
+                {
+                  "at": {
+                    "after": "ent"
+                  },
+                  "duration": 2.4,
+                  "preset": "float",
+                  "loop": true
+                }
               ]
             }
           }
@@ -442,42 +1005,93 @@
       }
     ]
   },
-
   {
     "slug": "motion_04_regressao_mista",
     "channel_name": "pyvideomaker",
     "debug": true,
     "_comentario/": "TESTE 4 — convivência. Na mesma cena: elemento com 'animation' legado e elemento com 'motion' novo. Valida P1 (o legado não muda um pixel) e a ordem scale→border_radius. A cena 2 usa text_box: antes da Fase 5 deve logar fallback para MoviePy; depois dela, não.",
-    "output": { "ratio": "9:16", "quality": "draft" },
+    "output": {
+      "ratio": "9:16",
+      "quality": "draft"
+    },
     "global_settings": {
-      "tts": { "provider": "edge", "voice": "pt-BR-AntonioNeural" },
-      "subtitle": { "enabled": false },
-      "transitions": { "enabled": false },
-      "background": { "visual": { "type": "color", "source": "#0c1220" } },
-      "motion": { "enabled": true }
+      "tts": {
+        "provider": "kokoro",
+        "voice": "pm_alex",
+        "lang_code": "p"
+      },
+      "subtitle": {
+        "enabled": false
+      },
+      "transitions": {
+        "enabled": false
+      },
+      "background": {
+        "visual": {
+          "type": "color",
+          "source": "#0c1220"
+        }
+      },
+      "motion": {
+        "enabled": true
+      }
     },
     "scenes": [
       {
         "id": "cena_01_legado_e_novo",
-        "narration": { "text": "O bloco de cima usa o sistema antigo. O de baixo usa o novo. Os dois precisam conviver sem brigar." },
+        "narration": {
+          "text": "O bloco de cima usa o sistema antigo. O de baixo usa o novo. Os dois precisam conviver sem brigar."
+        },
         "visual_elements": [
           {
             "_comentario/": "LEGADO — não tocar. Qualquer mudança de pixel aqui é regressão.",
             "type": "color",
             "color": "#2a56f0",
             "border_radius": 24,
-            "placement": { "anchor": ["center", "26%"], "width": "70%", "height": "22%", "relative_to": "screen" },
-            "animation": { "type": "zoom_in", "start_scale": 1.0, "end_scale": 1.15 }
+            "placement": {
+              "anchor": [
+                "center",
+                "26%"
+              ],
+              "width": "70%",
+              "height": "22%",
+              "relative_to": "screen"
+            },
+            "animation": {
+              "type": "zoom_in",
+              "start_scale": 1.0,
+              "end_scale": 1.15
+            }
           },
           {
             "_comentario/": "NOVO — mesma caixa, mesmo border_radius. A máscara arredondada tem que escalar junto, sem canto quadrado aparecendo.",
             "type": "color",
             "color": "#ff5a3c",
             "border_radius": 24,
-            "placement": { "anchor": ["center", "62%"], "width": "70%", "height": "22%", "relative_to": "screen" },
+            "placement": {
+              "anchor": [
+                "center",
+                "62%"
+              ],
+              "width": "70%",
+              "height": "22%",
+              "relative_to": "screen"
+            },
             "motion": {
               "actions": [
-                { "at": { "word": "novo" }, "duration": 0.6, "ease": "out_back", "tracks": { "scale": [1.0, 1.15] } }
+                {
+                  "at": {
+                    "word": "novo"
+                  },
+                  "duration": 0.6,
+                  "ease": "out_back",
+                  "tracks": {
+                    "scale": [
+                      1.0,
+                      1.15
+                    ]
+                  }
+                }
               ]
             }
           }
@@ -485,7 +1099,9 @@
       },
       {
         "id": "cena_02_text_box",
-        "narration": { "text": "Texto animado é o caso mais comum de todos, e hoje é justamente o que derruba a cena inteira para o caminho lento." },
+        "narration": {
+          "text": "Texto animado é o caso mais comum de todos, e hoje é justamente o que derruba a cena inteira para o caminho lento."
+        },
         "_comentario/": "text_box + motion. Antes da Fase 5: log 'visual_elements[0].type text_box não suportado — usando MoviePy'. Depois: renderiza no filtergraph. Meça os dois tempos.",
         "visual_elements": [
           {
@@ -500,11 +1116,29 @@
               "align": "center",
               "line_spacing": 1.05
             },
-            "placement": { "anchor": ["center", "center"] },
+            "placement": {
+              "anchor": [
+                "center",
+                "center"
+              ]
+            },
             "motion": {
               "actions": [
-                { "at": { "word": "animado" }, "duration": 0.55, "ease": "out_back", "preset": "rise" },
-                { "at": { "word": "lento" }, "duration": 0.45, "preset": "pop_out" }
+                {
+                  "at": {
+                    "word": "animado"
+                  },
+                  "duration": 0.55,
+                  "ease": "out_back",
+                  "preset": "rise"
+                },
+                {
+                  "at": {
+                    "word": "lento"
+                  },
+                  "duration": 0.45,
+                  "preset": "pop_out"
+                }
               ]
             }
           }
@@ -516,16 +1150,50 @@
         "_comentario/": "Cena sem narração nenhuma: words=None. Âncora de palavra tem que cair no on_missing sem quebrar, e a âncora numérica tem que funcionar normalmente.",
         "visual_elements": [
           {
-            "type": "color", "color": "#7f9bff",
-            "placement": { "anchor": ["center", "40%"], "width": "50%", "height": "14%", "relative_to": "screen" },
-            "motion": { "actions": [ { "at": 0.5, "duration": 0.6, "preset": "slide_in_left" } ] }
+            "type": "color",
+            "color": "#7f9bff",
+            "placement": {
+              "anchor": [
+                "center",
+                "40%"
+              ],
+              "width": "50%",
+              "height": "14%",
+              "relative_to": "screen"
+            },
+            "motion": {
+              "actions": [
+                {
+                  "at": 0.5,
+                  "duration": 0.6,
+                  "preset": "slide_in_left"
+                }
+              ]
+            }
           },
           {
-            "type": "color", "color": "#566178",
-            "placement": { "anchor": ["center", "60%"], "width": "50%", "height": "14%", "relative_to": "screen" },
+            "type": "color",
+            "color": "#566178",
+            "placement": {
+              "anchor": [
+                "center",
+                "60%"
+              ],
+              "width": "50%",
+              "height": "14%",
+              "relative_to": "screen"
+            },
             "motion": {
               "on_missing": "skip",
-              "actions": [ { "at": { "word": "qualquer" }, "duration": 0.5, "preset": "fade_in" } ]
+              "actions": [
+                {
+                  "at": {
+                    "word": "qualquer"
+                  },
+                  "duration": 0.5,
+                  "preset": "fade_in"
+                }
+              ]
             }
           }
         ]
