@@ -27,6 +27,12 @@ def run_job(job_id: int):
             if job.type == "video":
                 _run_video_job(config)
                 resultado = {"message": "Concluído com sucesso"}
+            elif job.type == "preview":
+                from previews import service
+                resultado = service.run_preview(config, job_id)
+            elif job.type == "prepare":
+                from previews import service
+                resultado = service.run_prepare(config, job_id)
             elif job.type == "youtube_upload":
                 resultado = _run_youtube_upload_job(config)
             elif job.type == "youtube_sync":
