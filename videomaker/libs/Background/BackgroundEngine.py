@@ -88,10 +88,10 @@ def _apply_cover(clip, target_w: int, target_h: int, focus: str = "center"):
 
 class BackgroundEngine:
     def __init__(self, resolution_output: Tuple[int, int], dir_clips_cache: Dict[str, List],
-                 ai_cache=None, remote_asset_manager=None, directory_selector=None):
+                 asset_store=None, remote_asset_manager=None, directory_selector=None):
         self.resolution_output = tuple(map(int, resolution_output))
         self.dir_clips_cache = dir_clips_cache
-        self.ai_cache = ai_cache
+        self.asset_store = asset_store
         self.remote_asset_manager = remote_asset_manager
         # Sem selector injetado, cria um com os caminhos de cache padrão — o
         # estado que importa (histórico de uso) vive em disco, então instâncias
@@ -372,11 +372,9 @@ class BackgroundEngine:
         ai_manager = _ai_manager()
         if ai_manager is None:
             raise ValueError("Sistema de IA não está disponível")
-        if not self.ai_cache:
-            raise ValueError("AICache não configurado para o fundo de IA")
-
         # Import local: carregar AIProviders no topo penaliza cenas sem IA.
-        from libs.AIProviders.params import resolve_parameters, cache_key as ai_cache_key
+        from libs.AIProviders.params import resolve_parameters
+        from libs.Prepare.keys import ai_key
 
         provider = cfg.get("provider", "pollinations")
         content_type = cfg.get("content_type", "image")
@@ -388,9 +386,10 @@ class BackgroundEngine:
         # Argumentos do provider vêm SÓ de `parameters`, com o default do canal
         # em global_settings.ai.parameters por baixo. Ver AIProviders/params.py.
         parameters = resolve_parameters(cfg, global_settings, "background.visual")
-        cache_key = ai_cache_key(cfg, parameters)
+        asset_key = ai_key(cfg, parameters, self.resolution_output)
+        extension = "png" if content_type == "image" else "mp4"
 
-        cached_file = self.ai_cache.get(cache_key, content_type) if self.ai_cache else None
+        cached_file = self.asset_store.get(asset_key) if self.asset_store else None
         if cached_file:
             file_path = cached_file
         else:
@@ -407,12 +406,14 @@ class BackgroundEngine:
             if not result.get("success"):
                 raise ValueError(f"Falha na geração IA: {result.get('error')}")
 
-            extension = "png" if content_type == "image" else "mp4"
-            filename = f"ai_bg_{cache_key}.{extension}"
-            file_path = os.path.join(storage_dir, filename)
-
-            with open(file_path, "wb") as f:
-                f.write(result["content"])
+            if self.asset_store:
+                file_path = self.asset_store.put(
+                    asset_key, result["content"], kind="ai", ext=extension,
+                    meta={"provider": provider, "prompt": prompt})
+            else:
+                file_path = os.path.join(storage_dir, f"ai_bg_{asset_key}.{extension}")
+                with open(file_path, "wb") as f:
+                    f.write(result["content"])
 
         if content_type == "image":
             # `contain`/`contain-blur` explícitos são respeitados (preservam a

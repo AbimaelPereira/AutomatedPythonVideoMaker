@@ -52,7 +52,7 @@ def resolve_parameters(block: dict, global_settings: dict = None,
 
 
 def cache_key(block: dict, parameters: dict) -> str:
-    """Chave do AICache. `cache_key` explícito vence; senão hash do pedido.
+    """Chave do asset de IA (sem o prefixo "ai_"). `cache_key` explícito vence; senão hash do pedido.
 
     Usa os parâmetros JÁ resolvidos (com o default do canal): trocar o modelo
     do canal precisa invalidar a imagem gerada com o modelo anterior. Precisa

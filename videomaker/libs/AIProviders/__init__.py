@@ -1,7 +1,6 @@
 from .PollinationsProvider import PollinationsProvider
 from .ModelScopeProvider import ModelScopeProvider
 from .AIProviderManager import AIProviderManager, AIProvider
-from .AICache import AICache
 from .GeminiProvider import GeminiProvider
 
 # Setup automático do manager
@@ -38,4 +37,4 @@ def setup_providers():
 # Auto-setup
 setup_providers()
 
-__all__ = ["ai_manager", "PollinationsProvider", "ModelScopeProvider", "AIProviderManager", "AIProvider", "AICache", "GeminiProvider"]
+__all__ = ["ai_manager", "PollinationsProvider", "ModelScopeProvider", "AIProviderManager", "AIProvider", "GeminiProvider"]

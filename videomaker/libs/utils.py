@@ -125,6 +125,14 @@ def check_free_space(path: str, needed_gb: float, label: str = "render") -> tupl
     return (free_gb >= needed_gb, free_gb, needed_gb)
 
 
+def ai_cache_enabled_by_env() -> bool:
+    """`AI_CACHE=0` (ou false/off/no) desliga o reaproveitamento de assets de IA. Ausente = ligado."""
+    raw = os.getenv("AI_CACHE")
+    if raw is None:
+        return True
+    return str(raw).strip().lower() not in ("0", "false", "off", "no")
+
+
 def _default_safe_paddings(resolution: tuple) -> dict:
     """Paddings padrão de "área segura" conforme a orientação da tela.
 

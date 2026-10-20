@@ -65,9 +65,9 @@ class YouTube:
             "thumbnail": None,  # {"type": "file"|"directory"|"ai"|"scene", ...}
             # Contexto injetado pelo UnifiedVideoEngine para o `type: "scene"`
             # compor a thumbnail com as mesmas engines do vídeo (fundo herdado,
-            # cache de IA e slugs de remote_asset compartilhados).
+            # assets do vídeo e slugs de remote_asset compartilhados).
             "global_settings": None,
-            "ai_cache": None,
+            "asset_store": None,
             "remote_asset_manager": None,
             "video_resolution": None,
         }
@@ -363,7 +363,7 @@ class YouTube:
                 output_path,
                 global_settings=self.global_settings,
                 work_dir=work_dir,
-                ai_cache=self.ai_cache,
+                asset_store=self.asset_store,
                 remote_asset_manager=self.remote_asset_manager,
                 video_resolution=self.video_resolution,
                 log_prefix="[YouTube]",

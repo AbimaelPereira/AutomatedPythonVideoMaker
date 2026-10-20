@@ -301,11 +301,11 @@ def _detect_face_center(path: str, resized_size: tuple):
     return result
 
 
-def resolve_ai_background(cfg: dict, resolution: tuple, ai_cache, storage_dir: str,
+def resolve_ai_background(cfg: dict, resolution: tuple, asset_store, storage_dir: str,
                           global_settings: dict = None) -> str:
     """Caminho local da imagem de fundo gerada por IA.
 
-    `type: "ai"` termina como arquivo em disco (via AICache) e, no
+    `type: "ai"` termina como arquivo em disco (via AssetStore) e, no
     BackgroundEngine, é apenas redimensionado para a resolução de saída — sem
     cover/crop. Aqui só resolvemos o CAMINHO: se estiver em cache, usa; se não,
     gera pelo mesmo `ai_manager` e grava com o mesmo nome, para os dois caminhos
@@ -317,8 +317,6 @@ def resolve_ai_background(cfg: dict, resolution: tuple, ai_cache, storage_dir: s
     content_type = cfg.get("content_type", "image")
     if content_type != "image":
         raise Unsupported(f"background ai content_type '{content_type}' não suportado")
-    if ai_cache is None:
-        raise Unsupported("AICache indisponível no worker")
 
     prompt = cfg.get("prompt", "")
     if not prompt:
@@ -327,15 +325,16 @@ def resolve_ai_background(cfg: dict, resolution: tuple, ai_cache, storage_dir: s
     provider = cfg.get("provider", "pollinations")
     # Mesma resolução e mesma chave do BackgroundEngine._build_ai — é o que faz
     # os dois caminhos dividirem o cache. Ver AIProviders/params.py.
-    from libs.AIProviders.params import resolve_parameters, cache_key as ai_cache_key
+    from libs.AIProviders.params import resolve_parameters
+    from libs.Prepare.keys import ai_key
     parameters = resolve_parameters(cfg, global_settings, "background.visual")
-    cache_key = ai_cache_key(cfg, parameters)
+    asset_key = ai_key(cfg, parameters, resolution)
 
-    cached = ai_cache.get(cache_key, content_type)
-    if cached and os.path.exists(cached):
+    cached = asset_store.get(asset_key) if asset_store else None
+    if cached:
         return cached
 
-    # Não está em cache: gera pelo mesmo caminho do BackgroundEngine.
+    # Não está no store: gera pelo mesmo caminho do BackgroundEngine.
     try:
         from libs.AIProviders import ai_manager
     except Exception as e:
@@ -347,25 +346,14 @@ def resolve_ai_background(cfg: dict, resolution: tuple, ai_cache, storage_dir: s
     if not result.get("success"):
         raise Unsupported(f"geração IA falhou: {result.get('error')}")
 
+    if asset_store:
+        return asset_store.put(asset_key, result["content"], kind="ai", ext="png",
+                               meta={"provider": provider, "prompt": prompt})
+
     os.makedirs(storage_dir, exist_ok=True)
-    file_path = os.path.join(storage_dir, f"ai_bg_{cache_key}.png")
+    file_path = os.path.join(storage_dir, f"ai_bg_{asset_key}.png")
     with open(file_path, "wb") as f:
         f.write(result["content"])
-
-    # Popula o AICache. O `_build_ai` do BackgroundEngine consulta `get()` mas
-    # nunca chama `store()` — então o cache ficava sempre vazio e cada render
-    # regerava a imagem. Gravando aqui, as próximas execuções (nos DOIS
-    # caminhos) reaproveitam o arquivo em vez de chamar a IA de novo.
-    try:
-        stored = ai_cache.store(cache_key, file_path, content_type,
-                                {"provider": provider, "prompt": prompt})
-        if stored:
-            cached = ai_cache.get(cache_key, content_type)
-            if cached and os.path.exists(cached):
-                return cached
-    except Exception as e:
-        print(f"[SceneBridge] Falha ao gravar imagem IA no cache: {e}")
-
     return file_path
 
 

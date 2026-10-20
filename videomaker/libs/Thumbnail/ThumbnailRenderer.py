@@ -103,12 +103,12 @@ def _layout_params(resolution: tuple, cfg: dict, global_settings: dict,
 
 
 def _prefetch_ai_background(scene: dict, effective_gs: dict, resolution: tuple,
-                            ai_cache, work_dir: str, log_prefix: str):
+                            asset_store, work_dir: str, log_prefix: str):
     """Resolve um fundo `type: "ai"` para arquivo ANTES do BackgroundEngine.
 
     Duas coisas melhoram ao passar pelo `SceneBridge.resolve_ai_background`:
 
-    1. Ele GRAVA no AICache; o `_build_ai` do BackgroundEngine só lê (`get`),
+    1. Ele GRAVA no AssetStore; o `_build_ai` do BackgroundEngine só lê (`get`),
        nunca escreve, então cada preview regeraria a imagem pelo mesmo prompt —
        lento e pago. Aqui a segunda chamada reaproveita o arquivo.
     2. O cache passa a ser compartilhado com o render do vídeo: a imagem
@@ -122,12 +122,12 @@ def _prefetch_ai_background(scene: dict, effective_gs: dict, resolution: tuple,
 
     if bg.get("type") != "ai" or bg.get("content_type", "image") != "image":
         return scene
-    if ai_cache is None:
+    if asset_store is None:
         return scene
 
     try:
         from libs.Render import SceneBridge
-        path = SceneBridge.resolve_ai_background(bg, resolution, ai_cache, work_dir)
+        path = SceneBridge.resolve_ai_background(bg, resolution, asset_store, work_dir)
     except Exception as e:
         print(f"{log_prefix} Fundo de IA não pôde ser pré-resolvido ({e}) — "
               f"seguindo pelo BackgroundEngine")
@@ -183,25 +183,8 @@ def _uses_ai(scene: dict, effective_gs: dict) -> bool:
                for el in (scene.get("visual_elements") or []))
 
 
-def _default_ai_cache():
-    """`AICache` apontando para o mesmo diretório que o pipeline de vídeo usa.
-
-    Compartilhar o diretório é intencional: uma imagem gerada no preview da
-    thumbnail é reaproveitada quando o vídeo roda de verdade (e vice-versa),
-    em vez de custar uma segunda geração pelo mesmo prompt.
-    """
-    try:
-        from libs.AIProviders.AICache import AICache
-    except ImportError:
-        return None  # sem o sistema de IA, `type: "ai"` já não funcionaria
-
-    # Mesmo caminho do `UnifiedVideoEngine`; relativo ao cwd, que é a pasta
-    # do videomaker tanto no CLI quanto no worker de preview.
-    return AICache(os.path.join(os.getcwd(), "cache", "ai_generated"))
-
-
 def render(cfg: dict, output_path: str, global_settings: dict = None,
-           work_dir: str = None, ai_cache=None, remote_asset_manager=None,
+           work_dir: str = None, asset_store=None, remote_asset_manager=None,
            video_resolution: tuple = None, log_prefix: str = "[Thumbnail]") -> str:
     """Renderiza a thumbnail composta e devolve o caminho do PNG salvo.
 
@@ -210,8 +193,7 @@ def render(cfg: dict, output_path: str, global_settings: dict = None,
     um diretório temporário descartado ao final. `video_resolution` só serve
     para decidir se os paddings do canal são herdáveis (ver `_layout_params`).
 
-    `ai_cache` é opcional: sem ele, um é criado apontando para o mesmo
-    `cache/ai_generated` do pipeline de vídeo.
+    `asset_store` é opcional: sem ele, um é criado em `{work_dir}/assets`.
     """
     from libs.Background.BackgroundEngine import BackgroundEngine
     from libs.Thumbnail import Compositor
@@ -219,30 +201,27 @@ def render(cfg: dict, output_path: str, global_settings: dict = None,
     resolution = _resolve_size(cfg)
     scene, effective_gs = _build_scene(cfg, global_settings)
 
-    if ai_cache is None and _uses_ai(scene, effective_gs):
-        # Sem AICache o BackgroundEngine recusa `type: "ai"` e cai em fundo
-        # preto. Criamos um só quando a cena realmente usa IA: o import do
-        # AICache puxa o SDK do Gemini (~2,3s) e a maioria das thumbnails
-        # (cor, imagem, pasta) não precisa dele.
-        ai_cache = _default_ai_cache()
-
     owns_work_dir = work_dir is None
     if owns_work_dir:
         work_dir = tempfile.mkdtemp(prefix="thumbnail_")
     else:
         os.makedirs(work_dir, exist_ok=True)
 
+    if asset_store is None and _uses_ai(scene, effective_gs):
+        from libs.Prepare.AssetStore import AssetStore
+        asset_store = AssetStore(os.path.join(work_dir, "assets"))
+
     print(f"{log_prefix} Compondo thumbnail {resolution[0]}x{resolution[1]}...")
 
     scene = _prefetch_ai_background(scene, effective_gs, resolution,
-                                    ai_cache, work_dir, log_prefix)
+                                    asset_store, work_dir, log_prefix)
 
     clips_to_close = []
     try:
         bg_engine = BackgroundEngine(
             resolution_output=resolution,
             dir_clips_cache={},
-            ai_cache=ai_cache,
+            asset_store=asset_store,
             remote_asset_manager=remote_asset_manager,
         )
         background_clip = bg_engine.build_scene_background(

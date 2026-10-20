@@ -15,7 +15,9 @@ from types import SimpleNamespace
 from libs.utils import (deep_merge, load_channel_config, resolve_output_resolution,
                         resolve_output_quality, resolve_intermediate_quality,
                         estimate_intermediate_size_gb, check_free_space,
-                        USE_INTERMEDIATE_ENCODE, _default_safe_paddings)
+                        USE_INTERMEDIATE_ENCODE, _default_safe_paddings,
+                        ai_cache_enabled_by_env)
+from libs.Prepare.AssetStore import AssetStore
 from libs.VideoContext import VideoContext, resolve_video_output_dir
 from libs.Profiler import Profiler
 from libs.VisualClip import VisualClip, force_rgb, apply_border_radius_clip, apply_animation_in_window, apply_visual_filters
@@ -33,17 +35,11 @@ from libs.FaceDetector import detect_focus_point
 
 try:
     from libs.AIProviders import ai_manager
-    from libs.AIProviders.AICache import AICache, ai_cache_enabled_by_env
     AI_AVAILABLE = True
     print("[UVE] Sistema de IA carregado")
 except ImportError as e:
     AI_AVAILABLE = False
     print(f"[UVE] Sistema de IA não disponível: {e}")
-
-    def ai_cache_enabled_by_env() -> bool:
-        """Fallback: sem o módulo de IA o cache é irrelevante, mas a função
-        continua sendo chamada no __init__."""
-        return os.getenv("AI_CACHE", "1").strip().lower() not in ("0", "false", "off", "no")
 
 MAX_PARALLEL_SCENES_DEFAULT = int(os.getenv("MAX_PARALLEL_SCENES", 2))
 
@@ -345,7 +341,7 @@ def _resolve_motion_timelines(*, scene, elements, boxes, resolution,
 def _try_ffmpeg_scene(*, scene, effective_gs, scene_dir, scene_id, scene_duration,
                       resolution_output, scene_quality, layout_params,
                       subtitle_file, remote_asset_manager, narration_path,
-                      out_path, ai_cache=None, log_prefix="[UVE]"):
+                      out_path, asset_store=None, log_prefix="[UVE]"):
     """Tenta renderizar a cena via filtergraph. Retorna (tempo, path) ou None.
 
     Nunca levanta: qualquer recusa/erro devolve None e quem chama segue no
@@ -404,7 +400,7 @@ def _try_ffmpeg_scene(*, scene, effective_gs, scene_dir, scene_id, scene_duratio
             # A imagem de IA já é (ou vira) um arquivo em disco; o cache é o
             # mesmo do BackgroundEngine, então não há geração duplicada.
             bg_resolved["_path"] = SceneBridge.resolve_ai_background(
-                bg_cfg, resolution_output, ai_cache, scene_dir, effective_gs
+                bg_cfg, resolution_output, asset_store, scene_dir, effective_gs
             )
             # Mesmo critério do BackgroundEngine._build_ai: `contain` explícito é
             # respeitado; qualquer outro fit_mode mantém o resize puro histórico.
@@ -560,7 +556,7 @@ def _process_scene_worker(scene_data_bundle):
     remote_assets_config = scene_data_bundle["remote_assets_config"]
     # A cena pode zerar/ajustar os paddings só para ela (visuais + legenda).
     layout_params = _resolve_scene_layout_params(layout_params, scene)
-    ai_cache_dir = scene_data_bundle["ai_cache_dir"]
+    assets_dir = scene_data_bundle["assets_dir"]
 
     try:
         scene_id = scene.get("id", f"cena_{scene_index}")
@@ -571,13 +567,10 @@ def _process_scene_worker(scene_data_bundle):
 
         remote_asset_manager = RemoteAssetManager(config=remote_assets_config)
 
-        if AI_AVAILABLE and ai_cache_dir:
-            # O worker é outro processo: o liga/desliga vem no bundle, porque a
-            # decisão do JSON não sobrevive à fronteira de processo.
-            ai_cache = AICache(ai_cache_dir,
-                               enabled=scene_data_bundle.get("ai_cache_enabled", True))
-        else:
-            ai_cache = None
+        # O worker é outro processo: o liga/desliga vem no bundle, porque a
+        # decisão do JSON não sobrevive à fronteira de processo.
+        asset_store = AssetStore(assets_dir,
+                                 enabled=scene_data_bundle.get("ai_cache_enabled", True))
 
         # 1. TTS — merge cena > global
         scene_tts_config = _resolve_scene_tts(tts_config, scene)
@@ -613,7 +606,7 @@ def _process_scene_worker(scene_data_bundle):
             # AudioFileClip guarda o arquivo de origem em .filename — o caminho
             # rápido usa o mp3 direto, sem passar o áudio pelo MoviePy.
             narration_path=getattr(narration_clip, "filename", None),
-            out_path=scene_clip_path, ai_cache=ai_cache,
+            out_path=scene_clip_path, asset_store=asset_store,
             log_prefix=f"[Worker-{scene_index}]",
         )
         if fast:
@@ -632,7 +625,7 @@ def _process_scene_worker(scene_data_bundle):
         bg_engine = BackgroundEngine(
             resolution_output=resolution_output,
             dir_clips_cache={},
-            ai_cache=ai_cache,
+            asset_store=asset_store,
             remote_asset_manager=remote_asset_manager,
         )
         background_clip = bg_engine.build_scene_background(
@@ -1039,13 +1032,8 @@ class UnifiedVideoEngine:
             else bool(json_ai_cache) and ai_cache_enabled_by_env()
         )
 
-        if AI_AVAILABLE:
-            cache_dir = os.path.join(os.getcwd(), "cache", "ai_generated")
-            self.ai_cache = AICache(cache_dir, enabled=self.ai_cache_enabled)
-            self.ai_cache_dir = cache_dir
-        else:
-            self.ai_cache = None
-            self.ai_cache_dir = None
+        self.assets_dir = ctx.assets_dir
+        self.asset_store = AssetStore(self.assets_dir, enabled=self.ai_cache_enabled)
 
         print("[UVE] Inicializando Remote Asset Manager...")
         remote_assets_config = self.global_settings.get("remote_assets", {})
@@ -1984,7 +1972,7 @@ class UnifiedVideoEngine:
                     layout_params=self.layout_params, subtitle_file=subtitle_file,
                     remote_asset_manager=self.remote_asset_manager,
                     narration_path=getattr(narration_clip, "filename", None),
-                    out_path=_fast_out, ai_cache=self.ai_cache,
+                    out_path=_fast_out, asset_store=self.asset_store,
                 )
                 if _fast:
                     _elapsed, _path = _fast
@@ -2005,7 +1993,7 @@ class UnifiedVideoEngine:
                     bg_engine = BackgroundEngine(
                         resolution_output=self.resolution_output,
                         dir_clips_cache=self.dir_media_index,
-                        ai_cache=self.ai_cache,
+                        asset_store=self.asset_store,
                         remote_asset_manager=self.remote_asset_manager,
                     )
                     background_clip = bg_engine.build_scene_background(
@@ -2108,7 +2096,7 @@ class UnifiedVideoEngine:
                     "effective_gs": effective_gs,
                     "layout_params": self.layout_params,
                     "remote_assets_config": self.remote_assets_config,
-                    "ai_cache_dir": self.ai_cache_dir,
+                    "assets_dir": self.assets_dir,
                     "ai_cache_enabled": self.ai_cache_enabled,
                 }
                 scene_bundles.append(bundle)
@@ -2237,7 +2225,7 @@ class UnifiedVideoEngine:
                 # engines do vídeo (herda o fundo global, reusa cache de IA e os
                 # slugs de remote_asset já resolvidos).
                 youtube_params["global_settings"] = self.global_settings
-                youtube_params["ai_cache"] = getattr(self, "ai_cache", None)
+                youtube_params["asset_store"] = self.asset_store
                 youtube_params["remote_asset_manager"] = self.remote_asset_manager
                 youtube_params["video_resolution"] = self.resolution_output
                 youtube_uploader = YouTube(params=youtube_params)

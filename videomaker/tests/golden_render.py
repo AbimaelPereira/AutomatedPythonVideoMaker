@@ -56,7 +56,7 @@ def _render_scene(engine, scene, scene_index: int, srt_path: str) -> str:
         resolution_output=engine.resolution_output,
         scene_quality=engine.scene_quality, layout_params=layout_params,
         subtitle_file=srt_path, remote_asset_manager=engine.remote_asset_manager,
-        narration_path=None, out_path=out_path, ai_cache=engine.ai_cache,
+        narration_path=None, out_path=out_path, asset_store=engine.asset_store,
         log_prefix="[golden]",
     )
     if fast:
@@ -65,7 +65,7 @@ def _render_scene(engine, scene, scene_index: int, srt_path: str) -> str:
     # --- caminho MoviePy (mesma ordem do worker) ---
     bg_engine = BackgroundEngine(
         resolution_output=engine.resolution_output, dir_clips_cache={},
-        ai_cache=engine.ai_cache, remote_asset_manager=engine.remote_asset_manager,
+        asset_store=engine.asset_store, remote_asset_manager=engine.remote_asset_manager,
     )
     background_clip = bg_engine.build_scene_background(
         effective_gs, scene, duration, scene_dir, engine.output_dir,
