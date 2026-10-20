@@ -68,6 +68,11 @@ def resolve_element_path(element: dict, scene_dir: str, remote_asset_manager,
         return None
 
     if el_type == "remote_asset":
+        slug = element.get("source")
+        # Já fixado pelo PrepareEngine: não seleciona outra URL.
+        if isinstance(slug, str) and not slug.startswith(("http://", "https://")) \
+                and os.path.isfile(slug):
+            return slug
         if not remote_asset_manager:
             raise Unsupported("remote_asset sem RemoteAssetManager")
         slug = element.get("source")
@@ -330,6 +335,9 @@ def resolve_ai_background(cfg: dict, resolution: tuple, asset_store, storage_dir
     parameters = resolve_parameters(cfg, global_settings, "background.visual")
     asset_key = ai_key(cfg, parameters, resolution)
 
+    prepared = cfg.get("_resolved_path")
+    if prepared and os.path.isfile(prepared):
+        return prepared
     cached = asset_store.get(asset_key) if asset_store else None
     if cached:
         return cached

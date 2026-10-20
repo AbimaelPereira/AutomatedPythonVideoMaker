@@ -1,3 +1,4 @@
+import re
 import os
 import time
 import requests
@@ -126,9 +127,14 @@ class ModelScopeProvider:
             content = self._baixar(url, timeout)
         except (requests.exceptions.RequestException, RuntimeError) as e:
             print(f"[ModelScope] ❌ Falhou: {e}")
+            status = getattr(getattr(e, "response", None), "status_code", None)
+            if status is None:
+                m = re.match(r"HTTP (\d{3})", str(e))
+                status = int(m.group(1)) if m else None
             return {
                 "success": False,
                 "error": str(e),
+                "status_code": status,
                 "parameters": params,
                 "prompt": prompt,
             }

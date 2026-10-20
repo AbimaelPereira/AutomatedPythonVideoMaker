@@ -5,6 +5,13 @@ from urllib.parse import quote
 from typing import Dict, Any, Optional, Union
 from pathlib import Path
 
+def _parse_retry_after(value):
+    try:
+        return float(value) if value is not None else None
+    except (TypeError, ValueError):
+        return None
+
+
 class PollinationsProvider:
     """
     Provider para integração com a API Pollinations
@@ -96,6 +103,8 @@ class PollinationsProvider:
         
         # Tenta cada modelo em sequência
         last_error = None
+        last_status = None
+        last_retry_after = None
         for attempt, current_model in enumerate(models_to_try, 1):
             try:
                 if attempt > 1:
@@ -143,6 +152,10 @@ class PollinationsProvider:
                 
             except requests.exceptions.RequestException as e:
                 last_error = str(e)
+                resp = getattr(e, "response", None)
+                if resp is not None:
+                    last_status = resp.status_code
+                    last_retry_after = resp.headers.get("Retry-After")
                 print(f"[Pollinations] ⚠️ Falha com modelo '{current_model}': {e}")
                 
                 # Se não for a última tentativa, continua
@@ -170,6 +183,8 @@ class PollinationsProvider:
             "parameters": params,
             "prompt": prompt,
             "models_tried": models_to_try,
+            "status_code": last_status,
+            "retry_after": _parse_retry_after(last_retry_after),
             "attempts": len(models_to_try)
         }
     
@@ -225,6 +240,8 @@ class PollinationsProvider:
         
         # Tenta cada modelo em sequência
         last_error = None
+        last_status = None
+        last_retry_after = None
         for attempt, current_model in enumerate(models_to_try, 1):
             try:
                 if attempt > 1:
@@ -276,6 +293,10 @@ class PollinationsProvider:
                 
             except requests.exceptions.RequestException as e:
                 last_error = str(e)
+                resp = getattr(e, "response", None)
+                if resp is not None:
+                    last_status = resp.status_code
+                    last_retry_after = resp.headers.get("Retry-After")
                 print(f"[Pollinations] ⚠️ Falha com modelo '{current_model}': {e}")
                 
                 # Se não for a última tentativa, continua
@@ -303,6 +324,8 @@ class PollinationsProvider:
             "parameters": params,
             "prompt": prompt,
             "models_tried": models_to_try,
+            "status_code": last_status,
+            "retry_after": _parse_retry_after(last_retry_after),
             "attempts": len(models_to_try)
         }
     

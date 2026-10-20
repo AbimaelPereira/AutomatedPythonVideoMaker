@@ -991,6 +991,7 @@ class UnifiedVideoEngine:
         # Extraído para VideoContext (Fase 1 do plano de preview) — mesmo cálculo,
         # agora reaproveitável por Prepare/PreviewEngine sem importar MoviePy/TTS.
         ctx = VideoContext.from_video_data(video_data, require_slug=False)
+        self.ctx = ctx
 
         channel_config = ctx.channel_config
         self.global_settings = ctx.global_settings
@@ -1773,61 +1774,6 @@ class UnifiedVideoEngine:
     # RUN
     # ------------------------------------------------------------------
 
-    def _resolve_visual_elements_ai_sources(self, scenes: list) -> None:
-        """Pré-resolve sources de IA em visual_elements antes do pool de workers.
-        Substitui cada source com type=ai por um path de arquivo local.
-        Modifica as cenas in-place.
-        """
-        if not AI_AVAILABLE:
-            return
-
-        from libs.AIProviders.PollinationsProvider import PollinationsProvider
-        from libs.AIProviders.params import resolve_parameters
-        provider = PollinationsProvider()
-
-        for scene in scenes:
-            elements = scene.get("visual_elements", [])
-            for element in elements:
-                source = element.get("source")
-                if not isinstance(source, dict) or source.get("type") != "ai":
-                    continue
-
-                prompt = source.get("prompt", "")
-                if not prompt:
-                    print(f"[UVE] visual_element ai source sem prompt — ignorado")
-                    continue
-
-                scene_id = scene.get("id", "scene")
-                # Argumentos SÓ de `parameters` (mesma regra do fundo). Os
-                # defaults históricos deste caminho valem quando nem o canal
-                # (global_settings.ai.parameters) nem o bloco definem.
-                params = resolve_parameters(
-                    source, self.global_settings,
-                    f"cena '{scene_id}' visual_elements.source",
-                    defaults={"model": "flux", "width": 576, "height": 1024},
-                )
-
-                print(f"[UVE] Gerando imagem IA para visual_element da cena '{scene_id}' (model={params.get('model')})...")
-
-                result = provider.generate_image(prompt=prompt, **params)
-
-                if not result.get("success"):
-                    print(f"[UVE] Falha ao gerar imagem IA para visual_element da cena '{scene_id}': {result.get('error')}")
-                    continue
-
-                ai_assets_dir = os.path.join(self.output_dir, "ai_assets")
-                os.makedirs(ai_assets_dir, exist_ok=True)
-
-                import hashlib
-                h = hashlib.md5(prompt.encode()).hexdigest()[:8]
-                file_path = os.path.join(ai_assets_dir, f"ve_ai_{scene_id}_{h}.png")
-
-                with open(file_path, "wb") as f:
-                    f.write(result["content"])
-
-                element["source"] = file_path
-                print(f"[UVE] Imagem IA salva: {file_path}")
-
     def run(self):
         """Wrapper que garante o relatório do profiler mesmo em falha —
         é justamente quando o diagnóstico de tempo interessa."""
@@ -1876,11 +1822,16 @@ class UnifiedVideoEngine:
                     "Metadados do YouTube inválidos (corrija antes de renderizar):\n  - "
                     + "\n  - ".join(problemas))
 
-        # PRÉ-PROCESSAMENTO: resolve imagens IA em visual_elements antes do pool
+        # PREPARE: resolve para {output}/{slug}/assets/ os assets visuais (IA,
+        # downloads, remote_asset) antes do TTS e do pool de workers.
         try:
-            self._resolve_visual_elements_ai_sources(scenes)
+            from libs.Prepare.PrepareEngine import PrepareEngine
+            with self.profiler.step("prepare_assets"):
+                prepare = PrepareEngine(self.ctx, remote_asset_manager=self.remote_asset_manager)
+                prepare.run()
+                scenes = prepare.apply(scenes)
         except Exception as e:
-            print(f"[UVE] Pré-processamento de IA em visual_elements falhou: {e}")
+            print(f"[UVE] Prepare de assets falhou: {e}")
 
         # PRÉ-PROCESSAMENTO
         try:

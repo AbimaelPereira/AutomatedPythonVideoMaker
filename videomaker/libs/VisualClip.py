@@ -139,6 +139,12 @@ class VisualClip:
         válida e tenta o download — caindo para a próxima URL se falhar.
         Retorna o caminho local baixado ou None.
         """
+        source = self.data.get("source")
+        # Já fixado pelo PrepareEngine: caminho local, sem nova seleção.
+        if isinstance(source, str) and not source.startswith(("http://", "https://")) \
+                and os.path.isfile(source):
+            return source
+
         if not self.remote_asset_manager:
             print("[VisualClip] RemoteAssetManager não disponível para remote_asset.")
             return None

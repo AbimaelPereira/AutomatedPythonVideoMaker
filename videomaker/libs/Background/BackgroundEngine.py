@@ -34,6 +34,12 @@ def _ai_manager():
     return _AI_MANAGER
 
 
+def _is_local_file(src) -> bool:
+    """remote_asset já fixado pelo PrepareEngine chega como caminho local."""
+    return isinstance(src, str) and not src.startswith(("http://", "https://")) \
+        and os.path.isfile(src)
+
+
 def _hex_to_rgb(hex_value):
     if not isinstance(hex_value, str):
         return tuple(hex_value)
@@ -211,7 +217,10 @@ class BackgroundEngine:
     def _build_image(self, cfg: Dict, scene_duration: float, storage_dir: str):
         src_type = cfg.get("type", "image")
         src = cfg.get("source")
+        fn_kind = "image"
 
+        if src_type == "remote_asset" and _is_local_file(src):
+            src_type = "image" if fn_kind == "image" else "video"
         if src_type == "remote_asset":
             if not self.remote_asset_manager:
                 print("[BackgroundEngine] RemoteAssetManager não disponível, usando cor sólida")
@@ -283,8 +292,11 @@ class BackgroundEngine:
     def _build_video(self, cfg: Dict, scene_duration: float, storage_dir: str):
         src_type = cfg.get("type", "video")
         src = cfg.get("source")
+        fn_kind = "video"
         fit_mode = cfg.get("fit_mode", "cover")
 
+        if src_type == "remote_asset" and _is_local_file(src):
+            src_type = "image" if fn_kind == "image" else "video"
         if src_type == "remote_asset":
             if not self.remote_asset_manager:
                 print("[BackgroundEngine] RemoteAssetManager não disponível, usando cor sólida")
@@ -389,7 +401,11 @@ class BackgroundEngine:
         asset_key = ai_key(cfg, parameters, self.resolution_output)
         extension = "png" if content_type == "image" else "mp4"
 
-        cached_file = self.asset_store.get(asset_key) if self.asset_store else None
+        # `_resolved_path`: já preparado pelo PrepareEngine (mesmo tratamento abaixo).
+        prepared = cfg.get("_resolved_path")
+        cached_file = prepared if prepared and os.path.isfile(prepared) else None
+        if not cached_file and self.asset_store:
+            cached_file = self.asset_store.get(asset_key)
         if cached_file:
             file_path = cached_file
         else:

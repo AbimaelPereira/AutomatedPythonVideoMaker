@@ -134,3 +134,23 @@ class VideoContext:
             previews_dir=previews_dir,
             scenes=scenes,
         )
+
+    def select_scenes(self, selection) -> list:
+        """ids ou índices 1-based → índices 0-based. None = todas."""
+        if selection is None:
+            return [s["_index"] for s in self.scenes]
+        by_id = {s.get("id"): s["_index"] for s in self.scenes if s.get("id")}
+        out = []
+        for item in selection:
+            if isinstance(item, int) or (isinstance(item, str) and item.isdigit()):
+                n = int(item)
+                if not 1 <= n <= len(self.scenes):
+                    raise ValueError(f"cena {n} fora do intervalo 1..{len(self.scenes)}")
+                idx = n - 1
+            elif item in by_id:
+                idx = by_id[item]
+            else:
+                raise ValueError(f"cena '{item}' não existe. Válidas: {sorted(by_id)}")
+            if idx not in out:
+                out.append(idx)
+        return out
