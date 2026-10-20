@@ -125,6 +125,29 @@ def check_free_space(path: str, needed_gb: float, label: str = "render") -> tupl
     return (free_gb >= needed_gb, free_gb, needed_gb)
 
 
+def _default_safe_paddings(resolution: tuple) -> dict:
+    """Paddings padrão de "área segura" conforme a orientação da tela.
+
+    Paddings significam apenas margem segura (a faixa onde visuais e legendas
+    podem ser ancorados via `placement`). Verticais: 9:16 mantém os históricos
+    (top 100 / bottom 850, calibrados para a legenda legada); 16:9 usa margens
+    simétricas de ~5% por não ter zona de legenda dedicada.
+    """
+    w, h = resolution
+    if w >= h:  # paisagem (16:9 etc.) — margens simétricas de ~5%
+        return {
+            "padding_side":   int(w * 0.05),   # 1920 → 96
+            "padding_top":    int(h * 0.05),   # 1080 → 54
+            "padding_bottom": int(h * 0.05),   # 1080 → 54
+        }
+    # retrato (9:16) — preserva os defaults históricos
+    return {
+        "padding_side":   50,
+        "padding_top":    100,
+        "padding_bottom": 850,
+    }
+
+
 def resolve_output_quality(quality) -> dict:
     """Resolve a config de qualidade de encoding a partir do JSON.
 

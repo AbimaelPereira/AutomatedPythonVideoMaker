@@ -15,7 +15,8 @@ from types import SimpleNamespace
 from libs.utils import (deep_merge, load_channel_config, resolve_output_resolution,
                         resolve_output_quality, resolve_intermediate_quality,
                         estimate_intermediate_size_gb, check_free_space,
-                        USE_INTERMEDIATE_ENCODE)
+                        USE_INTERMEDIATE_ENCODE, _default_safe_paddings)
+from libs.VideoContext import VideoContext, resolve_video_output_dir
 from libs.Profiler import Profiler
 from libs.VisualClip import VisualClip, force_rgb, apply_border_radius_clip, apply_animation_in_window, apply_visual_filters
 from libs.Motion import compile_moviepy as motion_mp
@@ -228,29 +229,6 @@ def _resolve_scene_tts(effective_gs_tts: dict, scene: dict) -> dict:
     if not scene_tts:
         return effective_gs_tts
     return deep_merge(effective_gs_tts, scene_tts)
-
-
-def _default_safe_paddings(resolution: tuple) -> dict:
-    """Paddings padrão de "área segura" conforme a orientação da tela.
-
-    Paddings significam apenas margem segura (a faixa onde visuais e legendas
-    podem ser ancorados via `placement`). Verticais: 9:16 mantém os históricos
-    (top 100 / bottom 850, calibrados para a legenda legada); 16:9 usa margens
-    simétricas de ~5% por não ter zona de legenda dedicada.
-    """
-    w, h = resolution
-    if w >= h:  # paisagem (16:9 etc.) — margens simétricas de ~5%
-        return {
-            "padding_side":   int(w * 0.05),   # 1920 → 96
-            "padding_top":    int(h * 0.05),   # 1080 → 54
-            "padding_bottom": int(h * 0.05),   # 1080 → 54
-        }
-    # retrato (9:16) — preserva os defaults históricos
-    return {
-        "padding_side":   50,
-        "padding_top":    100,
-        "padding_bottom": 850,
-    }
 
 
 def _resolve_scene_subtitle(base_subtitle_config: dict, effective_gs: dict, scene: dict) -> dict:
@@ -1016,33 +994,22 @@ class UnifiedVideoEngine:
         env_debug = os.getenv("DEBUG", "0").lower() in ("true", "1", "t")
         self.video_data["debug"] = bool(env_debug or video_data.get("debug") is True)
 
-        # 1. Carrega channel_config e faz merge de global_settings
-        channel_name = video_data.get("channel_name")
-        channel_config = load_channel_config(channel_name) if channel_name else {}
+        # 1-5. Contexto compartilhado (canal+vídeo merge, output_dir, layout_params).
+        # Extraído para VideoContext (Fase 1 do plano de preview) — mesmo cálculo,
+        # agora reaproveitável por Prepare/PreviewEngine sem importar MoviePy/TTS.
+        ctx = VideoContext.from_video_data(video_data, require_slug=False)
 
-        channel_gs = channel_config.get("global_settings", {})
-        video_gs   = video_data.get("global_settings", {})
-        self.global_settings = deep_merge(channel_gs, video_gs)
+        channel_config = ctx.channel_config
+        self.global_settings = ctx.global_settings
 
-        # 2. Merge youtube
         self.youtube_config = deep_merge(
             channel_config.get("youtube", {}),
             video_data.get("youtube", {})
         )
 
-        # 3. Resolução + qualidade
-        # Novo formato: objeto raiz "output" = {"ratio": ..., "quality": ..., "dir": ...}.
-        # Retrocompat: "output_ratio" solto na raiz ainda funciona.
-        # O bloco "output" do canal serve de base (o do vídeo vence campo a campo),
-        # para que um canal possa fixar seu próprio "dir" sem repetir em cada JSON.
-        output_cfg = deep_merge(
-            channel_config.get("output", {}) or {},
-            video_data.get("output", {}) or {}
-        )
-        self.output_config = output_cfg
-        output_ratio = output_cfg.get("ratio") or video_data.get("output_ratio", "9:16")
-        self.resolution_output = resolve_output_resolution(output_ratio)
-        self.output_quality = resolve_output_quality(output_cfg.get("quality"))
+        self.output_config = ctx.output_config
+        self.resolution_output = ctx.resolution
+        self.output_quality = resolve_output_quality(ctx.output_config.get("quality"))
         # Cenas são artefato intermediário (concatenadas/re-encodadas depois):
         # encoda rápido e quase-lossless, deixando output_quality só p/ a saída.
         self.scene_quality = resolve_intermediate_quality(self.output_quality)
@@ -1054,17 +1021,7 @@ class UnifiedVideoEngine:
         self.tts_config = self.global_settings.get("tts", {})
 
         # 5. Layout params
-        # Defaults de área segura dependem da orientação (9:16 mantém históricos,
-        # 16:9 usa margens simétricas). global_settings/env sobrescrevem.
-        pad_defaults = _default_safe_paddings(self.resolution_output)
-        self.layout_params = {
-            "width":             self.resolution_output[0],
-            "height":            self.resolution_output[1],
-            "padding_bottom":    self.global_settings.get("padding_bottom", int(os.getenv("PADDING_BOTTOM", pad_defaults["padding_bottom"]))),
-            "padding_top":       self.global_settings.get("padding_top",    int(os.getenv("PADDING_TOP", pad_defaults["padding_top"]))),
-            "padding_side":      self.global_settings.get("padding_side",   int(os.getenv("PADDING_SIDE", pad_defaults["padding_side"]))),
-            "stack_gap_percent": self.global_settings.get("stack_gap_percent", float(os.getenv("STACK_GAP_PERCENT", 0.02))),
-        }
+        self.layout_params = ctx.layout_params
         self.layout_config = SimpleNamespace(**self.layout_params)
 
         # 6. Caches e outros
@@ -1100,20 +1057,15 @@ class UnifiedVideoEngine:
         if stats["total_slugs"] > 0:
             print(f"[UVE] Remote Assets: {stats['total_slugs']} slugs, {stats['valid_media']} URLs válidas")
 
-        slug = video_data.get("slug", "video_sem_slug")
         # "output.dir" (JSON do vídeo ou do canal) redireciona a saída; relativo
         # resolve a partir de videomaker/ (o main.py faz chdir pra cá) e "~" expande.
-        # Ausente → "output/" ao lado do main.py, como sempre foi.
-        configured_dir = output_cfg.get("dir")
-        base_output_dir = (
-            os.path.abspath(os.path.expanduser(str(configured_dir)))
-            if configured_dir else os.path.join(os.getcwd(), "output")
-        )
-        self.base_output_dir = base_output_dir
-        self.output_dir = os.path.join(base_output_dir, slug)
+        # Ausente → "output/" ao lado do main.py, como sempre foi. Slug ausente
+        # mantém o fallback histórico "video_sem_slug" (require_slug=False acima).
+        self.base_output_dir = resolve_video_output_dir(video_data, channel_config)
+        self.output_dir = ctx.output_dir
         os.makedirs(self.output_dir, exist_ok=True)
-        if configured_dir:
-            print(f"[UVE] Diretório de saída: {base_output_dir}")
+        if ctx.output_config.get("dir"):
+            print(f"[UVE] Diretório de saída: {self.base_output_dir}")
 
         self.final_clips = []
         self.total_duration = 0.0
