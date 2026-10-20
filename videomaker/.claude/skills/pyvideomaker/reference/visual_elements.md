@@ -41,10 +41,10 @@ da cena, processados por `VisualClip`
 > "height": 1080}}}`. Argumentos do provider **só dentro de `parameters`** —
 > `model`/`width`/`height` soltos abortam o vídeo (formato único, ver
 > [ai.md](ai.md)). Sem `width`/`height` o default é `576`×`1024`.
-> `_resolve_visual_elements_ai_sources` gera a imagem antes do pool de workers e
-> troca o `source` pelo caminho do arquivo. Diferente do `background.visual`,
-> esse caminho **não usa o AICache** — regenera a cada execução, e o
-> `ai_cache: false` não tem efeito sobre ele.
+> O prepare (`libs/Prepare`) gera a imagem antes do pool de workers, grava em
+> `{output.dir}/{slug}/assets/ai/` e troca o `source` pelo caminho do arquivo.
+> Mesmo cache do `background.visual`: reaproveitada entre execuções e
+> regerada com `ai_cache: false`. Ver `docs/PREVIEW.md`.
 
 ## `type: "directory"` — pasta como elemento
 

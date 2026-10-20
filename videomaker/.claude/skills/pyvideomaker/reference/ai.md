@@ -83,12 +83,16 @@ Outros aliases de imagem válidos: `kontext`, `seedream`, `nanobanana`,
 
 ## Cache
 
-- `background.visual`: cache em disco (`cache/ai_generated/`). A chave é
-  `cache_key` ou o hash de `provider` + `content_type` + `prompt` + parâmetros
-  **já resolvidos** (com o default do canal). Trocar o modelo do canal gera
-  imagem nova. `ai_cache: false` ou `AI_CACHE=0` força regeração.
-- `visual_elements[].source` e thumbnail `ai`: **sem cache** — regeram a cada
-  execução.
+- `background.visual` e `visual_elements[].source`: cache **por vídeo** em
+  `{output.dir}/{slug}/assets/ai/` (resolvido pelo prepare; ver
+  `docs/PREVIEW.md`). A chave é `cache_key` ou o hash de `provider` +
+  `content_type` + `prompt` + parâmetros **já resolvidos** (com o default do
+  canal) e, no fundo, a resolução de saída. Trocar o modelo do canal gera imagem
+  nova. `ai_cache: false` ou `AI_CACHE=0` força regeração. Apagar a pasta do
+  vídeo limpa o cache.
+- Thumbnail `type: "scene"`: mesmo cache. Thumbnail `type: "ai"` (direto): sem cache.
+- Rate limit por provider em `global_settings.ai.rate_limits.<provider>`
+  (`max_concurrent`, `rpm`); 429/5xx têm backoff automático.
 
 ## `fit_mode` em fundo de IA
 

@@ -79,10 +79,10 @@ Detalhes que costumam surpreender:
 
 ### Cache do `type: "ai"`
 
-A imagem gerada é guardada em `cache/ai_generated/` e reaproveitada nas próximas
+A imagem gerada é guardada em `{output.dir}/{slug}/assets/ai/` e reaproveitada nas próximas
 execuções (a chave vem de `cache_key` ou de um hash de `provider`+`prompt`+
 `parameters` já resolvidos, incluindo o default do canal em
-`global_settings.ai.parameters`). Isso evita chamar a IA de novo a cada render.
+`global_settings.ai.parameters`, mais a resolução de saída). Isso evita chamar a IA de novo a cada render.
 Formato do bloco, precedência e fallback de modelo: [ai.md](ai.md).
 
 Para **forçar regeração**, desligue o cache:
@@ -96,11 +96,9 @@ AI_CACHE=0 python main.py meu.json     # aceita 0 / false / off / no
 ```
 
 Os dois somam — qualquer um dos dois desligando já desliga. Com o cache off, o
-log avisa: `[AICache] ⚠️ Cache de IA DESATIVADO`.
+as imagens de IA são regeradas e sobrescritas a cada execução.
 
-> Isso vale para `background.visual` com `type: "ai"`. Imagens de IA em
-> `visual_elements` (via `source: {type:"ai"}`) **não usam esse cache** — são
-> sempre regeradas, então o switch não muda nada lá.
+> Vale também para imagens de IA em `visual_elements` (`source: {type:"ai"}`).
 
 ### `fit_mode`
 

@@ -291,10 +291,11 @@ main.py
         ├── RemoteAssetManager    # resolve slug→URL e faz cache em disco
         │     └── Storage/        # JSONAssetStorage, RemoteAssetStorage
         ├── AIProviders           # geração de imagens (Pollinations)
-        │     └── AICache         # faz cache das imagens geradas em cache/ai_generated/
+        │     (sem cache próprio: assets de IA vivem em {output}/{slug}/assets/)
+        ├── Prepare/              # resolve assets (IA/download/remote_asset) p/ a pasta do vídeo
+        ├── Preview/              # PreviewEngine: PNG por cena em pose de repouso
         ├── MediaDownloader       # baixa vídeos/imagens remotos para temp/
-        ├── ThumbnailRenderer     # thumbnail composta (type: "scene") — reusa
-        │                         #   BackgroundEngine + VisualClip + LayoutEngine
+        ├── Thumbnail/Thumbnail   # build_thumbnail (type: "scene") — pose de repouso sobre o motor de preview
         └── YouTube               # faz upload do MP4 final e define a thumbnail
 ```
 

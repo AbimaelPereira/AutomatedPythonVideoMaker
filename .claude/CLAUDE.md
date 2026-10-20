@@ -66,7 +66,10 @@ Camadas principais:
 - **`Background/BackgroundEngine`** — seleção e filtro do vídeo de fundo
 - **`Audio/NarrationEngine`** — TTS (Edge-TTS, Google Cloud TTS, AWS Polly) + mixagem
 - **`Audio/NarrationEngine` + `Whisper/WhisperWorker`** — transcrição para legendas sincronizadas
-- **`AIProviders/`** — abstração sobre Gemini e Pollinations com cache em disco (`AICache`)
+- **`AIProviders/`** — abstração sobre Gemini, Pollinations e ModelScope (sem cache próprio; o cache é por vídeo, em `Prepare/`)
+- **`VideoContext`** — merge canal×vídeo, `output_dir`, `layout_params` e cenas achatadas, sem importar MoviePy/TTS
+- **`Prepare/`** — resolve assets (IA, downloads, remote_asset) para `{output}/{slug}/assets/` com rate limit e cache por vídeo
+- **`Preview/`** — `PreviewEngine`: PNG por cena em pose de repouso, cache por hash (`main.py --prepare` / `--preview`; ver `videomaker/docs/PREVIEW.md`)
 - **`Storage/`** — armazenamento local (JSON) e remoto de assets
 - **`Transitions/`** — efeitos Fade e Zoom entre cenas
 - **`YouTube.py` / `TikTok.py`** — upload automatizado com OAuth (tokens em `tokens/`)
@@ -87,3 +90,5 @@ Configs de canal ficam em `channels_config/` e são mescladas (`deep_merge`) com
 | `videomaker/channels_config/` | Configs padrão por canal (mescladas com o JSON do vídeo) |
 | `videomaker/tokens/` | Tokens OAuth do YouTube/TikTok (não commitar) |
 | `videomaker/jsons/` | JSONs de exemplo/produção para geração de vídeos |
+| `{output.dir}/{slug}/assets/` | Assets resolvidos pelo prepare + `manifest.json` (apagar a pasta do vídeo limpa o cache) |
+| `{output.dir}/{slug}/previews/` | PNGs de preview por cena + `.cache.json` |
