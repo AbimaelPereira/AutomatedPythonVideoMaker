@@ -1,6 +1,6 @@
 """Worker de renderização de thumbnail — roda como SUBPROCESSO.
 
-Existe como script separado de propósito: o `ThumbnailRenderer` puxa MoviePy, que
+Existe como script separado de propósito: o motor de thumbnail puxa MoviePy, que
 por sua vez fixa `numpy<2` e mantém handles de vídeo/ImageMagick abertos. Importar
 isso dentro do processo da API contaminaria as dependências do backend e faria a
 memória crescer a cada preview. Num subprocesso, tudo é liberado na saída.
@@ -23,31 +23,6 @@ import json
 import os
 import sys
 
-# Trechos que marcam uma degradação silenciosa nas engines.
-_WARNING_MARKERS = (
-    "Falha ao criar fundo",
-    "Fallback: preto",
-    "Tipo de fundo desconhecido",
-    "Erro no elemento",
-    "Falha ao posicionar elemento",
-    "Falha no LayoutEngine",
-    "não encontrado",
-    "não encontrada",
-)
-
-
-def _extract_warnings(log: str) -> list:
-    seen, warnings = set(), []
-    for line in log.splitlines():
-        line = line.strip()
-        if not line or line in seen:
-            continue
-        if any(marker in line for marker in _WARNING_MARKERS):
-            seen.add(line)
-            warnings.append(line)
-    return warnings
-
-
 def main():
     payload = json.load(sys.stdin)
 
@@ -56,26 +31,38 @@ def main():
     os.chdir(videomaker_dir)
     sys.path.insert(0, videomaker_dir)
 
-    from libs.Thumbnail import ThumbnailRenderer
+    import tempfile
+
+    from libs.Preview.warnings import extract_warnings
+    from libs.Thumbnail.Thumbnail import build_thumbnail, minimal_context
+
+    work_dir = payload.get("work_dir") or tempfile.mkdtemp(prefix="thumb_worker_")
+    video_resolution = (tuple(payload["video_resolution"])
+                        if payload.get("video_resolution") else None)
+    thumb = payload["thumbnail"]
+    if video_resolution is None and thumb.get("width") and thumb.get("height"):
+        # Sem vídeo de referência, a orientação vem da própria thumbnail.
+        video_resolution = (int(thumb["width"]), int(thumb["height"]))
+    ctx = minimal_context(work_dir, payload.get("global_settings") or {}, video_resolution)
 
     # As engines logam em stdout; capturamos para o resultado JSON continuar
     # sendo a última linha legível do stdout.
     log = io.StringIO()
     with contextlib.redirect_stdout(log):
-        path = ThumbnailRenderer.render(
-            payload["thumbnail"],
-            payload["output_path"],
-            global_settings=payload.get("global_settings") or {},
-            work_dir=payload.get("work_dir"),
-            video_resolution=(tuple(payload["video_resolution"])
-                              if payload.get("video_resolution") else None),
-            log_prefix="[ThumbPreview]",
-        )
+        result = build_thumbnail(thumb, ctx, output_path=payload["output_path"])
 
     captured = log.getvalue()
     sys.stderr.write(captured)  # log completo fica disponível para diagnóstico
 
-    json.dump({"path": path, "warnings": _extract_warnings(captured)}, sys.stdout)
+    if not result.path:
+        sys.stderr.write("\n".join(result.warnings) + "\n")
+        sys.exit(1)
+
+    warnings = list(result.warnings)
+    for line in extract_warnings(captured):
+        if line not in warnings:
+            warnings.append(line)
+    json.dump({"path": result.path, "warnings": warnings}, sys.stdout)
 
 
 if __name__ == "__main__":

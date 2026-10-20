@@ -70,6 +70,7 @@ class YouTube:
             "asset_store": None,
             "remote_asset_manager": None,
             "video_resolution": None,
+            "video_context": None,
         }
         if params:
             defaults.update(params)
@@ -342,35 +343,26 @@ class YouTube:
         return output_path
 
     def _generate_thumbnail_scene(self, thumb_config: dict) -> str | None:
-        """Compõe a thumbnail a partir de `background` + `visual_elements`.
+        """Compõe a thumbnail (`background` + `visual_elements`) pelo motor de preview.
 
-        Delega ao `ThumbnailRenderer`, que reusa as engines do vídeo. Os
-        intermediários vão para a pasta do vídeo, então uma imagem de IA gerada
-        aqui fica visível junto do resto do material do render.
+        Assets vão para `{slug}/assets/`; itens inválidos viram aviso (ver
+        libs/Thumbnail/Thumbnail.py).
         """
-        try:
-            from libs.Thumbnail import ThumbnailRenderer
-        except ImportError as e:
-            print(f"[YouTube] ❌ ThumbnailRenderer não disponível: {e}")
-            return None
+        from libs.Thumbnail.Thumbnail import build_thumbnail, minimal_context
 
         output_path = self._resolve_thumbnail_output_path()
-        work_dir = os.path.join(os.path.dirname(output_path), "thumbnail_tmp")
-
+        ctx = self.video_context or minimal_context(
+            os.path.dirname(output_path), self.global_settings, self.video_resolution)
         try:
-            return ThumbnailRenderer.render(
-                thumb_config,
-                output_path,
-                global_settings=self.global_settings,
-                work_dir=work_dir,
-                asset_store=self.asset_store,
-                remote_asset_manager=self.remote_asset_manager,
-                video_resolution=self.video_resolution,
-                log_prefix="[YouTube]",
-            )
+            result = build_thumbnail(thumb_config, ctx, output_path=output_path,
+                                     asset_store=self.asset_store,
+                                     remote_asset_manager=self.remote_asset_manager)
         except Exception as e:
             print(f"[YouTube] ❌ Falha ao compor thumbnail: {type(e).__name__}: {e}")
             return None
+        for w in result.warnings:
+            print(f"[YouTube] ⚠️ {w}")
+        return result.path
 
     THUMBNAIL_MAX_TENTATIVAS = 5
 

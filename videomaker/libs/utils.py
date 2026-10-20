@@ -204,3 +204,20 @@ def resolve_output_quality(quality) -> dict:
         return resolved
 
     raise ValueError(f"output.quality deve ser str ou dict, recebido {type(quality).__name__}.")
+
+
+def _resolve_scene_layout_params(layout_params: dict, scene: dict) -> dict:
+    """Permite que uma cena sobrescreva os paddings (área segura) só para ela.
+
+    Os `padding_top/bottom/side` da raiz do JSON viram o `layout_params` global
+    (resolvido uma vez no __init__). Se a CENA declarar qualquer `padding_*`, ele
+    vence apenas para essa cena — visuais e legenda usam a versão sobrescrita.
+    Sem override na cena, retorna o `layout_params` original inalterado.
+    """
+    overrides = {k: scene[k] for k in ("padding_top", "padding_bottom", "padding_side")
+                 if k in scene}
+    if not overrides:
+        return layout_params
+    merged = dict(layout_params)
+    merged.update(overrides)
+    return merged

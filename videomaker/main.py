@@ -15,10 +15,12 @@ def main():
                         help="só valida o schema de motion (sem TTS e sem render)")
     parser.add_argument("--prepare", action="store_true",
                         help="só resolve os assets visuais em {output}/{slug}/assets/ e imprime JSON")
+    parser.add_argument("--preview", action="store_true",
+                        help="prepare + PNG por cena (pose de repouso) em {output}/{slug}/previews/")
     parser.add_argument("--scenes", default=None,
-                        help="ids ou índices 1-based separados por vírgula (com --prepare)")
+                        help="ids ou índices 1-based separados por vírgula (--prepare/--preview)")
     parser.add_argument("--force", action="store_true",
-                        help="ignora o cache e regera/baixa de novo (com --prepare)")
+                        help="ignora o cache e regera/renderiza de novo (--prepare/--preview)")
     args = parser.parse_args()
 
     # Resolve para absoluto antes do chdir, para que caminhos relativos passados
@@ -52,7 +54,7 @@ def main():
                                    validate_only=args.validate)
         return status
 
-    if args.prepare:
+    if args.prepare or args.preview:
         return run_prepare(video_list, args)
 
     from libs.UnifiedVideoEngine import UnifiedVideoEngine
@@ -80,7 +82,7 @@ def _parse_scenes(raw):
 
 
 def run_prepare(video_list, args) -> int:
-    """`--prepare`: última linha do stdout = JSON do PrepareResult (array p/ lista)."""
+    """`--prepare`/`--preview`: última linha do stdout = JSON do resultado (array p/ lista)."""
     from libs.VideoContext import VideoContext
     from libs.Prepare.PrepareEngine import PrepareEngine
 
@@ -89,7 +91,12 @@ def run_prepare(video_list, args) -> int:
     try:
         for video_data in (video_list if is_list else [video_list]):
             ctx = VideoContext.from_video_data(video_data)
-            indexes = ctx.select_scenes(_parse_scenes(args.scenes)) if args.scenes else None
+            selection = _parse_scenes(args.scenes)
+            if args.preview:
+                from libs.Preview.PreviewEngine import PreviewEngine
+                results.append(PreviewEngine(ctx, scenes=selection, force=args.force).run().to_json())
+                continue
+            indexes = ctx.select_scenes(selection) if selection else None
             results.append(PrepareEngine(ctx, scene_indexes=indexes, force=args.force).run().to_json())
     except ValueError as e:
         print(f"Erro: {e}", file=sys.stderr)

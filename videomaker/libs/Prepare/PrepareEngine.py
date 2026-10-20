@@ -37,11 +37,12 @@ def ai_cache_enabled(video_data: dict, global_settings: dict) -> bool:
 class PrepareEngine:
     def __init__(self, ctx, *, scene_indexes=None, force: bool = False,
                  include_thumbnail: bool = False, max_workers: int | None = None,
-                 remote_asset_manager=None):
+                 remote_asset_manager=None, thumbnail_cfg: dict | None = None):
         self.ctx = ctx
         self.scene_indexes = scene_indexes
         self.force = force
-        self.include_thumbnail = include_thumbnail
+        self.include_thumbnail = include_thumbnail or thumbnail_cfg is not None
+        self.thumbnail_cfg = thumbnail_cfg
         self.max_workers = max_workers
         self.store = AssetStore(ctx.assets_dir)
         self._remote_asset_manager = remote_asset_manager
@@ -70,7 +71,8 @@ class PrepareEngine:
 
     def run(self) -> PrepareResult:
         start = time.monotonic()
-        self.tasks = collect_tasks(self.ctx, self.scene_indexes, self.include_thumbnail)
+        self.tasks = collect_tasks(self.ctx, self.scene_indexes, self.include_thumbnail,
+                                   self.thumbnail_cfg)
         result = PrepareResult()
         entries = self.store.entries()
 
@@ -123,6 +125,28 @@ class PrepareEngine:
                     continue
                 _rewrite(out[index], element_path, task.kind, path)
         return out
+
+    def apply_thumbnail(self, scene_like: dict) -> dict:
+        """Cópia de `{"background", "visual_elements"}` da thumbnail com sources resolvidos."""
+        out = copy.deepcopy(scene_like)
+        if self.result is None:
+            return out
+        for task in self.tasks:
+            path = self.result.resolved.get(task.asset_key)
+            if not path:
+                continue
+            for index, element_path in task.refs:
+                if index == THUMBNAIL_INDEX:
+                    _rewrite(out, element_path, task.kind, path)
+        return out
+
+    def scene_assets(self, index: int) -> dict:
+        """asset_key → caminho dos assets resolvidos usados pela cena `index`."""
+        if self.result is None:
+            return {}
+        return {t.asset_key: self.result.resolved[t.asset_key] for t in self.tasks
+                if t.asset_key in self.result.resolved
+                and any(i == index for i, _ in t.refs)}
 
 
 def _rewrite(scene: dict, element_path: str, kind: str, path: str) -> None:

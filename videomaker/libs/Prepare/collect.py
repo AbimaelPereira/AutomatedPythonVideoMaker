@@ -81,7 +81,9 @@ def _visual_tasks(visual: dict, scene_id: str, element_path: str, gs: dict,
     return []
 
 
-def collect_tasks(ctx, scene_indexes=None, include_thumbnail: bool = False) -> list:
+def collect_tasks(ctx, scene_indexes=None, include_thumbnail: bool = False,
+                  thumbnail_cfg: dict | None = None) -> list:
+    """`thumbnail_cfg` substitui o `youtube.thumbnail` do vídeo/canal."""
     from libs.AIProviders.params import validate_video_ai_blocks
 
     selected = [s for s in ctx.scenes
@@ -90,10 +92,12 @@ def collect_tasks(ctx, scene_indexes=None, include_thumbnail: bool = False) -> l
     if include_thumbnail:
         yt = deep_merge((ctx.channel_config or {}).get("youtube", {}) or {},
                         ctx.video_data.get("youtube", {}) or {})
-        cand = yt.get("thumbnail")
+        cand = thumbnail_cfg if thumbnail_cfg is not None else yt.get("thumbnail")
         if isinstance(cand, dict) and cand.get("type") == "scene":
             thumb = cand
     validate_video_ai_blocks(selected, None)
+    if thumb is not None:
+        validate_video_ai_blocks([dict(thumb, id="thumbnail")], None)
 
     found = {}  # key -> [kind, provider, spec, refs]
 

@@ -16,7 +16,7 @@ from libs.utils import (deep_merge, load_channel_config, resolve_output_resoluti
                         resolve_output_quality, resolve_intermediate_quality,
                         estimate_intermediate_size_gb, check_free_space,
                         USE_INTERMEDIATE_ENCODE, _default_safe_paddings,
-                        ai_cache_enabled_by_env)
+                        ai_cache_enabled_by_env, _resolve_scene_layout_params)
 from libs.Prepare.AssetStore import AssetStore
 from libs.VideoContext import VideoContext, resolve_video_output_dir
 from libs.Profiler import Profiler
@@ -262,23 +262,6 @@ def _subtitles_enabled(effective_gs: dict, scene: dict) -> bool:
     """
     merged = deep_merge(effective_gs.get("subtitle", {}), scene.get("subtitle", {}))
     return bool(merged.get("enabled", False))
-
-
-def _resolve_scene_layout_params(layout_params: dict, scene: dict) -> dict:
-    """Permite que uma cena sobrescreva os paddings (área segura) só para ela.
-
-    Os `padding_top/bottom/side` da raiz do JSON viram o `layout_params` global
-    (resolvido uma vez no __init__). Se a CENA declarar qualquer `padding_*`, ele
-    vence apenas para essa cena — visuais e legenda usam a versão sobrescrita.
-    Sem override na cena, retorna o `layout_params` original inalterado.
-    """
-    overrides = {k: scene[k] for k in ("padding_top", "padding_bottom", "padding_side")
-                 if k in scene}
-    if not overrides:
-        return layout_params
-    merged = dict(layout_params)
-    merged.update(overrides)
-    return merged
 
 
 def _render_backend() -> str:
@@ -2179,6 +2162,7 @@ class UnifiedVideoEngine:
                 youtube_params["asset_store"] = self.asset_store
                 youtube_params["remote_asset_manager"] = self.remote_asset_manager
                 youtube_params["video_resolution"] = self.resolution_output
+                youtube_params["video_context"] = self.ctx
                 youtube_uploader = YouTube(params=youtube_params)
                 video_id = youtube_uploader.upload()
 
