@@ -2220,13 +2220,6 @@ class UnifiedVideoEngine:
             # re-renderizar.
             if self.youtube_config and upload_ok:
                 try:
-                    parent_dir = os.path.dirname(self.output_dir)
-                    no_bg_filename = f"{slug}_no_bg_audio.mp4"
-                    no_bg_path = os.path.join(self.output_dir, no_bg_filename)
-                    if os.path.exists(no_bg_path):
-                        dest = os.path.join(parent_dir, no_bg_filename)
-                        shutil.move(no_bg_path, dest)
-                        print(f"[UVE] Vídeo sem bg audio preservado: {dest}")
                     shutil.rmtree(self.output_dir)
                     print(f"[UVE] Pasta de saída removida: {self.output_dir}")
                 except Exception as e:
