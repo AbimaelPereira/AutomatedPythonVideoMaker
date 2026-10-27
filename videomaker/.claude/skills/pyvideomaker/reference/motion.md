@@ -243,3 +243,40 @@ MOTION_DEBUG=1 python main.py meu.json    # imprime a timeline durante o render
 - Com `rotation`, o elemento é sempre centrado na própria caixa — `anchor`
   lateral deixa de valer para a compensação, porque o quadro girado tem margem
   dos dois lados.
+
+## Efeito sonoro por animação (`sfx`)
+
+Cada ação pode tocar um som no instante em que começa — inclusive quando ancorada
+numa palavra. O som é misturado na narração da cena **antes** do render
+(`libs/Audio/SfxMixer.py`), então funciona nos dois caminhos sem custo de vídeo.
+
+```jsonc
+{ "at": {"word": "dark"}, "preset": "pop_in",
+  "sfx": { "source": "./assets/sfx/swell", "volume": 0.8, "offset": -0.15 } }
+// "sfx": "./assets/sfx/pop"   (atalho)   •   "sfx": false   (silencia só esta ação)
+```
+
+`source` é arquivo ou pasta (sorteio determinístico por cena). Default por preset,
+sem repetir em cada ação — em `global_settings` (ou na cena):
+
+```jsonc
+"sfx": {
+  "enabled": true,
+  "volume": 0.55,                 // multiplicador geral
+  "min_gap": 0.08,                // mesma origem a < 0,08 s = um som só (pílula + texto)
+  "presets": {
+    "pop_in":     { "source": "./assets/sfx/pop", "volume": 0.75 },
+    "slide_in_*": { "source": "./assets/sfx/whoosh", "volume": 0.6 },
+    "rise":       "./assets/sfx/paper",
+    "custom":     null            // ação sem preset (tracks livres)
+  },
+  "events": [ { "at": {"word": "never"}, "source": "./assets/sfx/chime/chime_01.wav" } ]  // som sem animação
+}
+```
+
+Biblioteca em `assets/sfx/`: `pop`, `click` (Kenney, CC0), `whoosh`, `chime`,
+`swell`, `paper` (sintetizados por `tools/gerar_sfx.py`). O log mostra
+`[SFX] cena 'x': N efeito(s) — 0.42s pop.wav, …`.
+
+> O ducking da trilha usa a faixa de narração do vídeo — com SFX, a trilha também
+> abaixa levemente nos efeitos.

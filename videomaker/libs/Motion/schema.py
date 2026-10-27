@@ -21,7 +21,8 @@ MOTION_KEYS = {
     "visible", "actions", "stagger", "stagger_group",
 }
 ACTION_KEYS = {"name", "at", "until", "duration", "ease", "preset", "tracks",
-               "hold", "loop"}
+               "hold", "loop", "sfx"}
+SFX_KEYS = {"source", "volume", "offset"}
 AT_KEYS = {"word", "nth", "word_index", "phrase", "sentence", "after",
            "at_end_of", "offset", "align"}
 VISIBLE_KEYS = {"from", "to"}
@@ -134,6 +135,25 @@ def _validate_range(prop: str, raw, path: str, errors: list):
             errors.append(ValidationError(f"{prop} precisa ser > 0: {value}", path))
 
 
+def _validate_sfx(spec, path: str, errors: list):
+    """`sfx` da ação: caminho (arquivo ou pasta), objeto {source, volume, offset} ou false."""
+    if spec is False or spec is None or (isinstance(spec, str) and spec.strip()):
+        return
+    if not isinstance(spec, dict):
+        errors.append(ValidationError(f"sfx inválido: {spec!r}", path,
+                                      "use um caminho, {\"source\": ...} ou false"))
+        return
+    _unknown_keys(spec, SFX_KEYS, path, errors)
+    if not isinstance(spec.get("source"), str) or not spec["source"].strip():
+        errors.append(ValidationError("sfx sem 'source'", path))
+    for key in ("volume", "offset"):
+        value = spec.get(key)
+        if value is not None and (not isinstance(value, (int, float)) or isinstance(value, bool)):
+            errors.append(ValidationError(f"{key} precisa ser número: {value!r}", f"{path}.{key}"))
+    if isinstance(spec.get("volume"), (int, float)) and spec["volume"] < 0:
+        errors.append(ValidationError(f"volume não pode ser negativo: {spec['volume']}", f"{path}.volume"))
+
+
 def validate(motion_cfg, path: str = "motion") -> list:
     """Lista de `ValidationError` (vazia = válido)."""
     errors: list = []
@@ -229,6 +249,9 @@ def validate(motion_cfg, path: str = "motion") -> list:
             if key in action and not isinstance(action[key], bool):
                 errors.append(ValidationError(f"{key} precisa ser booleano: "
                                               f"{action[key]!r}", f"{apath}.{key}"))
+
+        if "sfx" in action:
+            _validate_sfx(action["sfx"], f"{apath}.sfx", errors)
 
         if "at" in action:
             _validate_anchor(action["at"], f"{apath}.at", errors)

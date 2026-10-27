@@ -224,6 +224,9 @@ def build_timeline(motion_cfg, *, box, resolution, scene_duration,
             "ease": cfg["ease"],
             "props": sorted(cfg["tracks"].keys()),
             "loop": cfg["loop"],
+            # Efeito sonoro da ação (cru do JSON; None = usar o default do preset).
+            # Quem toca é o SfxMixer — o Motion só informa o instante.
+            "sfx": action.get("sfx"),
         })
 
     # --- visible ----------------------------------------------------------

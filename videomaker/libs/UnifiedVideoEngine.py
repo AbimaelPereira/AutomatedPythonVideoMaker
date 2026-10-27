@@ -321,6 +321,38 @@ def _resolve_motion_timelines(*, scene, elements, boxes, resolution,
     )
 
 
+def _apply_scene_sfx(*, scene, effective_gs, narration_clip, scene_duration,
+                     subtitle_file, scene_dir, scene_id, log_prefix="[UVE]"):
+    """Mistura os efeitos sonoros das animações na narração da cena.
+
+    Devolve o clip de áudio a usar (o original quando a cena não tem SFX). A
+    mistura acontece ANTES do render, então os caminhos ffmpeg e MoviePy recebem
+    o mesmo áudio. Erro de JSON de `motion` sobe (P3); falha de áudio não derruba
+    o render — a cena sai só com a narração.
+    """
+    from libs.Motion.errors import MotionError
+    try:
+        from libs.Audio.SfxMixer import scene_sfx_mix
+        mixed = scene_sfx_mix(
+            scene=scene, effective_gs=effective_gs, scene_duration=float(scene_duration),
+            narration_path=getattr(narration_clip, "filename", None),
+            words=_motion_words(subtitle_file), scene_dir=scene_dir, scene_id=scene_id,
+        )
+    except MotionError:
+        raise
+    except Exception as e:
+        print(f"{log_prefix} ⚠️ SFX ignorado na cena '{scene_id}' ({type(e).__name__}: {e})")
+        return narration_clip
+    if not mixed:
+        return narration_clip
+    try:
+        if narration_clip:
+            narration_clip.close()
+    except Exception:
+        pass
+    return AudioFileClip(mixed)
+
+
 def _try_ffmpeg_scene(*, scene, effective_gs, scene_dir, scene_id, scene_duration,
                       resolution_output, scene_quality, layout_params,
                       subtitle_file, remote_asset_manager, narration_path,
@@ -574,6 +606,13 @@ def _process_scene_worker(scene_data_bundle):
             print(f"[Worker-{scene_index}] Usando duração padrão: {scene_duration}s")
         else:
             print(f"[Worker-{scene_index}] Duração da cena: {scene_duration}s")
+
+        # 3.4 Efeitos sonoros das animações (motion.actions[].sfx / global_settings.sfx)
+        narration_clip = _apply_scene_sfx(
+            scene=scene, effective_gs=effective_gs, narration_clip=narration_clip,
+            scene_duration=scene_duration, subtitle_file=subtitle_file,
+            scene_dir=scene_dir, scene_id=scene_id, log_prefix=f"[Worker-{scene_index}]",
+        )
 
         # 3.5 CAMINHO RÁPIDO (fase 1): compõe a cena inteira em um único
         # filtergraph ffmpeg, sem frames passando pelo Python. Só entra quando
@@ -1895,6 +1934,13 @@ class UnifiedVideoEngine:
                 # 2. Duração
                 scene_duration = scene.get("duration", duration_from_tts)
                 print(f"[UVE] Duração da cena: {scene_duration}s")
+
+                # 2.4 Efeitos sonoros das animações — ver _apply_scene_sfx.
+                narration_clip = _apply_scene_sfx(
+                    scene=scene, effective_gs=effective_gs, narration_clip=narration_clip,
+                    scene_duration=scene_duration, subtitle_file=subtitle_file,
+                    scene_dir=scene_dir, scene_id=scene_id,
+                )
 
                 # 2.5 CAMINHO RÁPIDO (fase 1) — ver nota em _process_scene_worker.
                 _fast_out = os.path.join(scene_dir, f"{scene_id}.mp4")
