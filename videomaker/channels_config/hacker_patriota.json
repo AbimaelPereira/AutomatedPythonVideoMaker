@@ -6,9 +6,20 @@
         },
         "tts": {
             "provider": "edge",
-            "voice": "pt-BR-AntonioNeural",
-            "pitch": "-40Hz",
-            "rate": "+20%"
+            "voice": "fr-FR-RemyMultilingualNeural",
+            "pitch": "-30Hz",
+            "rate": "+10%",
+            "silence_removal": {
+                "enabled": true,
+                "silence_thresh": -38,
+                "min_silence_len": 200,
+                "keep_silence": 40
+            },
+            "voice_fx": {
+                "enabled": true,
+                "pitch_shift": 0.90,
+                "compressor": { "ratio": 8, "threshold_db": -30, "makeup": 3 }
+            }
         },
         "subtitle": {
             "enabled": true,
@@ -33,7 +44,7 @@
         "background": {
             "audio": {
                 "type": "directory",
-                "source": "./assets/audio/background/suspense",
+                "source": "./assets/audio/background/geopolitica",
                 "ducking": {
                     "enabled": true,
                     "ducking_db": -10.0
