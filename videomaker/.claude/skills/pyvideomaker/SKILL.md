@@ -17,7 +17,7 @@ e armadilhas conhecidas. Exemplos prontos e copiáveis ficam em `examples/`.
 | [reference/global_settings.md](reference/global_settings.md) | Ordem de merge (canal → global → capítulo → cena), `deep_merge`, capítulos (`chapters`). |
 | [reference/channels_config.md](reference/channels_config.md) | O que vai em `channels_config/{canal}.json` vs no JSON do vídeo. |
 | [reference/scenes.md](reference/scenes.md) | Campos de cena, merge especial de `background` por cena. |
-| [reference/narration_tts.md](reference/narration_tts.md) | `narration`, providers TTS (edge/google/polly/kokoro/local_file), `silence_removal`. |
+| [reference/narration_tts.md](reference/narration_tts.md) | `narration`, providers TTS (edge/google/polly/kokoro/local_file), `silence_removal`, `voice_fx`. |
 | [reference/background.md](reference/background.md) | `background.visual` (tipos, `fit_mode`, `animation`), `background.audio` (ducking), remote assets. |
 | [reference/ai.md](reference/ai.md) | Geração por IA em fundo, `visual_elements` e thumbnail: formato único (`parameters`), default do canal (`global_settings.ai`), fallback de modelo, cache. |
 | [reference/visual_elements.md](reference/visual_elements.md) | Tipos de overlay (image/video/directory/text_box/color/gradient/remote_asset), `opacity`, `border_radius`, `animation`, `filters`. |

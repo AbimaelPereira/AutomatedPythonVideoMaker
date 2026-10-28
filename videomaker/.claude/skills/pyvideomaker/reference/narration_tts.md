@@ -14,7 +14,8 @@ usado pelas legendas.
 2. `SilenceRemover` detecta e remove silêncios no waveform (se `silence_removal`
    estiver habilitado) — não usa o SRT como guia, o SRT é regravado depois.
 3. `word_boundaries` são remapeados para o novo timeline.
-4. SRT final é gravado com os timestamps ajustados.
+4. `VoiceFx` aplica pitch shift/compressor (se `voice_fx` estiver habilitado).
+5. SRT final é gravado com os timestamps ajustados.
 
 ## Providers (`tts.provider`)
 
@@ -103,6 +104,28 @@ do global, a menos que a cena também declare `provider`):
 `silence_removal` da cena vence o global por completo se presente (não funde
 parâmetro a parâmetro — é um dict só, então `deep_merge` cobre, mas na prática
 normalmente se define o bloco inteiro de uma vez).
+
+## Efeito de voz (`tts.voice_fx`)
+
+Aplicado depois do `silence_removal`, via ffmpeg (`libs/Audio/VoiceFx.py`).
+Preserva a duração — legendas e âncoras de `motion` não mudam.
+
+```jsonc
+"voice_fx": {
+  "enabled": true,
+  "pitch_shift": 0.90,        // < 1 = mais grave, > 1 = mais agudo (1 = desligado)
+  "compressor": {             // ou atalho "compressor": 4 (só ratio)
+    "ratio": 4,               // default 4
+    "threshold_db": -18,      // default -18 dBFS
+    "attack": 20,             // ms, default 20
+    "release": 250,           // ms, default 250
+    "makeup": 1               // ganho linear pós-compressão (1–64), default 1
+  }
+}
+```
+
+Vale para todos os providers, inclusive `local_file`. Cena vence global
+(`deep_merge`).
 
 ## Armadilhas frequentes
 

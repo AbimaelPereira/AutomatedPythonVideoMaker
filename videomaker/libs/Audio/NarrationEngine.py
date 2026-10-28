@@ -8,6 +8,7 @@ from libs.Audio.tts.TTS_Polly import PollyTTS
 from libs.Audio.tts.TTS_GoogleCloud import GoogleCloudTTS
 from libs.Audio.tts.TTS_Kokoro import KokoroTTS
 from libs.Audio.SilenceRemover import SilenceRemover
+from libs.Audio.VoiceFx import VoiceFx
 from libs.Audio.AudioSegmenter import AudioSegmenter
 
 
@@ -28,8 +29,9 @@ class NarrationEngine:
       1. Provider TTS gera áudio bruto + word_boundaries
       2. NarrationEngine aplica SilenceRemover no áudio (detecta silêncios no waveform)
       3. word_boundaries são remapeados para o novo timeline
-      4. SRT é regravado com os timestamps ajustados
-      5. Retorna AudioFileClip, duração e caminho do SRT final
+      4. VoiceFx aplica pitch shift/compressor (opcional, preserva a duração)
+      5. SRT é regravado com os timestamps ajustados
+      6. Retorna AudioFileClip, duração e caminho do SRT final
 
     Providers: "edge" | "polly" | "google" | "local_file"
 
@@ -49,6 +51,14 @@ class NarrationEngine:
 
         # Desabilitado (ou chave ausente = mesmo efeito)
         "silence_removal": { "enabled": false }
+
+    Efeito de voz no JSON (dentro de "tts"):
+
+        "voice_fx": {
+            "enabled": true,
+            "pitch_shift": 0.90,          # < 1 = mais grave
+            "compressor": { "ratio": 4 }  # ou "compressor": 4
+        }
     """
 
     def __init__(self, tts_config: dict, output_base_dir: str):
@@ -56,6 +66,7 @@ class NarrationEngine:
         self.output_base_dir = output_base_dir
         self.provider        = tts_config.get("provider", "edge")
         self.silence_removal = tts_config.get("silence_removal")  # None se ausente
+        self.voice_fx        = tts_config.get("voice_fx")         # None se ausente
 
     # ------------------------------------------------------------------
     # PRÉ-PROCESSAMENTO (narração local via Whisper)
@@ -154,7 +165,10 @@ class NarrationEngine:
             #    Após o corte, remapeia os word_boundaries para o novo timeline.
             tts_result = self._apply_silence_removal(tts_result, audio_basename, silence_removal)
 
-            # 3. Regrava SRT com timestamps finais
+            # 3. Efeito de voz (opcional) — preserva duração, SRT segue válido
+            tts_result["audio_file"] = self._apply_voice_fx(tts_result["audio_file"])
+
+            # 4. Regrava SRT com timestamps finais
             if tts_result.get("word_boundaries"):
                 subtitle_path = self._write_srt(
                     tts_result["word_boundaries"],
@@ -352,6 +366,15 @@ class NarrationEngine:
         tts_result["word_boundaries"] = sr_result["word_boundaries"]
         return tts_result
 
+    def _apply_voice_fx(self, audio_path: str) -> str:
+        """Aplica tts.voice_fx (já resolvido cena > global). Retorna o áudio final."""
+        if not self.voice_fx:
+            return audio_path
+
+        # Grava ao lado, sem sobrescrever — no local_file o original é do usuário
+        output_path = audio_path.rsplit(".", 1)[0] + "_fx.mp3"
+        return VoiceFx.process(audio_path, output_path, self.voice_fx)["audio_path"]
+
     # ------------------------------------------------------------------
     # SRT FINAL
     # ------------------------------------------------------------------
@@ -390,6 +413,8 @@ class NarrationEngine:
                 silence_removal,
             )
             audio_file = tts_result["audio_file"]
+
+        audio_file = self._apply_voice_fx(audio_file)
 
         audio_clip = AudioFileClip(audio_file)
         return audio_clip, float(audio_clip.duration or 4.0), subtitle_file
