@@ -92,6 +92,7 @@ Para comparar os dois caminhos no mesmo JSON:
 
 1. Identifique o **canal** (`channel_name`) — a config base dele em
    `channels_config/{canal}.json` já traz `subtitle`, `background`, `tts` etc.
+   `channel_name` também aceita caminho de arquivo (`/abs/canal.json`).
    O JSON do vídeo só precisa do **delta** (o que muda em relação ao canal).
    Ver [reference/channels_config.md](reference/channels_config.md).
 2. Lembre da **ordem de merge** (cada um sobrescreve o anterior, via `deep_merge`):

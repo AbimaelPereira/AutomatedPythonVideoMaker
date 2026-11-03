@@ -21,7 +21,7 @@ O `main.py` aceita um JSON (objeto único ou lista de objetos) e instancia um
 | Campo | Obrigatório | Descrição |
 |-------|--------------|-----------|
 | `slug` | sim | Nome da pasta em `{output.dir}/{slug}/` e do arquivo final. |
-| `channel_name` | sim | Carrega `channels_config/{channel_name}.json` como base via `deep_merge`. Ver [channels_config.md](channels_config.md). |
+| `channel_name` | sim | Carrega `channels_config/{channel_name}.json` como base via `deep_merge`. Também aceita caminho de arquivo (absoluto ou relativo a `videomaker/`). Ver [channels_config.md](channels_config.md). |
 | `output` | não (default `{"ratio": "9:16", "quality": "high"}`) | Resolução + encoding + `dir` (pasta de saída). Ver [output_quality.md](output_quality.md). |
 | `output_ratio` | não | Retrocompat: equivale a `output.ratio` quando solto na raiz. |
 | `global_settings` | não | Overrides de `tts`, `subtitle`, `background`, `transitions`, `padding_*`. Ver [global_settings.md](global_settings.md). |

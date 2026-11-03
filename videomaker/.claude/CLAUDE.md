@@ -39,7 +39,7 @@ versão do ffmpeg da máquina) e por isso não são versionados.
 
 Cada objeto de vídeo possui:
 - `slug` — nome do arquivo de saída e da pasta dentro de `output/`
-- `channel_name` — carrega `channels_config/{channel_name}.json` como configuração base (mesclado via `deep_merge`)
+- `channel_name` — carrega `channels_config/{channel_name}.json` como configuração base (mesclado via `deep_merge`). Também aceita caminho de arquivo (absoluto ou relativo a `videomaker/`)
 - `output` — objeto raiz da saída: `{ "ratio": ..., "quality": ..., "dir": ... }` (ver abaixo).
   Retrocompat: `output_ratio` solto na raiz ainda é aceito (equivale a `output.ratio`).
   Também pode vir do `channels_config/{canal}.json` (o do vídeo vence campo a campo).

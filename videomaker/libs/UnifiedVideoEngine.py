@@ -12,7 +12,7 @@ import multiprocessing
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from types import SimpleNamespace
 
-from libs.utils import (deep_merge, load_channel_config, resolve_output_resolution,
+from libs.utils import (channel_slug, deep_merge, load_channel_config, resolve_output_resolution,
                         resolve_output_quality, resolve_intermediate_quality,
                         estimate_intermediate_size_gb, check_free_space,
                         USE_INTERMEDIATE_ENCODE, _default_safe_paddings,
@@ -1776,7 +1776,7 @@ class UnifiedVideoEngine:
                 "tags": tags,
                 "category_id": str(yt.get("category_id", "")) or None,
                 "slug": self.video_data.get("slug"),
-                "channel_slug": self.video_data.get("channel_name"),
+                "channel_slug": channel_slug(self.video_data.get("channel_name")),
                 "privacy_status": yt.get("privacy_status"),
                 "thumbnail_path": thumbnail_path,
                 "transcript": transcript,

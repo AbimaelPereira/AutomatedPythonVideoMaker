@@ -24,11 +24,26 @@ def _filter_comment_keys(d: dict) -> dict:
     }
 
 
+def _is_channel_path(channel_name: str) -> bool:
+    return "/" in channel_name or "\\" in channel_name or channel_name.endswith(".json")
+
+
+def channel_slug(channel_name: str | None) -> str | None:
+    """Slug do canal: o próprio nome, ou o nome do arquivo sem .json se for caminho."""
+    if not channel_name or not _is_channel_path(channel_name):
+        return channel_name
+    return os.path.splitext(os.path.basename(channel_name.replace("\\", "/")))[0]
+
+
 def load_channel_config(channel_name: str) -> dict:
-    """Carrega JSON do canal de channels_config/{channel_name}.json.
+    """Carrega o JSON do canal. `channel_name` é um nome (channels_config/{nome}.json)
+    ou um caminho de arquivo (absoluto, ou relativo à raiz de videomaker/).
     Retorna {} se não encontrar. Filtra chaves que terminam com /."""
     base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    channel_file = os.path.join(base_dir, "channels_config", f"{channel_name}.json")
+    if _is_channel_path(channel_name):
+        channel_file = os.path.join(base_dir, os.path.expanduser(channel_name))
+    else:
+        channel_file = os.path.join(base_dir, "channels_config", f"{channel_name}.json")
     if not os.path.exists(channel_file):
         print(f"[utils] Canal '{channel_name}': arquivo não encontrado em {channel_file}")
         return {}

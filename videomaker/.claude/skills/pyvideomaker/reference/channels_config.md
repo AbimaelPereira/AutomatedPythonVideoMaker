@@ -7,6 +7,22 @@ Cada canal tem um arquivo `channels_config/{channel_name}.json` carregado por
 (`deep_merge`) como a **base** de toda a cadeia — o JSON do vídeo só precisa
 declarar o **delta** (o que muda em relação ao canal).
 
+## Config em outro arquivo
+
+`channel_name` também aceita um caminho de arquivo. Valor com `/`, `\` ou
+terminado em `.json` é tratado como caminho:
+
+```json
+"channel_name": "hacker_patriota"                      // channels_config/hacker_patriota.json
+"channel_name": "channels_config/hacker_patriota.json" // relativo a videomaker/
+"channel_name": "/abs/meu_canal.json"                  // absoluto
+```
+
+- Relativo resolve a partir de `videomaker/`, não da pasta do JSON do vídeo.
+- O slug do canal na API é o nome do arquivo sem `.json` (`meu_canal`); o canal
+  precisa existir com esse slug para o vídeo ser vinculado.
+- Arquivo inexistente só gera aviso: o vídeo segue **sem** config do canal.
+
 ## O que tipicamente vai no `channels_config`
 
 Tudo que se repete em todo vídeo do canal: voz/TTS padrão, estilo de legenda,
@@ -68,7 +84,8 @@ o canal — útil para manter providers/vozes alternativos desabilitados:
 
 - **Canal "não encontrado"** → `load_channel_config` resolve o caminho relativo
   à raiz de `videomaker/` (`channels_config/{channel_name}.json`); confira o
-  nome exato do arquivo (sem `.json` no `channel_name`).
+  nome exato do arquivo (sem `.json` no `channel_name`). Valor com `/` ou
+  terminado em `.json` é tratado como caminho (absoluto ou relativo a `videomaker/`).
 - **Override no vídeo não tem efeito** → lembre que listas substituem na
   merge (não fundem); se o canal define uma `palette` de karaokê e o vídeo
   define outra, a do vídeo vence por completo, mesmo que incompleta.
