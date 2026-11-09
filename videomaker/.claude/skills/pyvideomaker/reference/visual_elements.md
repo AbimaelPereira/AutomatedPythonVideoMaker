@@ -219,3 +219,34 @@ Independe de `placement`/stack — aplicado sempre que presente, em graus.
 
 Próximos passos: [placement.md](placement.md) · [filters.md](filters.md) ·
 [background.md](background.md).
+
+## `counter` — número animado (contador)
+
+Um elemento só no lugar de N `text_box`s. Internamente vira um `text_box` por
+valor, cada um com sua janela `visible` (`libs/Counter.py`), então funciona nos
+dois backends, no preview e no `motion`.
+
+```jsonc
+{
+  "type": "counter",
+  "from": 300.51, "to": 89.90,
+  "start": 1.7,              // s ou âncora ({"word": "oitenta"}); default = visible.from (ou 0)
+  "duration": 0.7,
+  "ease": "out_expo",        // nomes do Motion: linear, out_cubic, out_expo…
+  "steps": 7,                // nº de trocas; ausente = a cada quadro (máx. 60 valores)
+  "format": { "prefix": "R$ ", "suffix": "", "decimals": 2, "decimal": ",", "thousands": "." },
+  "sfx": { "source": "assets/sfx/click", "on": "start" },   // "each" = 1 por troca (exige steps)
+  "style": { /* igual ao text_box */ },
+  "placement": { "anchor": ["center", "40%"], "width": "80%" },
+  "visible": { "from": 1.5 },                               // ou dentro de "motion"
+  "actions": [{ "at": 1.7, "duration": 0.5, "preset": "pop_in" }]  // tempos ABSOLUTOS
+}
+```
+
+- Antes de `start` mostra o valor inicial (se visível); depois de `start + duration`, fica no final.
+- Com `steps`, os valores seguem a curva do `ease` (não são saltos iguais).
+- `prefix` e `suffix` podem coexistir (`"R$ "` + `" mil"`).
+- Todos os valores usam a MESMA caixa (união das larguras/alturas) e dígitos tabulares
+  (`style.tabular_nums`, default true no counter): o número não pula nem muda de escala.
+  `style.align` (default `center`) posiciona o texto nessa caixa — use `right` para manter
+  a casa das unidades fixa quando o nº de dígitos muda (300 → 99).

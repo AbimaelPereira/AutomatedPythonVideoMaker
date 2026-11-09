@@ -1,0 +1,64 @@
+{
+  "slug": "exemplo_counter",
+  "output": {
+    "ratio": "9:16",
+    "quality": "high"
+  },
+  "global_settings": {
+    "transitions": {
+      "enabled": false
+    }
+  },
+  "scenes": [
+    {
+      "id": "s1",
+      "duration": 3.5,
+      "background": {
+        "visual": {
+          "type": "color",
+          "source": "#101820"
+        }
+      },
+      "visual_elements": [
+        {
+          "type": "counter",
+          "from": 300.51,
+          "to": 89.9,
+          "start": 0.7,
+          "duration": 0.7,
+          "ease": "out_expo",
+          "steps": 7,
+          "format": {
+            "prefix": "R$ ",
+            "decimals": 2,
+            "decimal": ",",
+            "thousands": "."
+          },
+          "style": {
+            "font_path": "./assets/fonts/Montserrat/Montserrat-Black.ttf",
+            "font_size": 118,
+            "text_color": "#E53935",
+            "background_color": "transparent"
+          },
+          "placement": {
+            "anchor": [
+              "center",
+              "40%"
+            ],
+            "width": "80%"
+          },
+          "visible": {
+            "from": 0.5
+          },
+          "actions": [
+            {
+              "at": 0.5,
+              "duration": 0.5,
+              "preset": "pop_in"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

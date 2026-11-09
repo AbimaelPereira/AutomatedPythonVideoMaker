@@ -79,6 +79,8 @@ class VideoContext:
     @classmethod
     def from_video_data(cls, video_data: dict, *, require_slug: bool = True) -> "VideoContext":
         video_data = copy.deepcopy(video_data)
+        from libs.Counter import expand_video_counters
+        expand_video_counters(video_data)
 
         channel_name = video_data.get("channel_name")
         channel_config = load_channel_config(channel_name) if channel_name else {}

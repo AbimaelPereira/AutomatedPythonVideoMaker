@@ -1000,6 +1000,8 @@ class UnifiedVideoEngine:
     VALID_AUDIO_EXTENSIONS = [".mp3", ".wav", ".ogg", ".m4a", ".flac", ".aac"]
 
     def __init__(self, video_data: dict):
+        from libs.Counter import expand_video_counters
+        expand_video_counters(video_data)   # `counter` → text_boxes (idempotente)
         self.video_data = video_data
 
         # debug: env DEBUG OU "debug": true no JSON.

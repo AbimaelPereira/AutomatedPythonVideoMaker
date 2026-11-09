@@ -294,10 +294,14 @@ class VisualClip:
 
         dummy = ImageDraw.Draw(Image.new("RGBA", (1,1)))
 
-        try:
+        union = _counter_union_bbox(style, font, dummy, features=_text_features(style))
+        if union:
+            w, h = union[2] - union[0], union[3] - union[1]
+        else:
+          try:
             bbox = dummy.textbbox((0,0), content, font=font)
             w, h = bbox[2]-bbox[0], bbox[3]-bbox[1]
-        except Exception:
+          except Exception:
             w, h = dummy.textsize(content, font=font)
 
         pad = style.get("padding", [10, 20]) # [V_pad, H_pad]
@@ -600,6 +604,37 @@ class VisualClip:
 
         return clip
 
+def _counter_union_bbox(style: dict, font, dummy, *, spacing=0, stroke_width=0, features=None):
+    """União das bboxes de todos os valores de um `counter` (`style._counter_values`).
+
+    Todos os pedaços do contador ganham a MESMA caixa e a mesma linha de base:
+    sem isso cada número tem tamanho próprio e o LayoutEngine escala/posiciona
+    cada um de um jeito (o número "pula" a cada troca).
+    """
+    values = style.get("_counter_values")
+    if not values:
+        return None
+    x0 = y0 = float("inf")
+    x1 = y1 = float("-inf")
+    for text in values:
+        b = dummy.multiline_textbbox((0, 0), text, font=font, spacing=spacing,
+                                     stroke_width=stroke_width, features=features)
+        x0, y0 = min(x0, b[0]), min(y0, b[1])
+        x1, y1 = max(x1, b[2]), max(y1, b[3])
+    return (x0, y0, x1, y1)
+
+
+def _text_features(style: dict):
+    """`style.tabular_nums` → dígitos de largura fixa (OpenType `tnum`)."""
+    if not style.get("tabular_nums"):
+        return None
+    try:
+        from PIL import features as _pf
+        return ["tnum"] if _pf.check("raqm") else None
+    except Exception:
+        return None
+
+
 def draw_text_box(data: dict, resolution: tuple):
     """Desenha um `text_box` e devolve a imagem PIL.
 
@@ -622,8 +657,10 @@ def draw_text_box(data: dict, resolution: tuple):
     # Estima a largura nativa para limitar o SS dentro do canvas
     base_font = VisualClip._resolve_font(style, font_size)
     dummy = ImageDraw.Draw(Image.new("RGBA", (1, 1)))
+    text_features = _text_features(style)
     try:
-        bb = dummy.textbbox((0, 0), content, font=base_font)
+        bb = _counter_union_bbox(style, base_font, dummy, features=text_features) or \
+            dummy.textbbox((0, 0), content, font=base_font)
         native_w = (bb[2] - bb[0]) + pad[1] * 2
     except Exception:
         native_w = dummy.textsize(content, font=base_font)[0] + pad[1] * 2
@@ -665,7 +702,7 @@ def draw_text_box(data: dict, resolution: tuple):
     try:
         bbox = dummy.multiline_textbbox(
             (0, 0), content, font=font, spacing=spacing_px, align=align,
-            stroke_width=stroke_width,
+            stroke_width=stroke_width, features=text_features,
         )
         w, h = bbox[2] - bbox[0], bbox[3] - bbox[1]
     except Exception:
@@ -680,6 +717,20 @@ def draw_text_box(data: dict, resolution: tuple):
     blur_pad = int(round(sh_blur * 3)) if has_shadow else 0
     extra_x = (abs(sh_dx) + blur_pad) if has_shadow else 0
     extra_y = (abs(sh_dy) + blur_pad) if has_shadow else 0
+
+    # Caixa fixa do `counter`: mesma largura/altura e linha de base para todos
+    # os valores; o texto é alinhado (style.align) dentro dela.
+    offset_x = 0
+    union = _counter_union_bbox(style, font, dummy, spacing=spacing_px,
+                                stroke_width=stroke_width, features=text_features)
+    if union:
+        text_w = w
+        w, h = union[2] - union[0], union[3] - union[1]
+        if align == "right":
+            offset_x = w - text_w
+        elif align == "center":
+            offset_x = (w - text_w) / 2
+        bbox = (bbox[0], union[1], bbox[2], union[3])
 
     box_w = w + pad_ss[1] * 2 + extra_x * 2
     box_h = h + pad_ss[0] * 2 + extra_y * 2
@@ -696,12 +747,14 @@ def draw_text_box(data: dict, resolution: tuple):
     # 3. Desenhar Texto
     # bbox[0]/bbox[1] compensam o offset interno da fonte (bearing), que em
     # geral é negativo ou pequeno.
-    text_x_pos = pad_ss[1] + extra_x - bbox[0]
+    text_x_pos = pad_ss[1] + extra_x - bbox[0] + offset_x
     text_y_pos = pad_ss[0] + extra_y - bbox[1]
 
     text_color = style.get("text_color", "black")
 
     draw_kwargs = {"font": font, "spacing": spacing_px, "align": align}
+    if text_features:
+        draw_kwargs["features"] = text_features
 
     # 3a. Sombra — desenhada ANTES do texto, numa camada própria para poder
     # ser borrada sem afetar o texto nítido por cima.

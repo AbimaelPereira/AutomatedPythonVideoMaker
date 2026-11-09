@@ -142,9 +142,14 @@ def _stagger_offsets(scene: dict, elements: list) -> list:
         inner = motion.get("stagger_group") if isinstance(motion, dict) else None
         return el.get("stagger_group") or inner
 
-    offsets, counters = [], {}
+    offsets, counters, seen = [], {}, {}
     for el in elements:
         group = group_of(el)
+        # Pedaços do mesmo `counter` (ver libs/Counter.py) são UM elemento.
+        cid = el.get("_counter_id") if isinstance(el, dict) else None
+        if cid is not None and (group, cid) in seen:
+            offsets.append(seen[(group, cid)])
+            continue
         # Sem `stagger_group` na cena, qualquer grupo declarado vale; com ele,
         # só o grupo nomeado é escalonado.
         if group is None or (target_group is not None and group != target_group):
@@ -153,6 +158,8 @@ def _stagger_offsets(scene: dict, elements: list) -> list:
         index = counters.get(group, 0)
         counters[group] = index + 1
         offsets.append(index * step)
+        if cid is not None:
+            seen[(group, cid)] = index * step
     return offsets
 
 

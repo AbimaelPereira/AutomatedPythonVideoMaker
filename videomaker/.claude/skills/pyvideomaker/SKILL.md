@@ -20,7 +20,7 @@ e armadilhas conhecidas. Exemplos prontos e copiáveis ficam em `examples/`.
 | [reference/narration_tts.md](reference/narration_tts.md) | `narration`, providers TTS (edge/google/polly/kokoro/local_file), `silence_removal`, `voice_fx`. |
 | [reference/background.md](reference/background.md) | `background.visual` (tipos, `fit_mode`, `animation`), `background.audio` (ducking), remote assets. |
 | [reference/ai.md](reference/ai.md) | Geração por IA em fundo, `visual_elements` e thumbnail: formato único (`parameters`), default do canal (`global_settings.ai`), fallback de modelo, cache. |
-| [reference/visual_elements.md](reference/visual_elements.md) | Tipos de overlay (image/video/directory/text_box/color/gradient/remote_asset), `opacity`, `border_radius`, `animation`, `filters`. |
+| [reference/visual_elements.md](reference/visual_elements.md) | Tipos de overlay (image/video/directory/text_box/counter/color/gradient/remote_asset), `opacity`, `border_radius`, `animation`, `filters`. |
 | [reference/motion.md](reference/motion.md) | `motion`: keyframes, easing, presets, `visible`, stagger — movimento rico em `visual_elements`. **Substitui `animation` (legado).** |
 | [reference/sync_narracao.md](reference/sync_narracao.md) | Ancorar o movimento na fala (`{"word": …}`, `{"sentence": …}`), escolha da palavra âncora, `on_missing`, loop de iteração (`--timeline-only`). |
 | [reference/placement.md](reference/placement.md) | Bloco `placement` (`anchor`/`width`/`region`) — compartilhado por `visual_elements` e `subtitle`; área segura/paddings. |
@@ -42,6 +42,7 @@ e armadilhas conhecidas. Exemplos prontos e copiáveis ficam em `examples/`.
 | [examples/teste_motion.json](examples/teste_motion.json) | `motion`: presets, keyframes explícitos, `{"after": …}`, `visible`, `zoom`. |
 | [examples/teste_motion_stagger.json](examples/teste_motion_stagger.json) | `stagger` entre elementos de um grupo + `loop` (`float`). |
 | [examples/teste_motion_text_box.json](examples/teste_motion_text_box.json) | `text_box` animado pelo caminho rápido. |
+| [examples/teste_counter.json](examples/teste_counter.json) | `counter` (contador animado R$ 300,51 → 89,90, steps, pop_in). |
 | [examples/teste_motion_narracao.json](examples/teste_motion_narracao.json) | Movimento ancorado em palavras da narração (`{"word": …}`, `{"sentence": …}`). |
 | [examples/teste_motion_rotation_blur.json](examples/teste_motion_rotation_blur.json) | `rotation`, `blur` e `motion` no próprio `background.visual`. |
 | [examples/teste_transitions.json](examples/teste_transitions.json) | Transição global (`zoom`), override por cena (`fade`), desativação por cena. |
@@ -137,7 +138,7 @@ arquivos intermediários ficam em `output/{slug}/` para inspeção (ou em
 - [ ] No karaokê com `palette`: lista completa (não fundirá com a global).
 - [ ] `placement` (se usado) coerente com `output_ratio`/`output.ratio` e com os visuais.
 - [ ] `visual_elements` não usa `type: "ai"` no próprio elemento (só `image`/
-      `video`/`directory`/`text_box`/`color`/`gradient`/`remote_asset`) — IA vai
+      `video`/`directory`/`text_box`/`counter`/`color`/`gradient`/`remote_asset`) — IA vai
       dentro de `source`, ver [reference/visual_elements.md](reference/visual_elements.md).
 - [ ] Todo bloco de IA tem `model`/`width`/`seed`/… **dentro de `parameters`** —
       chave solta aborta o vídeo. Canal com estilo fixo: `global_settings.ai.parameters`

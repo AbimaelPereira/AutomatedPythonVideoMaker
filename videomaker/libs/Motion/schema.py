@@ -206,7 +206,9 @@ def validate(motion_cfg, path: str = "motion") -> list:
                                       f"{path}.actions"))
         return errors
     if not actions:
-        errors.append(ValidationError("actions vazia", f"{path}.actions"))
+        # Só `visible` (sem ações) é válido: janela de exibição pura.
+        if not motion_cfg.get("visible"):
+            errors.append(ValidationError("actions vazia", f"{path}.actions"))
         return errors
 
     names: list = []
