@@ -1,5 +1,5 @@
 """
-Importa os arquivos de videomaker/channels_config/ para o banco de dados.
+Importa as configs de canal (channels_config/ e pastas dos canais) para o banco.
 Rodar uma vez: python seed_channels.py
 """
 import json
@@ -16,7 +16,8 @@ import channels.models  # noqa: F401
 from sqlmodel import SQLModel
 SQLModel.metadata.create_all(engine)
 
-CHANNELS_DIR = Path(__file__).parent.parent / "videomaker" / "channels_config"
+sys.path.insert(0, str(Path(__file__).parent.parent / "videomaker"))
+from libs.utils import channel_config_files  # noqa: E402
 
 DISPLAY_NAMES = {
     "blood_and_paperwork": "Blood & Paperwork",
@@ -25,14 +26,13 @@ DISPLAY_NAMES = {
 }
 
 with Session(engine) as session:
-    for json_file in CHANNELS_DIR.glob("*.json"):
-        slug = json_file.stem
+    for slug, json_file in channel_config_files().items():
         existing = session.exec(select(Channel).where(Channel.slug == slug)).first()
         if existing:
             print(f"  skip  {slug} (já existe)")
             continue
 
-        config = json.loads(json_file.read_text())
+        config = json.loads(Path(json_file).read_text())
         name = DISPLAY_NAMES.get(slug, slug.replace("_", " ").title())
         channel = Channel(slug=slug, name=name, config=json.dumps(config))
         session.add(channel)

@@ -1,6 +1,6 @@
 """Regras das operações de YouTube por canal.
 
-O canal é resolvido SEMPRE pelo `videomaker/channels_config/{slug}.json`, nunca
+O canal é resolvido SEMPRE pelo JSON do canal (`libs.utils.channel_config_files`), nunca
 pela tabela `app_channels`: o seed (`seed_channels.py`) copia o JSON para o
 banco uma única vez e pula o que já existe, então o banco é uma cópia que pode
 estar velha. O JSON é a fonte de verdade — é de onde o próprio pipeline lê.
@@ -14,13 +14,14 @@ import sys
 from pathlib import Path
 
 VIDEOMAKER = Path(__file__).resolve().parent.parent.parent / "videomaker"
-CHANNELS_CONFIG = VIDEOMAKER / "channels_config"
 ANALYTICS_DIR = VIDEOMAKER / "output" / "analytics"
 
 # O videomaker precisa ser importável e os caminhos relativos das suas configs
 # (`tokens/`, `assets/`) partem da pasta dele.
 if str(VIDEOMAKER) not in sys.path:
     sys.path.insert(0, str(VIDEOMAKER))
+
+from libs.utils import channel_config_files  # noqa: E402
 
 
 class CanalNaoEncontrado(Exception):
@@ -31,15 +32,15 @@ class CanalNaoEncontrado(Exception):
 # RESOLUÇÃO DE CANAL
 # ---------------------------------------------------------------------------
 def carregar_config(slug: str) -> dict:
-    """O `channels_config/{slug}.json` inteiro."""
+    """O JSON inteiro do canal."""
     # Barra o path traversal: `slug` vem da URL.
     if not slug or "/" in slug or "\\" in slug or slug.startswith("."):
         raise CanalNaoEncontrado(f"Slug inválido: {slug!r}")
 
-    caminho = CHANNELS_CONFIG / f"{slug}.json"
-    if not caminho.exists():
-        raise CanalNaoEncontrado(f"channels_config/{slug}.json não existe")
-    return json.loads(caminho.read_text())
+    caminho = channel_config_files().get(slug)
+    if not caminho:
+        raise CanalNaoEncontrado(f"Config do canal {slug!r} não encontrada")
+    return json.loads(Path(caminho).read_text())
 
 
 def _limpar_comentarios(d: dict) -> dict:

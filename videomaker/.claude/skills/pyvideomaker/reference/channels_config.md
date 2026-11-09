@@ -19,9 +19,12 @@ terminado em `.json` é tratado como caminho:
 ```
 
 - Relativo resolve a partir de `videomaker/`, não da pasta do JSON do vídeo.
-- O slug do canal na API é o nome do arquivo sem `.json` (`meu_canal`); o canal
-  precisa existir com esse slug para o vídeo ser vinculado.
-- Arquivo inexistente só gera aviso: o vídeo segue **sem** config do canal.
+- O slug também encontra `{CHANNELS_DIR}/{Canal}/credentials/channel_config.json`
+  (default de `CHANNELS_DIR`: `../../Canais`). `Psychology of the Gospel` vira
+  `psychology_of_the_gospel`. Se existir nos dois lugares, `channels_config/` vence.
+- Em outros caminhos, o slug é o nome do arquivo sem `.json` (`meu_canal`). O canal
+  precisa existir no banco com esse slug para o vídeo ser vinculado.
+- Canal inexistente interrompe o render com `FileNotFoundError`.
 
 ## O que tipicamente vai no `channels_config`
 

@@ -1,5 +1,11 @@
+import glob
 import os
 import json
+import re
+import unicodedata
+
+_BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+CHANNEL_CONFIG_FILE = "channel_config.json"
 
 
 def deep_merge(base: dict, override: dict) -> dict:
@@ -28,34 +34,51 @@ def _is_channel_path(channel_name: str) -> bool:
     return "/" in channel_name or "\\" in channel_name or channel_name.endswith(".json")
 
 
+def _slugify(name: str) -> str:
+    ascii_name = unicodedata.normalize("NFKD", name).encode("ascii", "ignore").decode()
+    return re.sub(r"[^a-z0-9]+", "_", ascii_name.lower()).strip("_")
+
+
 def channel_slug(channel_name: str | None) -> str | None:
-    """Slug do canal: o próprio nome, ou o nome do arquivo sem .json se for caminho."""
+    """Slug do canal: o próprio nome, ou derivado do caminho. Em
+    `{Canal}/credentials/channel_config.json` vem da pasta do canal; nos demais
+    caminhos, do nome do arquivo sem .json."""
     if not channel_name or not _is_channel_path(channel_name):
         return channel_name
-    return os.path.splitext(os.path.basename(channel_name.replace("\\", "/")))[0]
+    parts = channel_name.replace("\\", "/").split("/")
+    if parts[-1] == CHANNEL_CONFIG_FILE and len(parts) >= 3 and parts[-2] == "credentials":
+        return _slugify(parts[-3])
+    return os.path.splitext(parts[-1])[0]
+
+
+def channel_config_files() -> dict:
+    """{slug: caminho} de todos os canais: `channels_config/*.json` e
+    `{CHANNELS_DIR}/*/credentials/channel_config.json` (default: `../../Canais`).
+    Se o slug existir nos dois, `channels_config/` vence."""
+    roots = os.getenv("CHANNELS_DIR") or os.path.join(_BASE_DIR, "..", "..", "Canais")
+    files = {
+        channel_slug(path): os.path.normpath(path)
+        for path in glob.glob(os.path.join(glob.escape(roots), "*", "credentials", CHANNEL_CONFIG_FILE))
+    }
+    for path in glob.glob(os.path.join(glob.escape(_BASE_DIR), "channels_config", "*.json")):
+        files[channel_slug(path)] = path
+    return files
 
 
 def load_channel_config(channel_name: str) -> dict:
-    """Carrega o JSON do canal. `channel_name` é um nome (channels_config/{nome}.json)
-    ou um caminho de arquivo (absoluto, ou relativo à raiz de videomaker/).
-    Retorna {} se não encontrar. Filtra chaves que terminam com /."""
-    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    """Carrega o JSON do canal. `channel_name` é um slug ou um caminho de arquivo
+    (absoluto, ou relativo à raiz de videomaker/). Levanta FileNotFoundError se o
+    canal não existir. Filtra chaves que terminam com /."""
     if _is_channel_path(channel_name):
-        channel_file = os.path.join(base_dir, os.path.expanduser(channel_name))
+        channel_file = os.path.join(_BASE_DIR, os.path.expanduser(channel_name))
     else:
-        channel_file = os.path.join(base_dir, "channels_config", f"{channel_name}.json")
-    if not os.path.exists(channel_file):
-        print(f"[utils] Canal '{channel_name}': arquivo não encontrado em {channel_file}")
-        return {}
-    try:
-        with open(channel_file, "r", encoding="utf-8") as f:
-            raw = json.load(f)
-        filtered = _filter_comment_keys(raw)
-        print(f"[utils] Configuração do canal '{channel_name}' carregada.")
-        return filtered
-    except Exception as e:
-        print(f"[utils] Erro ao carregar canal '{channel_name}': {e}")
-        return {}
+        channel_file = channel_config_files().get(channel_name)
+    if not channel_file or not os.path.exists(channel_file):
+        raise FileNotFoundError(f"Config do canal '{channel_name}' não encontrada")
+    with open(channel_file, "r", encoding="utf-8") as f:
+        raw = json.load(f)
+    print(f"[utils] Configuração do canal '{channel_name}' carregada.")
+    return _filter_comment_keys(raw)
 
 
 def resolve_output_resolution(output_ratio: str) -> tuple:
