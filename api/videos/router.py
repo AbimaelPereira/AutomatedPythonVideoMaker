@@ -11,7 +11,7 @@ router = APIRouter()
 
 
 class VideoCreateRequest(BaseModel):
-    youtube_id: str
+    youtube_id: Optional[str] = None
     title: str
     description: Optional[str] = None
     tags: Optional[list[str]] = None
@@ -23,6 +23,7 @@ class VideoCreateRequest(BaseModel):
     thumbnail_path: Optional[str] = None
     duration_seconds: Optional[float] = None
     transcript: Optional[str] = None
+    instagram_media: Optional[list[dict]] = None
 
 
 # Quem chama é o videomaker (um processo), não um usuário com login — por isso

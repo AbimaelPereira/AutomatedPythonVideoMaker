@@ -8,7 +8,7 @@ from videos.models import Video
 def create_video_after_upload(
     session: Session,
     *,
-    youtube_id: str,
+    youtube_id: str | None = None,
     title: str,
     description: str | None = None,
     tags: list[str] | None = None,
@@ -21,12 +21,13 @@ def create_video_after_upload(
     thumbnail_path: str | None = None,
     duration_seconds: float | None = None,
     transcript: str | None = None,
+    instagram_media: list[dict] | None = None,
 ) -> Video:
     if channel_id is None and channel_slug:
         channel = get_by_slug(session, channel_slug)
         channel_id = channel.id if channel else None
 
-    video = get_video_by_youtube_id(session, youtube_id)
+    video = get_video_by_youtube_id(session, youtube_id) if youtube_id else None
     if video is None:
         video = Video(youtube_id=youtube_id)
         session.add(video)
@@ -36,12 +37,19 @@ def create_video_after_upload(
     video.tags = json.dumps(tags, ensure_ascii=False) if tags else None
     video.category_id = category_id
     video.slug = slug
-    video.channel_id = channel_id
+    # Slug sem canal no banco não desfaz um vínculo já existente.
+    if channel_id is not None:
+        video.channel_id = channel_id
     video.privacy_status = privacy_status
     video.published_at = published_at
     video.thumbnail_path = thumbnail_path
     video.duration_seconds = duration_seconds
     video.transcript = transcript
+    if instagram_media:
+        video.instagram_media_ids = json.dumps(instagram_media, ensure_ascii=False)
+        video.instagram_permalink = next(
+            (m.get("permalink") for m in instagram_media if m.get("target") == "feed"),
+            instagram_media[0].get("permalink"))
     video.updated_at = datetime.utcnow()
 
     session.commit()

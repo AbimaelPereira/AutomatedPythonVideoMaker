@@ -29,6 +29,7 @@ e armadilhas conhecidas. Exemplos prontos e copiáveis ficam em `examples/`.
 | [reference/transitions.md](reference/transitions.md) | Transições `zoom`/`fade`, áudio de transição, override por cena. |
 | [reference/output_quality.md](reference/output_quality.md) | `output.ratio`, `output.quality` (presets x264 e override fino), `output.dir` (pasta de saída). |
 | [reference/youtube_upload.md](reference/youtube_upload.md) | Upload: `title`/`tags`/`privacy_status`/`publish_at`, thumbnail (file/directory/ai/scene — composta com background + visual_elements). |
+| [reference/instagram.md](reference/instagram.md) | Instagram: `account`, `targets` (feed/story), `caption`, `cover`; modo imagem (`output.type: "image"`, carrossel). |
 
 ## Exemplos prontos (`examples/`)
 

@@ -46,6 +46,31 @@ Cada objeto de vídeo possui:
 - `global_settings` — sobrescreve os padrões do canal: `tts`, `subtitle`, `background`, `transitions`, `padding_*`, `remote_assets`
 - `scenes` (lista plana) OU `chapters` (agrupado; cada capítulo pode sobrescrever `global_settings` e `background.audio`)
 - `youtube` — title, description, tags, `token_file_name`, `privacy_status`, `publish_at`
+- `instagram` — publicação no Instagram (ver abaixo)
+
+### Instagram (`instagram`) e modo imagem
+
+```jsonc
+"instagram": {
+  "enabled": true,                 // default true se o bloco existe
+  "credentials_json": "/caminho/instagram.json",  // só caminho (abs, ~ ou relativo a videomaker/)
+  "targets": ["feed", "story"],    // feed = REELS (vídeo) / IMAGE; story = STORIES
+  "caption": "texto #hashtag",     // ≤ 2200 chars, ≤ 30 hashtags
+  "share_to_feed": true,
+  "cover": { "thumb_offset_ms": 1000 }   // ou { "url": "https://..." }
+}
+```
+
+- Mesclado canal < vídeo (`deep_merge`); `credentials_json` normalmente no `channels_config`.
+- `credentials_json` **obrigatório** → arquivo `{"user_id", "token", "username"}` (nada vem do `.env`).
+  Sem bloco `instagram` (vídeo ou canal) não publica. Credencial **nunca** no JSON do vídeo. Conferir: `python -m libs.InstagramAccount --check /caminho/instagram.json`.
+- Vídeo: upload resumable direto (`libs/Instagram.py`). Imagem: JPEG → R2 (`ig/{slug}/`) → `image_url` → apaga.
+- Ordem: Instagram → YouTube → TikTok. A pasta de saída só é apagada se **todos** os destinos deram certo.
+- `"output": {"type": "image"}` → `ImagePostEngine`: cada cena vira um PNG (motor do preview, pose de
+  repouso) em `{output}/{slug}/{slug}[_NN].png`. 1 cena → post/story; 2–10 → **carrossel** no feed
+  (story: um story por imagem). Sem TTS/legenda/áudio; texto via `text_box`. YouTube/TikTok ignorados.
+  Limpeza igual ao vídeo: tudo OK → apaga a pasta; falha → mantém só os PNGs finais.
+- Envs: `R2_*` (ver `.env.example`). Token permanente: System User (ver `.claude/plans/instagram_r2.md`).
 
 **Convenção de comentário no JSON**: qualquer chave terminada com `/` (ex: `"tts/"`) é silenciosamente ignorada por `_filter_comment_keys`. Use isso para manter configurações desabilitadas ou alternativas no arquivo.
 

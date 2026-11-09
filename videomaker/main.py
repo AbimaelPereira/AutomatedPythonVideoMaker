@@ -65,8 +65,11 @@ def main():
     for index, video_data in enumerate(video_list):
         print(f"\nIniciando processamento do vídeo {index + 1}/{len(video_list)}...")
         try:
-            engine = UnifiedVideoEngine(video_data)
-            engine.run()
+            from libs.ImagePostEngine import ImagePostEngine, output_type
+            if output_type(video_data) == "image":
+                ImagePostEngine(video_data).run()
+            else:
+                UnifiedVideoEngine(video_data).run()
             print(f"Vídeo {index + 1} concluído com sucesso!")
         except Exception as e:
             print(f"Erro no vídeo {index + 1}: {e}")

@@ -27,6 +27,7 @@ from libs.MediaDownloader import MediaDownloader
 from libs.LayoutEngine import LayoutEngine
 from libs.YouTube import YouTube
 from libs.TikTok import TikTok
+from libs.Instagram import Instagram
 from libs.Background.BackgroundEngine import BackgroundEngine
 from libs.Audio.NarrationEngine import NarrationEngine
 from libs.Transitions.TransitionEngine import TransitionEngine
@@ -1022,6 +1023,9 @@ class UnifiedVideoEngine:
             channel_config.get("youtube", {}),
             video_data.get("youtube", {})
         )
+        ig = deep_merge(channel_config.get("instagram", {}) or {},
+                        video_data.get("instagram", {}) or {})
+        self.instagram_config = ig if ig and ig.get("enabled", True) else None
 
         self.output_config = ctx.output_config
         self.resolution_output = ctx.resolution
@@ -1751,7 +1755,8 @@ class UnifiedVideoEngine:
     # VIDEO RECORD
     # ------------------------------------------------------------------
 
-    def _save_video_record(self, youtube_id: str, thumbnail_path: str | None, scenes: list):
+    def _save_video_record(self, youtube_id: str | None, thumbnail_path: str | None, scenes: list,
+                           instagram_media: list | None = None):
         """Salva o registro do vídeo chamando a API via HTTP."""
         try:
             import requests
@@ -1780,6 +1785,7 @@ class UnifiedVideoEngine:
                 "privacy_status": yt.get("privacy_status"),
                 "thumbnail_path": thumbnail_path,
                 "transcript": transcript,
+                "instagram_media": instagram_media or None,
             }
 
             # A rota exige X-Service-Token (chamada de processo, não de usuário).
@@ -1842,6 +1848,13 @@ class UnifiedVideoEngine:
             if problemas:
                 raise ValueError(
                     "Metadados do YouTube inválidos (corrija antes de renderizar):\n  - "
+                    + "\n  - ".join(problemas))
+
+        if self.instagram_config and self.video_data.get("debug") is not True:
+            problemas = Instagram(params=self.instagram_config).validar()
+            if problemas:
+                raise ValueError(
+                    "Config do Instagram inválida (corrija antes de renderizar):\n  - "
                     + "\n  - ".join(problemas))
 
         # PREPARE: resolve para {output}/{slug}/assets/ os assets visuais (IA,
@@ -2187,6 +2200,24 @@ class UnifiedVideoEngine:
 
         print("[UVE] Debug config: " + str(self.video_data.get("debug", "N/A")))
 
+        # 12a. Upload Instagram (antes do YouTube)
+        instagram_media = []
+        instagram_ok = True
+        if self.instagram_config and self.video_data.get("debug") is not True:
+            try:
+                print("[UVE] Iniciando upload para o Instagram...")
+                ig = Instagram(params=self.instagram_config)
+                problemas = ig.validar(final_path)
+                if problemas:
+                    raise ValueError("; ".join(problemas))
+                results = ig.publish_video(final_path)
+                instagram_media = [{k: r.get(k) for k in ("target", "id", "permalink")}
+                                   for r in results if r["ok"]]
+                instagram_ok = all(r["ok"] for r in results)
+            except Exception as e:
+                instagram_ok = False
+                print(f"[UVE] Upload Instagram falhou: {e}")
+
         # 12. Upload YouTube
         #
         # `upload_ok` decide, lá na etapa 14, se a pasta de saída pode ser
@@ -2217,22 +2248,28 @@ class UnifiedVideoEngine:
                     print(f"[UVE] Enviando thumbnail: {os.path.basename(thumbnail_path)}")
                     youtube_uploader.upload_thumbnail(video_id, thumbnail_path)
 
-                self._save_video_record(video_id, thumbnail_path, scenes)
+                self._save_video_record(video_id, thumbnail_path, scenes, instagram_media)
                 upload_ok = True
             except Exception as e:
                 print(f"[UVE] Upload YouTube falhou: {e}")
                 print("[UVE] O vídeo NÃO foi apagado — corrija o erro acima e "
                       "suba o arquivo final sem re-renderizar.")
 
+        if not self.youtube_config and instagram_media:
+            self._save_video_record(None, None, scenes, instagram_media)
+
         # 12b. Upload TikTok
+        tiktok_ok = True
         tiktok_config = self.video_data.get("tiktok") or self.global_settings.get("tiktok")
         if tiktok_config and self.video_data.get("debug") is not True:
+            tiktok_ok = False
             try:
                 print("[UVE] Iniciando upload para o TikTok...")
                 tiktok_params = tiktok_config.copy()
                 tiktok_params["video_path"] = final_path
                 tiktok_uploader = TikTok(params=tiktok_params)
                 tiktok_uploader.upload()
+                tiktok_ok = True
             except Exception as e:
                 print(f"[UVE] Upload TikTok falhou: {e}")
 
@@ -2264,7 +2301,11 @@ class UnifiedVideoEngine:
             # upload falhou, cai no `else`: mantém o arquivo final e descarta
             # só os intermediários, para o vídeo poder ser reenviado sem
             # re-renderizar.
-            if self.youtube_config and upload_ok:
+            # Só apaga tudo se TODOS os destinos configurados deram certo.
+            has_dest = bool(self.youtube_config or self.instagram_config or tiktok_config)
+            all_ok = (has_dest and instagram_ok and tiktok_ok
+                      and (upload_ok or not self.youtube_config))
+            if all_ok:
                 try:
                     shutil.rmtree(self.output_dir)
                     print(f"[UVE] Pasta de saída removida: {self.output_dir}")
@@ -2287,7 +2328,7 @@ class UnifiedVideoEngine:
                     # o arquivo que acabou de ser movido, e quem lesse o log não
                     # acharia o vídeo.
                     print(f"[UVE] Arquivos temporários removidos, mantendo apenas o final: {preservado}")
-                    if self.youtube_config and not upload_ok:
+                    if has_dest and not all_ok:
                         print(f"[UVE] Upload falhou — o vídeo está preservado em: {preservado}")
                 except Exception as e:
                     print(f"[UVE] Falha ao limpar arquivos temporários: {e}")

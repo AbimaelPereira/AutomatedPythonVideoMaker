@@ -29,6 +29,10 @@ class Video(SQLModel, table=True):
     privacy_status: Optional[str] = Field(default=None)  # public, private, unlisted
     published_at: Optional[datetime] = Field(default=None)
 
+    # Instagram: [{"target","id","permalink"}] serializado
+    instagram_media_ids: Optional[str] = Field(default=None, sa_column=Column(Text))
+    instagram_permalink: Optional[str] = Field(default=None)
+
     # Métricas (preenchidas depois via sync com YouTube Analytics)
     views: Optional[int] = Field(default=None)
     likes: Optional[int] = Field(default=None)

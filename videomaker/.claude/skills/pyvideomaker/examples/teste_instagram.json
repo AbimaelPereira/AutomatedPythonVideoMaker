@@ -1,0 +1,100 @@
+{
+  "slug": "teste_instagram_carrossel",
+  "output": {
+    "ratio": "9:16",
+    "type": "image"
+  },
+  "instagram": {
+    "credentials_json/": "tokens/instagram_lojao.json",
+    "targets": [
+      "feed"
+    ],
+    "caption": "Oferta do dia #promo"
+  },
+  "scenes": [
+    {
+      "id": "s1",
+      "duration": 1.0,
+      "background": {
+        "visual": {
+          "type": "color",
+          "source": "#101820"
+        }
+      },
+      "visual_elements": [
+        {
+          "type": "text_box",
+          "content": "OFERTA DO DIA",
+          "style": {
+            "font_path": "./assets/fonts/Montserrat/Montserrat-Black.ttf",
+            "font_size": 110,
+            "text_color": "#ffffff",
+            "background_color": "transparent"
+          },
+          "placement": {
+            "anchor": [
+              "center",
+              "center"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "s2",
+      "duration": 1.0,
+      "background": {
+        "visual": {
+          "type": "color",
+          "source": "#7a1010"
+        }
+      },
+      "visual_elements": [
+        {
+          "type": "text_box",
+          "content": "SÓ HOJE",
+          "style": {
+            "font_path": "./assets/fonts/Montserrat/Montserrat-Black.ttf",
+            "font_size": 110,
+            "text_color": "#ffffff",
+            "background_color": "transparent"
+          },
+          "placement": {
+            "anchor": [
+              "center",
+              "center"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "s3",
+      "duration": 1.0,
+      "background": {
+        "visual": {
+          "type": "color",
+          "source": "#0f4d1f"
+        }
+      },
+      "visual_elements": [
+        {
+          "type": "text_box",
+          "content": "R$ 49,90",
+          "style": {
+            "font_path": "./assets/fonts/Montserrat/Montserrat-Black.ttf",
+            "font_size": 110,
+            "text_color": "#ffffff",
+            "background_color": "transparent"
+          },
+          "placement": {
+            "anchor": [
+              "center",
+              "center"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
