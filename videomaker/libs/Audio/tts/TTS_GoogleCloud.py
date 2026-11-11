@@ -607,7 +607,7 @@ class GoogleCloudTTS:
 
 if __name__ == "__main__":
     tts = GoogleCloudTTS(params={
-        "credentials_file": "./tokens/tts-automate-videos-20509ec7c438.json",
+        "credentials_file": "./tokens/gcp-videomaker-sa.json",
         "show_usage_report": True,
     })
     tts.usage_report()

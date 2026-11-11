@@ -15,6 +15,7 @@ from subtitle_preview.router import router as subtitle_preview_router
 from thumbnail_preview.router import router as thumbnail_preview_router
 from previews.router import router as previews_router
 from youtube.router import router as youtube_router
+from ai_generation.router import router as ai_generation_router
 import channels.models  # noqa: F401 — garante que a tabela é criada
 import videos.models  # noqa: F401 — garante que a tabela é criada
 
@@ -59,6 +60,7 @@ app.include_router(subtitle_preview_router, prefix="/subtitle-preview", tags=["s
 app.include_router(thumbnail_preview_router, prefix="/thumbnail-preview", tags=["thumbnail-preview"])
 app.include_router(previews_router, prefix="/previews", tags=["previews"])
 app.include_router(youtube_router, prefix="/youtube", tags=["youtube"])
+app.include_router(ai_generation_router, prefix="/ai-generation", tags=["ai-generation"])
 
 
 @app.get("/health")
