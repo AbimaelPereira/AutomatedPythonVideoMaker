@@ -28,6 +28,9 @@ class ThumbnailResult:
 
 def _default_size(video_resolution) -> tuple:
     if video_resolution and video_resolution[0] < video_resolution[1]:
+        w, h = video_resolution
+        if abs(w / h - 2 / 3) < 0.01:
+            return (1000, 1500)
         return _DEFAULT_PORTRAIT
     return _DEFAULT_LANDSCAPE
 
@@ -52,8 +55,12 @@ def _validate_size(cfg: dict, video_resolution, warn) -> tuple:
         if h < 640:
             warn(f"thumbnail: altura {h} < 640; usando {default[0]}x{default[1]}")
             return default
+    elif abs(ratio - 2 / 3) <= (2 / 3) * 0.01:
+        if h < 640:
+            warn(f"thumbnail: altura {h} < 640; usando {default[0]}x{default[1]}")
+            return default
     else:
-        warn(f"thumbnail: proporção {w}x{h} não é 16:9 nem 9:16; usando {default[0]}x{default[1]}")
+        warn(f"thumbnail: proporção {w}x{h} não é 16:9, 9:16 nem 2:3; usando {default[0]}x{default[1]}")
         return default
     return (w, h)
 

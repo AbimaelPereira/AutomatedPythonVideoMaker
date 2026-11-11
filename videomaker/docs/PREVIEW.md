@@ -81,7 +81,7 @@ mudam o código.
 ## Thumbnail
 
 `youtube.thumbnail` com `type: "scene"` usa o mesmo motor (`libs/Thumbnail/Thumbnail.py`,
-`build_thumbnail`). Aceita 16:9 (≥640 de largura) e 9:16 (≥640 de altura);
+`build_thumbnail`). Aceita 16:9 (≥640 de largura), 9:16 e 2:3 (≥640 de altura);
 sem `width`/`height` usa 1280x720 ou 720x1280 pela orientação do vídeo.
 Itens inválidos (`animation`, `motion`, `narration`, `subtitle`, chaves
 desconhecidas, proporção fora do padrão) viram aviso e são ignorados. Saída:

@@ -82,7 +82,8 @@ def load_channel_config(channel_name: str) -> dict:
 
 
 def resolve_output_resolution(output_ratio: str) -> tuple:
-    RESOLUTIONS = {"9:16": (1080, 1920), "16:9": (1920, 1080), "16:9-2k": (2560, 1440), "9:16-2k": (1440, 2560)}
+    RESOLUTIONS = {"9:16": (1080, 1920), "16:9": (1920, 1080), "16:9-2k": (2560, 1440), "9:16-2k": (1440, 2560),
+                   "2:3": (1000, 1500), "2:3-2k": (1440, 2160)}
     return RESOLUTIONS.get(output_ratio, (1080, 1920))
 
 
@@ -186,11 +187,19 @@ def _default_safe_paddings(resolution: tuple) -> dict:
             "padding_top":    int(h * 0.05),   # 1080 → 54
             "padding_bottom": int(h * 0.05),   # 1080 → 54
         }
-    # retrato (9:16) — preserva os defaults históricos
+    # retrato 9:16 — preserva os defaults históricos
+    if abs(w / h - 9 / 16) < 0.01:
+        return {
+            "padding_side":   50,
+            "padding_top":    100,
+            "padding_bottom": 850,
+        }
+    # outros retratos (2:3 etc.) — escala os históricos pela altura (base 1920)
+    k = h / 1920
     return {
         "padding_side":   50,
-        "padding_top":    100,
-        "padding_bottom": 850,
+        "padding_top":    int(100 * k),   # 1500 → 78
+        "padding_bottom": int(850 * k),   # 1500 → 664
     }
 
 

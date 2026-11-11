@@ -78,7 +78,7 @@ Cada objeto de vídeo possui:
 
 ```jsonc
 "output": {
-  "ratio": "16:9-2k",     // "9:16" | "16:9" | "16:9-2k" (2560×1440) | "9:16-2k" (1440×2560)
+  "ratio": "16:9-2k",     // "9:16" | "16:9" | "16:9-2k" (2560×1440) | "9:16-2k" (1440×2560) | "2:3" (1000×1500) | "2:3-2k" (1440×2160)
   "quality": "high",       // preset OU objeto de override fino (ver abaixo)
   "dir": "/mnt/videos"     // opcional: pasta base da saída (default: videomaker/output/)
 }

@@ -64,6 +64,7 @@ _PUNCTUATION = ",.?!;:\"()[]{}<>-—_"
 _RESOLUTIONS = {
     "9:16": (1080, 1920),
     "16:9": (1920, 1080),
+    "2:3": (1000, 1500),
 }
 
 
@@ -71,7 +72,10 @@ def _default_paddings(resolution: tuple) -> dict:
     w, h = resolution
     if w >= h:  # paisagem — ~5% simétrico
         return {"padding_side": int(w * 0.05), "padding_top": int(h * 0.05), "padding_bottom": int(h * 0.05)}
-    return {"padding_side": 50, "padding_top": 100, "padding_bottom": 850}
+    if abs(w / h - 9 / 16) < 0.01:
+        return {"padding_side": 50, "padding_top": 100, "padding_bottom": 850}
+    k = h / 1920  # outros retratos (2:3): escala pela altura
+    return {"padding_side": 50, "padding_top": int(100 * k), "padding_bottom": int(850 * k)}
 
 
 def _resolve_font_path(font_path: Optional[str]) -> str:
@@ -109,7 +113,7 @@ class PaletteItem(BaseModel):
 class SubtitlePreviewRequest(BaseModel):
     type: Literal["classic", "karaoke"] = "classic"
     text: str = "O segredo que ninguém te contou"
-    output_ratio: Literal["9:16", "16:9"] = "9:16"
+    output_ratio: Literal["9:16", "16:9", "2:3"] = "9:16"
     uppercase: bool = True
 
     # Paddings (área segura). None → default por orientação.

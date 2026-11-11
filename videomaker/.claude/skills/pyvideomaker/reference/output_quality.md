@@ -4,7 +4,7 @@
 
 ```jsonc
 "output": {
-  "ratio": "16:9-2k",   // "9:16" | "16:9" | "16:9-2k" (2560x1440) | "9:16-2k" (1440x2560)
+  "ratio": "16:9-2k",   // "9:16" | "16:9" | "16:9-2k" (2560x1440) | "9:16-2k" (1440x2560) | "2:3" (1000x1500) | "2:3-2k" (1440x2160)
   "quality": "high",     // preset OU objeto de override fino
   "dir": "/mnt/videos"   // opcional: onde salvar (default: videomaker/output/)
 }
@@ -25,6 +25,8 @@ repetir em cada JSON.
 | `"16:9"` | 1920×1080 |
 | `"16:9-2k"` | 2560×1440 |
 | `"9:16-2k"` | 1440×2560 |
+| `"2:3"` | 1000×1500 |
+| `"2:3-2k"` | 1440×2160 |
 
 **Retrocompat**: `output_ratio` solto na raiz do JSON ainda é aceito e
 equivale a `output.ratio`.
