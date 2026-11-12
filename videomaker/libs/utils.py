@@ -83,7 +83,9 @@ def load_channel_config(channel_name: str) -> dict:
 
 def resolve_output_resolution(output_ratio: str) -> tuple:
     RESOLUTIONS = {"9:16": (1080, 1920), "16:9": (1920, 1080), "16:9-2k": (2560, 1440), "9:16-2k": (1440, 2560),
-                   "2:3": (1000, 1500), "2:3-2k": (1440, 2160)}
+                   "2:3": (1000, 1500), "2:3-2k": (1440, 2160),
+                   "1:1": (1080, 1080), "1:1-2k": (1440, 1440),
+                   "4:5": (1080, 1350), "4:5-2k": (1440, 1800)}
     return RESOLUTIONS.get(output_ratio, (1080, 1920))
 
 
@@ -181,7 +183,9 @@ def _default_safe_paddings(resolution: tuple) -> dict:
     simétricas de ~5% por não ter zona de legenda dedicada.
     """
     w, h = resolution
-    if w >= h:  # paisagem (16:9 etc.) — margens simétricas de ~5%
+    # paisagem, 1:1 e 4:5 (feed) — margens simétricas de ~5%: sem UI de app
+    # cobrindo o rodapé, a zona de legenda de 850px do 9:16 não faz sentido.
+    if w / h >= 0.79:
         return {
             "padding_side":   int(w * 0.05),   # 1920 → 96
             "padding_top":    int(h * 0.05),   # 1080 → 54

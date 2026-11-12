@@ -4,7 +4,7 @@
 
 ```jsonc
 "output": {
-  "ratio": "16:9-2k",   // "9:16" | "16:9" | "16:9-2k" (2560x1440) | "9:16-2k" (1440x2560) | "2:3" (1000x1500) | "2:3-2k" (1440x2160)
+  "ratio": "16:9-2k",   // "9:16" | "16:9" | "16:9-2k" (2560x1440) | "9:16-2k" (1440x2560) | "2:3" (1000x1500) | "2:3-2k" (1440x2160) | "1:1" (1080x1080) | "1:1-2k" (1440x1440) | "4:5" (1080x1350) | "4:5-2k" (1440x1800)
   "quality": "high",     // preset OU objeto de override fino
   "dir": "/mnt/videos"   // opcional: onde salvar (default: videomaker/output/)
 }
@@ -27,6 +27,13 @@ repetir em cada JSON.
 | `"9:16-2k"` | 1440×2560 |
 | `"2:3"` | 1000×1500 |
 | `"2:3-2k"` | 1440×2160 |
+| `"1:1"` | 1080×1080 (feed Instagram / Telegram) |
+| `"1:1-2k"` | 1440×1440 |
+| `"4:5"` | 1080×1350 (feed Instagram) |
+| `"4:5-2k"` | 1440×1800 |
+
+Ratio desconhecido cai para 1080×1920. 1:1 e 4:5 usam paddings simétricos de ~5%
+(como 16:9), não a zona de legenda de 850px do 9:16 — ver [placement.md](placement.md).
 
 **Retrocompat**: `output_ratio` solto na raiz do JSON ainda é aceito e
 equivale a `output.ratio`.

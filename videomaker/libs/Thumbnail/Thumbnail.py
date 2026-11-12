@@ -26,12 +26,34 @@ class ThumbnailResult:
     warnings: list = field(default_factory=list)
 
 
+# proporção → tamanho default da thumbnail quando o vídeo tem essa proporção.
+SUPPORTED_RATIOS = {
+    "16:9": (16 / 9, _DEFAULT_LANDSCAPE),
+    "9:16": (9 / 16, _DEFAULT_PORTRAIT),
+    "2:3": (2 / 3, (1000, 1500)),
+    "1:1": (1.0, (1080, 1080)),
+    "4:5": (4 / 5, (1080, 1350)),
+}
+
+
+def match_ratio(w, h):
+    """Nome da proporção suportada (tolerância 1%) ou None."""
+    if not w or not h:
+        return None
+    r = w / h
+    for name, (target, _) in SUPPORTED_RATIOS.items():
+        if abs(r - target) <= target * 0.01:
+            return name
+    return None
+
+
 def _default_size(video_resolution) -> tuple:
-    if video_resolution and video_resolution[0] < video_resolution[1]:
-        w, h = video_resolution
-        if abs(w / h - 2 / 3) < 0.01:
-            return (1000, 1500)
-        return _DEFAULT_PORTRAIT
+    if video_resolution:
+        name = match_ratio(*video_resolution)
+        if name:
+            return SUPPORTED_RATIOS[name][1]
+        if video_resolution[0] < video_resolution[1]:
+            return _DEFAULT_PORTRAIT
     return _DEFAULT_LANDSCAPE
 
 
@@ -46,21 +68,14 @@ def _validate_size(cfg: dict, video_resolution, warn) -> tuple:
         warn(f"thumbnail: width/height inválidos ({cfg.get('width')}x{cfg.get('height')}); "
              f"usando {default[0]}x{default[1]}")
         return default
-    ratio = w / h if h else 0
-    if abs(ratio - 16 / 9) <= (16 / 9) * 0.01:
-        if w < 640:
-            warn(f"thumbnail: largura {w} < 640; usando {default[0]}x{default[1]}")
-            return default
-    elif abs(ratio - 9 / 16) <= (9 / 16) * 0.01:
-        if h < 640:
-            warn(f"thumbnail: altura {h} < 640; usando {default[0]}x{default[1]}")
-            return default
-    elif abs(ratio - 2 / 3) <= (2 / 3) * 0.01:
-        if h < 640:
-            warn(f"thumbnail: altura {h} < 640; usando {default[0]}x{default[1]}")
-            return default
-    else:
-        warn(f"thumbnail: proporção {w}x{h} não é 16:9, 9:16 nem 2:3; usando {default[0]}x{default[1]}")
+    name = match_ratio(w, h)
+    if name is None:
+        warn(f"thumbnail: proporção {w}x{h} não é {', '.join(SUPPORTED_RATIOS)}; "
+             f"usando {default[0]}x{default[1]}")
+        return default
+    # lado maior ≥ 640; 1:1 e 4:5 (quase quadrados) também exigem largura ≥ 640.
+    if max(w, h) < 640 or (name in ("1:1", "4:5") and w < 640):
+        warn(f"thumbnail: {w}x{h} pequeno demais (lado < 640); usando {default[0]}x{default[1]}")
         return default
     return (w, h)
 

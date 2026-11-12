@@ -103,7 +103,7 @@ para combinar fundo (IA/imagem) com caixa de texto, degradê e logo.
 
 | Campo | Default | Descrição |
 |-------|---------|-----------|
-| `width` / `height` | `1280` / `720` | Resolução da thumbnail (independente do `output.ratio` do vídeo). |
+| `width` / `height` | `1280` / `720` | Resolução da thumbnail (independente do `output.ratio` do vídeo). Proporções aceitas: 16:9, 9:16, 2:3, 1:1, 4:5 (±1%). Sem width/height, o default segue o vídeo: 1280×720, 720×1280, 1000×1500, 1080×1080 ou 1080×1350. No pipeline, proporção inválida vira aviso e cai no default; no `POST /thumbnail-preview` (e `/background`) retorna **422**. |
 | `background` | herda o global | Mesmos tipos de `background.visual` de uma cena (`ai`, `image`, `color`, `video`, `directory`, `remote_asset`). Omitido → herda o fundo do canal/vídeo. |
 | `visual_elements` | `[]` | Mesmos tipos de overlay de uma cena, incluindo `gradient` e `text_box`. |
 | `padding_*` | por orientação | Área segura da thumbnail. Os paddings do canal só são herdados se a orientação for a mesma do vídeo (um `padding_bottom: 850` de 9:16 colapsaria uma thumb 16:9). |

@@ -41,6 +41,11 @@ def _is_9x16(w, h) -> bool:
     return bool(w and h) and abs(w / h - 9 / 16) < 0.01
 
 
+def _is_feed_image_ratio(w, h) -> bool:
+    """Imagem de feed: 9:16 ou 4:5..1.91:1 (1:1 e 4:5 inclusos)."""
+    return _is_9x16(w, h) or (bool(w and h) and 0.795 <= w / h <= 1.92)
+
+
 class InstagramError(RuntimeError):
     pass
 
@@ -84,8 +89,8 @@ class Instagram:
             from PIL import Image
             with Image.open(path) as im:
                 w, h = im.size
-            if not _is_9x16(w, h):
-                print(f"[Instagram] Aviso: imagem {w}x{h} não é 9:16")
+            if not _is_feed_image_ratio(w, h):
+                print(f"[Instagram] Aviso: imagem {w}x{h} fora de 9:16 / 4:5–1.91:1")
             return problemas
 
         dur, w, h = _probe(path)

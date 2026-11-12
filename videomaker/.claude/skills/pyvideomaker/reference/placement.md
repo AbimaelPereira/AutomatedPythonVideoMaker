@@ -77,6 +77,12 @@ Margem uniforme onde tudo é ancorado (visual via `placement`, legenda via
 |------------|-------------|-----------------|--------------|
 | 9:16 (1080×1920) | 100 | 850 | 50 |
 | 16:9 (1920×1080) | ~54 | ~54 | ~96 (≈5% simétrico) |
+| 1:1 (1080×1080) | 54 | 54 | 54 (≈5% simétrico) |
+| 4:5 (1080×1350) | 67 | 67 | 54 (≈5% simétrico) |
+| 2:3 (1000×1500) | 78 | 664 | 50 (9:16 escalado pela altura) |
+
+Regra: largura/altura ≥ 0,79 (paisagem, 1:1, 4:5) → 5% simétrico; abaixo disso
+→ retrato com zona de legenda inferior.
 
 Sobrescrevíveis em `global_settings` (`padding_top` / `padding_bottom` /
 `padding_side`) — ver [global_settings.md](global_settings.md).

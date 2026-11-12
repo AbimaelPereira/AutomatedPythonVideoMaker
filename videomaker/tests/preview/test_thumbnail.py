@@ -24,9 +24,16 @@ def test_tamanho_padrao_por_orientacao(make_ctx):
 
 
 def test_proporcao_invalida_vira_aviso(make_ctx):
-    r = build_thumbnail(_thumb(width=1000, height=1000), make_ctx({"scenes": []}))
+    r = build_thumbnail(_thumb(width=800, height=600), make_ctx({"scenes": []}))
     assert Image.open(r.path).size == (1280, 720)
     assert any("proporção" in w for w in r.warnings)
+
+
+def test_proporcoes_feed_aceitas(make_ctx):
+    for size in ((1080, 1080), (1080, 1350)):
+        r = build_thumbnail(_thumb(width=size[0], height=size[1]), make_ctx({"scenes": []}))
+        assert Image.open(r.path).size == size
+        assert not any("proporção" in w for w in r.warnings)
 
 
 def test_animacao_ignorada_e_elemento_visivel(make_ctx, red_png):

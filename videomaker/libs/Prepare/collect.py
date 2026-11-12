@@ -38,8 +38,8 @@ def thumbnail_resolution(thumb: dict, video_resolution: tuple) -> tuple:
     w, h = thumb.get("width"), thumb.get("height")
     if w and h:
         return int(w), int(h)
-    vw, vh = video_resolution
-    return (1280, 720) if vw >= vh else (720, 1280)
+    from libs.Thumbnail.Thumbnail import _default_size
+    return _default_size(video_resolution)
 
 
 def _visual_tasks(visual: dict, scene_id: str, element_path: str, gs: dict,

@@ -138,6 +138,8 @@ const SIZE_PRESETS = [
   { value: '1920x1080', label: 'Full HD 16:9 — 1920×1080' },
   { value: '1080x1920', label: 'Shorts 9:16 — 1080×1920' },
   { value: '1000x1500', label: 'Pinterest 2:3 — 1000×1500' },
+  { value: '1080x1080', label: 'Quadrado 1:1 — 1080×1080' },
+  { value: '1080x1350', label: 'Feed Instagram 4:5 — 1080×1350' },
 ]
 
 // ----------------------------------------------------------------------

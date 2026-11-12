@@ -29,7 +29,7 @@ interface PaletteItem {
 interface State {
   type: 'classic' | 'karaoke'
   text: string
-  output_ratio: '9:16' | '16:9' | '2:3'
+  output_ratio: '9:16' | '16:9' | '2:3' | '1:1' | '4:5'
   uppercase: boolean
   // posicionamento
   use_placement: boolean
@@ -96,6 +96,8 @@ const PADDINGS_DEFAULT: Record<string, { side: number; top: number; bottom: numb
   '9:16': { side: 50, top: 100, bottom: 850 },
   '16:9': { side: 96, top: 54, bottom: 54 },
   '2:3': { side: 50, top: 78, bottom: 664 },
+  '1:1': { side: 54, top: 54, bottom: 54 },
+  '4:5': { side: 54, top: 67, bottom: 67 },
 }
 
 /** CaseMode → bool|null para a API (None = herda o global). */
@@ -242,7 +244,7 @@ export default function SubtitlePreviewPage() {
           <div className="grid grid-cols-2 gap-3">
             <Select label="Tipo" options={[{ value: 'classic', label: 'Classic' }, { value: 'karaoke', label: 'Karaokê' }]}
               value={s.type} onChange={v => set('type', (v as State['type']) ?? 'classic')} isClearable={false} isSearchable={false} />
-            <Select label="Orientação" options={[{ value: '9:16', label: '9:16 (vertical)' }, { value: '16:9', label: '16:9 (horizontal)' }, { value: '2:3', label: '2:3 (vertical longa)' }]}
+            <Select label="Orientação" options={[{ value: '9:16', label: '9:16 (vertical)' }, { value: '16:9', label: '16:9 (horizontal)' }, { value: '2:3', label: '2:3 (vertical longa)' }, { value: '1:1', label: '1:1 (quadrado)' }, { value: '4:5', label: '4:5 (feed Instagram)' }]}
               value={s.output_ratio} onChange={v => setRatio((v as State['output_ratio']) ?? '9:16')} isClearable={false} isSearchable={false} />
           </div>
 

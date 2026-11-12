@@ -109,7 +109,32 @@ _RESOLUTIONS = {
     "9:16-2k": (1440, 2560),
     "2:3": (1000, 1500),
     "2:3-2k": (1440, 2160),
+    "1:1": (1080, 1080),
+    "1:1-2k": (1440, 1440),
+    "4:5": (1080, 1350),
+    "4:5-2k": (1440, 1800),
 }
+
+# Proporções aceitas para width/height (tolerância 1%). Fora delas → 422, em vez
+# do fallback silencioso do motor para o tamanho default.
+_SUPPORTED_RATIOS = {"16:9": 16 / 9, "9:16": 9 / 16, "2:3": 2 / 3, "1:1": 1.0, "4:5": 4 / 5}
+
+
+def _check_size(width: int, height: int) -> None:
+    if width < 16 or height < 16 or width > 4096 or height > 4096:
+        raise HTTPException(status_code=422,
+                            detail="width/height devem estar entre 16 e 4096")
+    r = width / height
+    if not any(abs(r - t) <= t * 0.01 for t in _SUPPORTED_RATIOS.values()):
+        raise HTTPException(
+            status_code=422,
+            detail=f"proporção {width}x{height} não suportada; use "
+                   f"{', '.join(_SUPPORTED_RATIOS)} (ex.: 1280x720, 1080x1920, "
+                   f"1000x1500, 1080x1080, 1080x1350)",
+        )
+    if max(width, height) < 640 or (r >= 0.79 and width < 640):
+        raise HTTPException(status_code=422,
+                            detail=f"{width}x{height} pequeno demais (mínimo 640 no lado de referência)")
 
 
 class ThumbnailPreviewRequest(BaseModel):
@@ -197,9 +222,7 @@ def generate_background(
     no texto): o painel gera o fundo uma vez e referencia por `background_id`
     nas renderizações seguintes.
     """
-    if body.width < 16 or body.height < 16 or body.width > 4096 or body.height > 4096:
-        raise HTTPException(status_code=422,
-                            detail="width/height devem estar entre 16 e 4096")
+    _check_size(body.width, body.height)
 
     os.makedirs(_BACKGROUNDS_DIR, exist_ok=True)
     _purge_expired_backgrounds()
@@ -254,9 +277,7 @@ def preview_thumbnail(
     body: ThumbnailPreviewRequest,
     current_user: User = Depends(get_current_user),
 ):
-    if body.width < 16 or body.height < 16 or body.width > 4096 or body.height > 4096:
-        raise HTTPException(status_code=422,
-                            detail="width/height devem estar entre 16 e 4096")
+    _check_size(body.width, body.height)
 
     # Um fundo já gerado vence o `background` declarado: é exatamente a imagem
     # que o usuário aprovou no painel, e reusá-la evita regerar IA a cada tecla.
@@ -278,6 +299,10 @@ def preview_thumbnail(
             detail="informe ao menos `background` ou `visual_elements`",
         )
 
+    if body.output_ratio and body.output_ratio not in _RESOLUTIONS:
+        raise HTTPException(status_code=422,
+                            detail=f"output_ratio '{body.output_ratio}' não suportado; "
+                                   f"use {', '.join(_RESOLUTIONS)}")
     video_resolution = _RESOLUTIONS.get(body.output_ratio) if body.output_ratio else None
 
     work_root = tempfile.mkdtemp(prefix="thumb_preview_")
