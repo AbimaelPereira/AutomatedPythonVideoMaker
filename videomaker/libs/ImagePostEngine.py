@@ -1,6 +1,6 @@
-"""`output.type: "image"`: cada cena vira um PNG (motor do preview) e é publicada no Instagram.
+"""`output.type: "image"`: cada cena vira um PNG (motor do preview) e é publicada no Instagram e/ou R2.
 
-1 cena → post/story simples; 2–10 cenas → carrossel no feed (story: um por imagem).
+1 cena → post/story simples; 2–20 cenas → carrossel no feed (story: um por imagem).
 Pula TTS, legenda, transições, concat e áudio. YouTube/TikTok são ignorados.
 Limpeza igual ao vídeo: tudo OK → apaga a pasta; falha → mantém só os PNGs finais.
 """
@@ -24,13 +24,14 @@ class ImagePostEngine:
         self.debug = (os.getenv("DEBUG", "0").lower() in ("true", "1", "t")
                       or video_data.get("debug") is True)
         self.ctx = VideoContext.from_video_data(video_data)
-        ig = deep_merge(self.ctx.channel_config.get("instagram", {}) or {},
-                        video_data.get("instagram", {}) or {})
-        self.instagram_config = ig if ig and ig.get("enabled", True) else None
+        from libs.Uploads import resolve_uploads
+        self.uploads = resolve_uploads(self.ctx.channel_config, video_data, self.ctx.global_settings)
+        self.instagram_config = self.uploads.get("instagram")
+        self.r2_config = self.uploads.get("r2")
 
     def _warn_ignored(self):
         for k in ("youtube", "tiktok"):
-            if self.video_data.get(k) or self.ctx.channel_config.get(k) or self.ctx.global_settings.get(k):
+            if k in self.uploads:
                 print(f"[ImagePost] Aviso: '{k}' ignorado no modo imagem")
         for i, scene in enumerate(self.ctx.scenes):
             gs = scene.get("_effective_gs") or {}
@@ -70,9 +71,15 @@ class ImagePostEngine:
         from libs.Instagram import CAROUSEL_MAX, Instagram
         from libs.Preview.PreviewEngine import PreviewEngine
 
-        publish = bool(self.instagram_config) and not self.debug
+        publish = bool(self.instagram_config or self.r2_config) and not self.debug
         n = len(self.ctx.scenes)
-        if publish:
+        if publish and self.r2_config:
+            from libs.Uploads import validate_r2
+            problemas = validate_r2(self.r2_config, slug=self.ctx.slug,
+                                    channel_name=self.video_data.get("channel_name"))
+            if problemas:
+                raise ValueError("Config do R2 inválida:\n  - " + "\n  - ".join(problemas))
+        if publish and self.instagram_config:
             ig = Instagram(params=self.instagram_config)
             problemas = ig.validar()
             if "feed" in ig.targets() and n > CAROUSEL_MAX:
@@ -91,15 +98,26 @@ class ImagePostEngine:
         if not publish:
             return finals
 
-        all_ok = False
-        try:
-            for f in finals:
-                problemas = ig.validar(f, kind="image")
-                if problemas:
-                    raise ValueError(f"{os.path.basename(f)}: " + "; ".join(problemas))
-            results = ig.publish_images(finals, slug=self.ctx.slug)
-            all_ok = bool(results) and all(r["ok"] for r in results)
-        except Exception as e:
-            print(f"[ImagePost] Publicação falhou: {e}")
-        self._cleanup(finals, all_ok)
+        ig_ok = r2_ok = True
+        if self.instagram_config:
+            ig_ok = False
+            try:
+                for f in finals:
+                    problemas = ig.validar(f, kind="image")
+                    if problemas:
+                        raise ValueError(f"{os.path.basename(f)}: " + "; ".join(problemas))
+                results = ig.publish_images(finals, slug=self.ctx.slug)
+                ig_ok = bool(results) and all(r["ok"] for r in results)
+            except Exception as e:
+                print(f"[ImagePost] Publicação no Instagram falhou: {e}")
+        if self.r2_config:
+            r2_ok = False
+            try:
+                from libs.Uploads import upload_r2
+                upload_r2(self.r2_config, finals, slug=self.ctx.slug,
+                          channel_name=self.video_data.get("channel_name"))
+                r2_ok = True
+            except Exception as e:
+                print(f"[ImagePost] Upload R2 falhou: {e}")
+        self._cleanup(finals, ig_ok and r2_ok)
         return finals

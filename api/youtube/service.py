@@ -22,6 +22,7 @@ if str(VIDEOMAKER) not in sys.path:
     sys.path.insert(0, str(VIDEOMAKER))
 
 from libs.utils import channel_config_files  # noqa: E402
+from libs.Uploads import upload_config  # noqa: E402
 
 
 class CanalNaoEncontrado(Exception):
@@ -59,7 +60,7 @@ def montar_params(slug: str, overrides: dict | None = None) -> dict:
     `token_file_name` sem caminho (ex. "the_touchline_record.json") seria
     procurado em `api/tokens/` e nunca encontrado.
     """
-    base = _limpar_comentarios(carregar_config(slug).get("youtube", {}))
+    base = _limpar_comentarios(upload_config("youtube", carregar_config(slug), None))
     if overrides:
         base.update({k: v for k, v in overrides.items() if v is not None})
     base.setdefault("token_dir", str(VIDEOMAKER / "tokens"))
@@ -90,7 +91,7 @@ def _credenciais(slug: str):
 def canal_id(slug: str) -> str:
     """O ID do canal: o declarado na config, ou o dono do token."""
     cfg = carregar_config(slug)
-    declarado = (cfg.get("youtube") or {}).get("channel_id") or cfg.get("channel_id")
+    declarado = upload_config("youtube", cfg, None).get("channel_id") or cfg.get("channel_id")
     if declarado:
         return declarado
 

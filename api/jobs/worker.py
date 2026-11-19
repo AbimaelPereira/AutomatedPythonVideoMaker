@@ -73,9 +73,12 @@ def _output_curto(resultado: dict) -> str:
 
 
 def _run_video_job(config: dict):
+    from libs.ImagePostEngine import ImagePostEngine, output_type
+    if output_type(config) == "image":
+        ImagePostEngine(config).run()
+        return
     from libs.UnifiedVideoEngine import UnifiedVideoEngine
-    engine = UnifiedVideoEngine(config)
-    engine.run()
+    UnifiedVideoEngine(config).run()
 
 
 def _run_youtube_upload_job(config: dict) -> dict:

@@ -90,8 +90,8 @@ def collect_tasks(ctx, scene_indexes=None, include_thumbnail: bool = False,
                 if scene_indexes is None or s["_index"] in set(scene_indexes)]
     thumb = None
     if include_thumbnail:
-        yt = deep_merge((ctx.channel_config or {}).get("youtube", {}) or {},
-                        ctx.video_data.get("youtube", {}) or {})
+        from libs.Uploads import upload_config
+        yt = upload_config("youtube", ctx.channel_config, ctx.video_data)
         cand = thumbnail_cfg if thumbnail_cfg is not None else yt.get("thumbnail")
         if isinstance(cand, dict) and cand.get("type") == "scene":
             thumb = cand

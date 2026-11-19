@@ -28,6 +28,7 @@ e armadilhas conhecidas. Exemplos prontos e copiáveis ficam em `examples/`.
 | [reference/filters.md](reference/filters.md) | `light_leak`, `particles`, `brightness_pulse`, `light_sweep` — `overlay` vs `modifier`. |
 | [reference/transitions.md](reference/transitions.md) | Transições `zoom`/`fade`, áudio de transição, override por cena. |
 | [reference/output_quality.md](reference/output_quality.md) | `output.ratio`, `output.quality` (presets x264 e override fino), `output.dir` (pasta de saída). |
+| [reference/uploads.md](reference/uploads.md) | Bloco `uploads` (youtube/instagram/tiktok/r2 juntos), `enabled: false`, legado na raiz, Cloudflare R2 (`prefix`, `video`, `thumbnail`). |
 | [reference/youtube_upload.md](reference/youtube_upload.md) | Upload: `title`/`tags`/`privacy_status`/`publish_at`, thumbnail (file/directory/ai/scene — composta com background + visual_elements). |
 | [reference/instagram.md](reference/instagram.md) | Instagram: `account`, `targets` (feed/story), `caption`, `cover`; modo imagem (`output.type: "image"`, carrossel). |
 
@@ -109,8 +110,8 @@ Para comparar os dois caminhos no mesmo JSON:
 
 ## ⚠️ Antes de rodar um JSON de teste
 
-**O upload para o YouTube não depende de haver bloco `youtube` no JSON do
-vídeo** — o `youtube_config` pode vir inteiro do `channels_config/{canal}.json`.
+**O upload não depende de haver bloco `uploads`/`youtube` no JSON do
+vídeo** — os destinos podem vir inteiros do `channels_config/{canal}.json`.
 Ou seja: rodar um JSON de teste de um canal configurado **publica um vídeo**.
 
 Para testar sem publicar, use **qualquer um** dos dois:

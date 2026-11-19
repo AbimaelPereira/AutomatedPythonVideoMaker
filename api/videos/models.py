@@ -33,6 +33,9 @@ class Video(SQLModel, table=True):
     instagram_media_ids: Optional[str] = Field(default=None, sa_column=Column(Text))
     instagram_permalink: Optional[str] = Field(default=None)
 
+    # Cloudflare R2: [{"key","url"}] serializado
+    r2_files: Optional[str] = Field(default=None, sa_column=Column(Text))
+
     # Métricas (preenchidas depois via sync com YouTube Analytics)
     views: Optional[int] = Field(default=None)
     likes: Optional[int] = Field(default=None)

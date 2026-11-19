@@ -24,6 +24,7 @@ class VideoCreateRequest(BaseModel):
     duration_seconds: Optional[float] = None
     transcript: Optional[str] = None
     instagram_media: Optional[list[dict]] = None
+    r2_files: Optional[list[dict]] = None
 
 
 # Quem chama é o videomaker (um processo), não um usuário com login — por isso

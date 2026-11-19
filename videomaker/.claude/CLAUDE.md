@@ -45,8 +45,12 @@ Cada objeto de vídeo possui:
   Também pode vir do `channels_config/{canal}.json` (o do vídeo vence campo a campo).
 - `global_settings` — sobrescreve os padrões do canal: `tts`, `subtitle`, `background`, `transitions`, `padding_*`, `remote_assets`
 - `scenes` (lista plana) OU `chapters` (agrupado; cada capítulo pode sobrescrever `global_settings` e `background.audio`)
-- `youtube` — title, description, tags, `token_file_name`, `privacy_status`, `publish_at`
-- `instagram` — publicação no Instagram (ver abaixo)
+- `uploads.youtube` (ou `youtube` na raiz, legado) — title, description, tags, `token_file_name`, `privacy_status`, `publish_at`
+- `uploads` — destinos de upload: `{ "youtube", "instagram", "tiktok", "r2" }` (resolvidos em `libs/Uploads.py`).
+  Canal < vídeo via `deep_merge`; `"enabled": false` desliga um destino herdado; `youtube`/`instagram`/`tiktok`/`r2`
+  na raiz (legado) continuam aceitos. R2: `{ "prefix": "videos/{channel}/{slug}", "video": true, "thumbnail": true }`
+  sobe MP4/thumbnail (ou os PNGs no modo imagem); URLs em `app_videos.r2_files`. Ver `.claude/skills/pyvideomaker/reference/uploads.md`.
+- `uploads.instagram` — publicação no Instagram (ver abaixo)
 
 ### Instagram (`instagram`) e modo imagem
 
@@ -65,10 +69,10 @@ Cada objeto de vídeo possui:
 - `credentials_json` **obrigatório** → arquivo `{"user_id", "token", "username"}` (nada vem do `.env`).
   Sem bloco `instagram` (vídeo ou canal) não publica. Credencial **nunca** no JSON do vídeo. Conferir: `python -m libs.InstagramAccount --check /caminho/instagram.json`.
 - Vídeo: upload resumable direto (`libs/Instagram.py`). Imagem: JPEG → R2 (`ig/{slug}/`) → `image_url` → apaga.
-- Ordem: Instagram → YouTube → TikTok. A pasta de saída só é apagada se **todos** os destinos deram certo.
+- Ordem: Instagram → YouTube → R2 → TikTok. A pasta de saída só é apagada se **todos** os destinos deram certo.
 - `"output": {"type": "image"}` → `ImagePostEngine`: cada cena vira um PNG (motor do preview, pose de
-  repouso) em `{output}/{slug}/{slug}[_NN].png`. 1 cena → post/story; 2–10 → **carrossel** no feed
-  (story: um story por imagem). Sem TTS/legenda/áudio; texto via `text_box`. YouTube/TikTok ignorados.
+  repouso) em `{output}/{slug}/{slug}[_NN].png`. 1 cena → post/story; 2–20 → **carrossel** no feed
+  (story: um story por imagem). Sem TTS/legenda/áudio; texto via `text_box`. Publica em Instagram e/ou R2; YouTube/TikTok ignorados.
   Limpeza igual ao vídeo: tudo OK → apaga a pasta; falha → mantém só os PNGs finais.
 - Envs: `R2_*` (ver `.env.example`). Token permanente: System User (ver `.claude/plans/instagram_r2.md`).
 

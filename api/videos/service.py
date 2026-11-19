@@ -22,6 +22,7 @@ def create_video_after_upload(
     duration_seconds: float | None = None,
     transcript: str | None = None,
     instagram_media: list[dict] | None = None,
+    r2_files: list[dict] | None = None,
 ) -> Video:
     if channel_id is None and channel_slug:
         channel = get_by_slug(session, channel_slug)
@@ -50,6 +51,8 @@ def create_video_after_upload(
         video.instagram_permalink = next(
             (m.get("permalink") for m in instagram_media if m.get("target") == "feed"),
             instagram_media[0].get("permalink"))
+    if r2_files:
+        video.r2_files = json.dumps(r2_files, ensure_ascii=False)
     video.updated_at = datetime.utcnow()
 
     session.commit()

@@ -1021,13 +1021,15 @@ class UnifiedVideoEngine:
         channel_config = ctx.channel_config
         self.global_settings = ctx.global_settings
 
-        self.youtube_config = deep_merge(
-            channel_config.get("youtube", {}),
-            video_data.get("youtube", {})
-        )
-        ig = deep_merge(channel_config.get("instagram", {}) or {},
-                        video_data.get("instagram", {}) or {})
-        self.instagram_config = ig if ig and ig.get("enabled", True) else None
+        # Destinos de upload (bloco `uploads`, ou legado na raiz). Ver libs/Uploads.py.
+        from libs.Uploads import resolve_uploads, upload_config
+        self.uploads = resolve_uploads(channel_config, video_data, self.global_settings)
+        self.youtube_config = self.uploads.get("youtube") or {}
+        self.instagram_config = self.uploads.get("instagram")
+        self.tiktok_config = self.uploads.get("tiktok")
+        self.r2_config = self.uploads.get("r2")
+        # Metadados do YouTube (título/thumbnail) mesmo com upload desligado.
+        self.youtube_meta = upload_config("youtube", channel_config, video_data)
 
         self.output_config = ctx.output_config
         self.resolution_output = ctx.resolution
@@ -1758,7 +1760,7 @@ class UnifiedVideoEngine:
     # ------------------------------------------------------------------
 
     def _save_video_record(self, youtube_id: str | None, thumbnail_path: str | None, scenes: list,
-                           instagram_media: list | None = None):
+                           instagram_media: list | None = None, r2_files: list | None = None):
         """Salva o registro do vídeo chamando a API via HTTP."""
         try:
             import requests
@@ -1771,7 +1773,7 @@ class UnifiedVideoEngine:
                 if scene.get("narration", {}).get("text")
             ) or None
 
-            yt = self.youtube_config
+            yt = self.youtube_config or self.youtube_meta or {}
             tags = yt.get("tags") or []
             if isinstance(tags, str):
                 tags = [t.strip() for t in tags.split(",")]
@@ -1788,6 +1790,7 @@ class UnifiedVideoEngine:
                 "thumbnail_path": thumbnail_path,
                 "transcript": transcript,
                 "instagram_media": instagram_media or None,
+                "r2_files": r2_files or None,
             }
 
             # A rota exige X-Service-Token (chamada de processo, não de usuário).
@@ -1837,7 +1840,7 @@ class UnifiedVideoEngine:
         # cena preta. Ver libs/AIProviders/params.py.
         if AI_AVAILABLE:
             from libs.AIProviders.params import validate_video_ai_blocks
-            validate_video_ai_blocks(scenes, (self.youtube_config or {}).get("thumbnail"))
+            validate_video_ai_blocks(scenes, (self.youtube_meta or {}).get("thumbnail"))
 
         # Metadados do YouTube também são checados AQUI, não no upload. Título
         # com 104 chars, tags estourando 500 ou token OAuth ausente só
@@ -1857,6 +1860,15 @@ class UnifiedVideoEngine:
             if problemas:
                 raise ValueError(
                     "Config do Instagram inválida (corrija antes de renderizar):\n  - "
+                    + "\n  - ".join(problemas))
+
+        if self.r2_config and self.video_data.get("debug") is not True:
+            from libs.Uploads import validate_r2
+            problemas = validate_r2(self.r2_config, slug=self.video_data.get("slug"),
+                                    channel_name=self.video_data.get("channel_name"))
+            if problemas:
+                raise ValueError(
+                    "Config do R2 inválida (corrija antes de renderizar):\n  - "
                     + "\n  - ".join(problemas))
 
         # PREPARE: resolve para {output}/{slug}/assets/ os assets visuais (IA,
@@ -2229,6 +2241,8 @@ class UnifiedVideoEngine:
         # um `invalidTags` (as tags somavam 547 chars; o teto é 500), e o MP4
         # não vai para a lixeira, porque `shutil.rmtree` apaga direto.
         upload_ok = False
+        video_id = None
+        thumbnail_path = None
         if self.youtube_config and self.video_data.get("debug") is not True:
             try:
                 print("[UVE] Iniciando upload para o YouTube...")
@@ -2250,19 +2264,34 @@ class UnifiedVideoEngine:
                     print(f"[UVE] Enviando thumbnail: {os.path.basename(thumbnail_path)}")
                     youtube_uploader.upload_thumbnail(video_id, thumbnail_path)
 
-                self._save_video_record(video_id, thumbnail_path, scenes, instagram_media)
                 upload_ok = True
             except Exception as e:
                 print(f"[UVE] Upload YouTube falhou: {e}")
                 print("[UVE] O vídeo NÃO foi apagado — corrija o erro acima e "
                       "suba o arquivo final sem re-renderizar.")
 
-        if not self.youtube_config and instagram_media:
-            self._save_video_record(None, None, scenes, instagram_media)
+        # 12b. Upload R2 (vídeo final + thumbnail do YouTube, se houver)
+        r2_files = []
+        r2_ok = True
+        if self.r2_config and self.video_data.get("debug") is not True:
+            r2_ok = False
+            try:
+                print("[UVE] Iniciando upload para o R2...")
+                from libs.Uploads import upload_r2
+                files = []
+                if self.r2_config.get("video", True):
+                    files.append(final_path)
+                if self.r2_config.get("thumbnail", True) and thumbnail_path:
+                    files.append(thumbnail_path)
+                r2_files = upload_r2(self.r2_config, files, slug=self.video_data.get("slug"),
+                                     channel_name=self.video_data.get("channel_name"))
+                r2_ok = True
+            except Exception as e:
+                print(f"[UVE] Upload R2 falhou: {e}")
 
-        # 12b. Upload TikTok
+        # 12c. Upload TikTok
         tiktok_ok = True
-        tiktok_config = self.video_data.get("tiktok") or self.global_settings.get("tiktok")
+        tiktok_config = self.tiktok_config
         if tiktok_config and self.video_data.get("debug") is not True:
             tiktok_ok = False
             try:
@@ -2274,6 +2303,9 @@ class UnifiedVideoEngine:
                 tiktok_ok = True
             except Exception as e:
                 print(f"[UVE] Upload TikTok falhou: {e}")
+
+        if video_id or instagram_media or r2_files:
+            self._save_video_record(video_id, thumbnail_path, scenes, instagram_media, r2_files)
 
         # 13. Abrir vídeo (debug)
         if self.video_data.get("debug") is True:
@@ -2304,8 +2336,8 @@ class UnifiedVideoEngine:
             # só os intermediários, para o vídeo poder ser reenviado sem
             # re-renderizar.
             # Só apaga tudo se TODOS os destinos configurados deram certo.
-            has_dest = bool(self.youtube_config or self.instagram_config or tiktok_config)
-            all_ok = (has_dest and instagram_ok and tiktok_ok
+            has_dest = bool(self.uploads)
+            all_ok = (has_dest and instagram_ok and tiktok_ok and r2_ok
                       and (upload_ok or not self.youtube_config))
             if all_ok:
                 try:

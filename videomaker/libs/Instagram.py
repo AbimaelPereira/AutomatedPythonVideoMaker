@@ -19,7 +19,7 @@ HASHTAGS_MAX = 30
 IMAGE_MAX_BYTES = 8 * 1024 * 1024
 REEL_MIN_S, REEL_MAX_S = 3, 15 * 60
 STORY_VIDEO_MAX_S = 60
-CAROUSEL_MAX = 10
+CAROUSEL_MAX = 20
 
 
 def _probe(path: str) -> tuple:
@@ -198,7 +198,7 @@ class Instagram:
         return self.publish_images([path], slug=slug, r2=r2)
 
     def publish_images(self, paths: list, slug: str = "post", r2=None) -> list:
-        """feed: 1 imagem → IMAGE; 2–10 → CAROUSEL. story: um story por imagem, em ordem."""
+        """feed: 1 imagem → IMAGE; 2–20 → CAROUSEL. story: um story por imagem, em ordem."""
         from PIL import Image
         from libs.R2 import R2, ig_key
 
