@@ -1,0 +1,16 @@
+<!doctype html><html><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Special+Elite&family=Oswald:wght@600&display=swap" rel="stylesheet"><style>
+html,body{margin:0;background:transparent}
+#__root{display:inline-block;padding:50px}
+.f{width:880px;background:#e9dfc7;color:#2a2116;padding:46px 54px 50px;position:relative;transform:rotate(-1.5deg);
+ box-shadow:0 30px 60px rgba(0,0,0,.7);font-family:'Special Elite',monospace;
+ background-image:linear-gradient(rgba(120,90,40,.08) 1px,transparent 1px);background-size:100% 46px}
+.tab{position:absolute;top:-38px;left:40px;background:#d8c9a3;padding:8px 30px;font:600 26px Oswald;letter-spacing:3px}
+.k{font-size:26px;color:#6b5a40;letter-spacing:2px}
+.v{font-size:44px;margin:4px 0 24px}
+.t{font:600 64px/1.05 Oswald;text-transform:uppercase;margin-bottom:26px;border-bottom:3px solid #2a2116;padding-bottom:18px}
+.clip{position:absolute;top:-26px;right:80px;width:40px;height:110px;border:7px solid #9aa3ad;border-radius:20px}
+</style></head><body><div id="__root"><div class="f"><div class="tab">ARQUIVO {{ numero }}</div><div class="clip"></div>
+<div class="t">{{ titulo }}</div>
+{% for k, v in campos %}<div class="k">{{ k }}</div><div class="v">{{ v }}</div>{% endfor %}
+</div></div></body></html>

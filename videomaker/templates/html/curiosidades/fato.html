@@ -1,0 +1,10 @@
+<!doctype html><html><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@600;900&display=swap" rel="stylesheet"><style>
+html,body{margin:0;background:transparent}#__root{display:inline-block;padding:40px 40px 70px}
+.c{width:900px;background:rgba(255,255,255,.96);border-radius:44px;padding:46px 54px 50px;box-shadow:0 26px 0 {{ cor|default('#00b4d8') }},0 40px 80px rgba(0,0,0,.6);position:relative}
+.tag{position:absolute;top:-34px;left:50px;background:{{ cor|default('#00b4d8') }};color:#fff;font:900 34px Inter;padding:12px 30px;border-radius:40px;letter-spacing:2px;box-shadow:0 8px 20px rgba(0,0,0,.3)}
+.x{font:900 60px/1.15 Inter;color:#04162e;margin-top:10px}
+.x b{color:{{ cor|default('#00b4d8') }}}
+.s{font:600 32px Inter;color:#51627a;margin-top:18px}
+</style></head><body><div id="__root"><div class="c"><div class="tag">{{ tag }}</div>
+<div class="x">{{ texto|safe }}</div>{% if sub %}<div class="s">{{ sub }}</div>{% endif %}</div></div></body></html>

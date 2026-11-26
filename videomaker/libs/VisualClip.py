@@ -349,11 +349,18 @@ class VisualClip:
             # 3. Sobrescreve/Cria cópia PNG para compatibilidade MoviePy
             final_path = path
             base_name, ext = os.path.splitext(path)
-            
+
             if ext.lower() != '.png' or image_was_processed:
                 final_path = base_name + ".png"
-                
-            pil_img.save(final_path, "PNG")
+
+            # PNG (RGB ou RGBA) o MoviePy lê como está: NUNCA regravar no lugar —
+            # outra cena em paralelo pode estar lendo o mesmo arquivo (fundo
+            # compartilhado) e veria "image file is truncated". Conversões de
+            # outros formatos são atômicas (tmp + replace).
+            if final_path != path or image_was_processed:
+                tmp = f"{final_path}.{os.getpid()}.tmp.png"
+                pil_img.save(tmp, "PNG")
+                os.replace(tmp, final_path)
             path = final_path 
             
         except Exception as e:
@@ -369,7 +376,8 @@ class VisualClip:
             path = MediaDownloader.resolve_source_path(self.data.get("source"), self.temp_dir)
         if not path or not os.path.exists(path): return None
         
-        clip = VideoFileClip(path)
+        # `_alpha`: vídeo com canal alfa (ex: html animado) — lê a máscara.
+        clip = VideoFileClip(path, has_mask=bool(self.data.get("_alpha")))
         
         audio_cfg = self.data.get("audio", {})
         if not audio_cfg.get("keep_audio", False):

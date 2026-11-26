@@ -608,6 +608,11 @@ def _process_scene_worker(scene_data_bundle):
         else:
             print(f"[Worker-{scene_index}] Duração da cena: {scene_duration}s")
 
+        # 3.3 HTML animado: precisa dos tempos da fala (só existem após o TTS).
+        from libs.Graphics.animated import render_scene_animated
+        render_scene_animated(scene, scene_dir=scene_dir, duration=float(scene_duration),
+                              subtitle_file=subtitle_file, assets_dir=assets_dir)
+
         # 3.4 Efeitos sonoros das animações (motion.actions[].sfx / global_settings.sfx)
         narration_clip = _apply_scene_sfx(
             scene=scene, effective_gs=effective_gs, narration_clip=narration_clip,
@@ -1876,7 +1881,8 @@ class UnifiedVideoEngine:
         try:
             from libs.Prepare.PrepareEngine import PrepareEngine
             with self.profiler.step("prepare_assets"):
-                prepare = PrepareEngine(self.ctx, remote_asset_manager=self.remote_asset_manager)
+                prepare = PrepareEngine(self.ctx, remote_asset_manager=self.remote_asset_manager,
+                                        animated_stills=False)
                 prepare.run()
                 scenes = prepare.apply(scenes)
         except Exception as e:
@@ -1961,6 +1967,12 @@ class UnifiedVideoEngine:
                 # 2. Duração
                 scene_duration = scene.get("duration", duration_from_tts)
                 print(f"[UVE] Duração da cena: {scene_duration}s")
+
+                # 2.3 HTML animado — ver nota em _process_scene_worker.
+                from libs.Graphics.animated import render_scene_animated
+                render_scene_animated(scene, scene_dir=scene_dir, duration=float(scene_duration or 4.0),
+                                      subtitle_file=subtitle_file,
+                                      assets_dir=getattr(self.asset_store, "assets_dir", None))
 
                 # 2.4 Efeitos sonoros das animações — ver _apply_scene_sfx.
                 narration_clip = _apply_scene_sfx(

@@ -58,6 +58,16 @@ def resolve_element_path(element: dict, scene_dir: str, remote_asset_manager,
             return MediaDownloader.resolve_source_path(path, scene_dir)
         raise Unsupported(f"imagem não encontrada: {path}")
 
+    if el_type == "video":
+        # Arquivo local (ex: html animado → .mov PNG+alfa). O alfa é preservado:
+        # o segmento passa por `format=rgba` antes do overlay.
+        path = element.get("source")
+        if path and os.path.isfile(path):
+            return path
+        if path and str(path).startswith(("http://", "https://")):
+            return MediaDownloader.resolve_source_path(path, scene_dir)
+        raise Unsupported(f"vídeo não encontrado: {path}")
+
     if el_type == "text_box":
         # Vira um PNG em disco e segue como qualquer imagem daqui para a frente.
         return render_text_box_png(element, scene_dir, resolution or (1920, 1080))
@@ -211,6 +221,8 @@ def resolve_visual_boxes(elements: list, paths: list, layout_params: dict,
             "layout": el.get("layout", {}),
             "border_radius": el.get("border_radius", 0),
             "animation": el.get("animation"),
+            # html/icon renderizados: tamanho nativo sem `placement.width`
+            "_native_size": el.get("_native_size"),
         })
 
     # O LayoutEngine lê atributos do config; completa com os mesmos defaults do

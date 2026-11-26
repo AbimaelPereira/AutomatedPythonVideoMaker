@@ -77,8 +77,10 @@ def align_to_text(word_boundaries: list, text: str) -> list:
 
     Usa `SequenceMatcher` sobre as sequências normalizadas: os blocos iguais
     dão o alinhamento; o que o Whisper inventou cai nas lacunas e é removido.
-    Uma palavra do texto que o Whisper não transcreveu simplesmente não recebe
-    timestamp — não inventamos tempo para ela.
+    Trecho que o Whisper ouviu mas escreveu diferente (número por extenso,
+    grafia) recebe o tempo desse trecho, dividido entre as palavras do texto.
+    Palavra do texto sem NADA transcrito no lugar continua sem timestamp —
+    não inventamos tempo para ela.
     """
     expected = (text or "").split()
     if not expected or not word_boundaries:
@@ -90,11 +92,23 @@ def align_to_text(word_boundaries: list, text: str) -> list:
     matcher = SequenceMatcher(None, exp_norm, got_norm, autojunk=False)
 
     aligned = []
-    for exp_i, got_j, size in matcher.get_matching_blocks():
-        for k in range(size):
-            wb = dict(word_boundaries[got_j + k])
-            wb["word"] = expected[exp_i + k]  # grafia canônica do texto
-            aligned.append(wb)
+    matched = 0
+    for tag, i1, i2, j1, j2 in matcher.get_opcodes():
+        if tag == "equal":
+            for k in range(i2 - i1):
+                wb = dict(word_boundaries[j1 + k])
+                wb["word"] = expected[i1 + k]  # grafia canônica do texto
+                aligned.append(wb)
+            matched += i2 - i1
+        elif tag == "replace":
+            # O Whisper ouviu ESSE trecho, só escreveu diferente ("quarenta e um"
+            # → "41", "Escreva amém" → "Escreve Amen"). Sem isso as palavras do
+            # texto ficavam sem tempo e sumiam da legenda e das âncoras de motion.
+            # Distribui as palavras do texto no intervalo que o Whisper cobriu.
+            aligned.extend(_spread(expected[i1:i2], word_boundaries[j1]["start"],
+                                   word_boundaries[j2 - 1]["end"]))
+        # "insert" (Whisper disse algo fora do texto) = alucinação → descarta.
+        # "delete" (texto sem nada transcrito no lugar) → sem tempo, não inventa.
 
     # Rede de segurança: só abandona o alinhamento quando o texto claramente
     # não descreve o áudio (cena com `text` trocado, Whisper em outro idioma,
@@ -108,10 +122,22 @@ def align_to_text(word_boundaries: list, text: str) -> list:
     # curta (áudio cortado, Whisper que desistiu no meio) é legítima e não
     # deve reabilitar a legenda suja só por cobrir pouco do texto.
     reference = min(len(expected), len(word_boundaries))
-    if reference and len(aligned) < reference * 0.5:
+    if reference and matched < reference * 0.5:
         return word_boundaries
 
     return aligned
+
+
+def _spread(words: list, start: int, end: int) -> list:
+    """Palavras distribuídas em [start, end] proporcionalmente ao tamanho."""
+    weights = [max(1, len(normalize_token(w))) for w in words]
+    total = float(sum(weights))
+    out, t = [], float(start)
+    for w, wt in zip(words, weights):
+        dur = (end - start) * wt / total
+        out.append({"word": w, "start": int(round(t)), "end": int(round(t + dur))})
+        t += dur
+    return out
 
 
 def sanitize(word_boundaries: list, text: str, audio_duration_ms: int) -> list:

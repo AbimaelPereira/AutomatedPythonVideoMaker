@@ -1,0 +1,8 @@
+<!doctype html><html><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Anton&display=swap" rel="stylesheet"><style>
+html,body{margin:0;background:transparent}#__root{display:inline-block;padding:60px}
+.n{white-space:nowrap;font:380px/0.9 Anton;letter-spacing:-6px;
+ background:linear-gradient(180deg,#fff 0%,{{ cor|default('#00e5ff') }} 60%,#0052d4 100%);-webkit-background-clip:text;color:transparent;
+ filter:drop-shadow(0 0 40px {{ cor|default('#00e5ff') }}88) drop-shadow(0 14px 0 #00122e)}
+.n small{font-size:.45em;letter-spacing:0}
+</style></head><body><div id="__root"><div class="n">{{ valor }}{% if sufixo %}<small>{{ sufixo }}</small>{% endif %}</div></div></body></html>

@@ -114,6 +114,11 @@ class PreviewEngine:
         prepare = PrepareEngine(ctx, scene_indexes=indexes, force=self.force)
         prepare_result = prepare.run()
         prepared = prepare.apply(ctx.scenes)
+        # html animado: no preview entra a pose final (PNG gerado pelo prepare).
+        for sc in prepared:
+            for el in sc.get("visual_elements") or []:
+                if isinstance(el, dict) and el.get("_still_png"):
+                    el.update(type="image", source=el["_still_png"], _native_size=True)
 
         total = len(ctx.scenes)
         cache = self._load_cache()

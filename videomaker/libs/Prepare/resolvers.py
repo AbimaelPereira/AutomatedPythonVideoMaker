@@ -102,7 +102,24 @@ def resolve_remote_asset(task, ctx, store, *, remote_asset_manager=None, pinned_
         print(f"[Prepare] remote_asset '{slug}': falha no download, tentando próxima URL")
 
 
+def resolve_render(task, ctx, store, **_):
+    return resolve_render_batch([task], ctx, store)[task.asset_key]
+
+
+def resolve_render_batch(tasks, ctx, store, **_) -> dict:
+    """html/icon de várias tasks num único Chromium. `{asset_key: caminho | Exception}`."""
+    from libs.Graphics import render_many
+    pngs = render_many([t.spec["element"] for t in tasks])
+    out = {}
+    for task, png in zip(tasks, pngs):
+        out[task.asset_key] = png if isinstance(png, Exception) else store.put(
+            task.asset_key, png, kind="render", ext="png",
+            meta={"type": task.spec["element"].get("type")})
+    return out
+
+
 RESOLVERS = {
+    "render": resolve_render,
     "ai": resolve_ai,
     "download": resolve_download,
     "remote_asset": resolve_remote_asset,

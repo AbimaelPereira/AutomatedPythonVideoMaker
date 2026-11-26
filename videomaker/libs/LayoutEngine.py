@@ -250,8 +250,8 @@ class LayoutEngine:
                 # só height: height-driven, width derivado pelo aspect ratio
                 target_h = LayoutEngine.calculate_dimension(req_height, safe_h)
                 target_w = int(target_h * aspect_ratio)
-            elif req_width is None and item.get('type') == 'text_box':
-                # text_box sem width: usa o tamanho nativo do PNG, não esticar para a área segura
+            elif req_width is None and (item.get('type') == 'text_box' or item.get('_native_size')):
+                # text_box / html / icon sem width: tamanho nativo do PNG, não esticar para a área segura
                 target_w = orig_w
                 target_h = orig_h
             else:

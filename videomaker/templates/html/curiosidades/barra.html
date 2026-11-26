@@ -1,0 +1,12 @@
+<!doctype html><html><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@700;900&display=swap" rel="stylesheet"><style>
+html,body{margin:0;background:transparent}#__root{display:inline-block;padding:40px}
+.w{width:920px;font-family:Inter;color:#fff}
+.t{font:900 50px Inter;margin-bottom:30px;text-shadow:0 4px 20px #000}
+.bar{height:110px;border-radius:24px;overflow:hidden;display:flex;border:4px solid rgba(255,255,255,.8);box-shadow:0 0 40px rgba(0,200,255,.35)}
+.a{background:linear-gradient(90deg,#00e5ff,#00b4d8);width:{{ pct }}%;display:flex;align-items:center;justify-content:center;font:40px Anton;color:#002}
+.b{flex:1;background:repeating-linear-gradient(45deg,#06142a 0 22px,#0b2245 22px 44px);display:flex;align-items:center;justify-content:center;font:900 40px Inter;color:#8fb3ff;letter-spacing:3px}
+.lg{display:flex;justify-content:space-between;margin-top:20px;font:700 32px Inter;color:#bfe9ff}
+</style></head><body><div id="__root"><div class="w"><div class="t">{{ titulo }}</div>
+<div class="bar"><div class="a">{{ pct }}%</div><div class="b">{{ resto }}</div></div>
+<div class="lg"><span>{{ la }}</span><span>{{ lb }}</span></div></div></div></body></html>

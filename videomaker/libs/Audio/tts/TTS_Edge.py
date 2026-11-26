@@ -1,5 +1,6 @@
 import os
 import asyncio
+import time
 from pathlib import Path
 from mutagen.mp3 import MP3
 import edge_tts
@@ -168,6 +169,18 @@ class EdgeTTS:
                 f.write(f"{w['word']}\n\n")
         return srt_path
 
+    def _run_synthesis(self):
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            return asyncio.run(self._synthesize_audio_async())
+        try:
+            import nest_asyncio
+            nest_asyncio.apply()
+        except ImportError:
+            pass
+        return loop.run_until_complete(self._synthesize_audio_async())
+
     def generate_audio_and_subtitles(self) -> dict:
         """
         Sintetiza texto e gera SRT com word boundaries reais do Edge TTS.
@@ -181,19 +194,23 @@ class EdgeTTS:
                 "word_boundaries":      list,  # [{"word", "start", "end"}] em ms
             }
         """
-        try:
-            loop = asyncio.get_running_loop()
+        # O serviço do Edge às vezes responde sem áudio (NoAudioReceived) de forma
+        # transitória — mais comum com várias cenas sintetizando em paralelo.
+        # Sem retry a cena saía MUDA. Tenta de novo com espera crescente.
+        attempts = 4
+        for attempt in range(1, attempts + 1):
             try:
-                import nest_asyncio
-                nest_asyncio.apply()
-            except ImportError:
-                pass
-            audio_data, word_boundaries = loop.run_until_complete(self._synthesize_audio_async())
-        except RuntimeError:
-            audio_data, word_boundaries = asyncio.run(self._synthesize_audio_async())
-
-        if not word_boundaries:
-            raise ValueError("Nenhum word boundary retornado pelo Edge TTS")
+                audio_data, word_boundaries = self._run_synthesis()
+                if not audio_data or not word_boundaries:
+                    raise ValueError("Nenhum word boundary retornado pelo Edge TTS")
+                break
+            except Exception as e:  # noqa: BLE001 — repassado na última tentativa
+                if attempt == attempts:
+                    raise
+                wait = 1.5 * attempt
+                print(f"[TTS_Edge] ⚠️ tentativa {attempt}/{attempts} falhou "
+                      f"({type(e).__name__}: {e}); nova tentativa em {wait:.1f}s")
+                time.sleep(wait)
 
         # Salva áudio bruto
         target_dir = os.path.dirname(self.output_basename) or "."

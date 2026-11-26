@@ -225,3 +225,27 @@ def test_resultado_e_subsequencia_ordenada_e_monotonica():
 def test_align_to_text_isolado_remove_insercao():
     out = align_to_text(wb([("a", 0, 100), ("X", 100, 200), ("b", 200, 300)]), "a b")
     assert words(out) == ["a", "b"]
+
+
+# ----------------------------------------------------------------------
+# Trecho ouvido mas escrito diferente (replace)
+# ----------------------------------------------------------------------
+
+def test_numero_por_extenso_transcrito_em_digitos_recebe_tempo():
+    """REAL (kokoro): "Isaías, quarenta e um, dez" virou "Isaías 41:10" e as
+    palavras sumiam da legenda e das âncoras de motion."""
+    text = "Isaías, quarenta e um, dez: Não temas"
+    transcricao = wb([("Isaías", 0, 400), ("41:10", 450, 1500), ("Não", 1600, 1800), ("temas", 1800, 2200)])
+    out = sanitize(transcricao, text, 2300)
+    assert words(out) == ["Isaías,", "quarenta", "e", "um,", "dez:", "Não", "temas"]
+    trecho = out[1:5]
+    assert trecho[0]["start"] == 450 and trecho[-1]["end"] == 1500
+    assert all(out[i]["start"] >= out[i - 1]["start"] for i in range(1, len(out)))
+
+
+def test_grafia_diferente_mantem_palavra_do_texto():
+    """REAL (kokoro): "Escreva amém" transcrito como "Escreve Amen"."""
+    out = sanitize(wb([("Escreve", 0, 300), ("Amen", 300, 700), ("e", 700, 800), ("envie", 800, 1100)]),
+                   "Escreva amém e envie", 1200)
+    assert words(out) == ["Escreva", "amém", "e", "envie"]
+    assert out[0]["start"] == 0 and out[1]["end"] == 700

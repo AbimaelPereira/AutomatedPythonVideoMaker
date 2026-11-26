@@ -1,0 +1,13 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+html,body{margin:0;background:transparent}
+#__root{width:1080px;height:1920px;position:relative;overflow:hidden;background:linear-gradient(180deg,{{ c1|default('#021b3a') }},{{ c2|default('#000814') }})}
+.ray{position:absolute;top:-200px;width:180px;height:1500px;background:linear-gradient(rgba(120,220,255,.22),transparent);filter:blur(30px);transform-origin:top}
+.b{position:absolute;border-radius:50%;border:2px solid rgba(160,230,255,.35);background:radial-gradient(circle at 30% 30%,rgba(255,255,255,.35),transparent 60%)}
+.vig{position:absolute;inset:0;box-shadow:inset 0 0 300px 60px rgba(0,0,0,.85)}
+</style></head><body><div id="__root">
+<div class="ray" style="left:120px;transform:rotate(12deg)"></div>
+<div class="ray" style="left:480px;transform:rotate(4deg);width:260px"></div>
+<div class="ray" style="left:820px;transform:rotate(-10deg)"></div>
+{% for b in [(90,1500,30),(160,1300,14),(940,1650,40),(860,1200,18),(520,1780,22),(300,1000,10),(700,900,12)] %}
+<div class="b" style="left:{{b[0]}}px;top:{{b[1]}}px;width:{{b[2]}}px;height:{{b[2]}}px"></div>{% endfor %}
+<div class="vig"></div></div></body></html>

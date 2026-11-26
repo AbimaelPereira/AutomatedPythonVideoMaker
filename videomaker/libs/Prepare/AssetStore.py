@@ -8,7 +8,7 @@ import tempfile
 from contextlib import contextmanager
 from datetime import datetime
 
-_SUBDIRS = {"ai": "ai", "download": "dl", "remote_asset": "dl"}
+_SUBDIRS = {"ai": "ai", "download": "dl", "remote_asset": "dl", "render": "render"}
 
 
 def _safe_name(key: str) -> str:

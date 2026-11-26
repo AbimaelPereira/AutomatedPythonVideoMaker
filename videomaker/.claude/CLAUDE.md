@@ -210,7 +210,11 @@ históricos (top 100 / bottom 850); 16:9 usa ~5% simétrico (side 96, top/bottom
 em 1920×1080). Sobrescrevíveis em `global_settings` (`padding_top/bottom/side`).
 
 > `visual_elements` com `type: "ai"` NÃO é suportado — só `image`, `video`,
-> `directory`, `color`, `gradient`, `remote_asset`, `text_box` e `counter` (vira text_boxes, ver `libs/Counter.py`). AI só vale para
+> `directory`, `color`, `gradient`, `remote_asset`, `text_box`, `counter` (vira text_boxes, ver `libs/Counter.py`), `html` e `icon`
+> (renderizados para PNG pelo prepare via Chromium/Playwright e reescritos como `image`; ver
+> `libs/Graphics/__init__.py`, templates em `templates/html/` ou caminho de arquivo em `template`).
+> `html` com `"animated": true` + `sync` (âncoras de fala) vira vídeo com alfa renderizado no worker
+> após o TTS (`libs/Graphics/animated.py`); hoje força o caminho MoviePy na cena. AI só vale para
 > `background.visual`. Veja
 > `.claude/skills/pyvideomaker/examples/teste_placement_16x9.json`.
 

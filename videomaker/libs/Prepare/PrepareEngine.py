@@ -11,7 +11,7 @@ from libs.Prepare.collect import THUMBNAIL_INDEX, collect_tasks
 from libs.Prepare.resolvers import RESOLVERS
 from libs.utils import ai_cache_enabled_by_env
 
-_ORDER = {"ai": 0, "remote_asset": 1, "download": 2}
+_ORDER = {"ai": 0, "remote_asset": 1, "download": 2, "render": 3}
 _EL_PATH = re.compile(r"^visual_elements\[(\d+)\]$")
 
 
@@ -37,8 +37,12 @@ def ai_cache_enabled(video_data: dict, global_settings: dict) -> bool:
 class PrepareEngine:
     def __init__(self, ctx, *, scene_indexes=None, force: bool = False,
                  include_thumbnail: bool = False, max_workers: int | None = None,
-                 remote_asset_manager=None, thumbnail_cfg: dict | None = None):
+                 remote_asset_manager=None, thumbnail_cfg: dict | None = None,
+                 animated_stills: bool = True):
+        """`animated_stills=False`: não gera a pose final de html animado (só o
+        preview usa; no render o worker gera o vídeo depois do TTS)."""
         self.ctx = ctx
+        self.animated_stills = animated_stills
         self.scene_indexes = scene_indexes
         self.force = force
         self.include_thumbnail = include_thumbnail or thumbnail_cfg is not None
@@ -72,7 +76,7 @@ class PrepareEngine:
     def run(self) -> PrepareResult:
         start = time.monotonic()
         self.tasks = collect_tasks(self.ctx, self.scene_indexes, self.include_thumbnail,
-                                   self.thumbnail_cfg)
+                                   self.thumbnail_cfg, animated_stills=self.animated_stills)
         result = PrepareResult()
         entries = self.store.entries()
 
@@ -88,17 +92,36 @@ class PrepareEngine:
                 pending.append((task, pinned))
 
         pending.sort(key=lambda tp: _ORDER.get(tp[0].kind, 9))
-        if pending:
-            workers = self.max_workers or min(32, len(pending))
+        # html/icon: um único Chromium para todos (lote), em paralelo com os downloads.
+        renders = [t for t, _ in pending if t.kind == "render"]
+        pending = [tp for tp in pending if tp[0].kind != "render"]
+        if pending or renders:
+            workers = self.max_workers or min(32, len(pending) + 1)
             with ThreadPoolExecutor(max_workers=workers) as pool:
                 futures = [(task, pool.submit(self._resolve_one, task, pinned))
                            for task, pinned in pending]
+                batch = None
+                if renders:
+                    from libs.Prepare.resolvers import resolve_render_batch
+                    batch = pool.submit(resolve_render_batch, renders, self.ctx, self.store)
                 for task, fut in futures:
                     try:
                         result.resolved[task.asset_key] = fut.result()
                     except Exception as e:
                         result.failed[task.asset_key] = f"{type(e).__name__}: {e}"
                         print(f"[Prepare] ❌ {task.kind} {task.asset_key}: {e}")
+                if batch is not None:
+                    try:
+                        done = batch.result()
+                    except Exception as e:  # o lote inteiro falhou (ex: sem Chromium)
+                        done = {t.asset_key: e for t in renders}
+                    for task in renders:
+                        r = done.get(task.asset_key)
+                        if isinstance(r, Exception) or r is None:
+                            result.failed[task.asset_key] = f"{type(r).__name__}: {r}"
+                            print(f"[Prepare] ❌ render {task.asset_key}: {r}")
+                        else:
+                            result.resolved[task.asset_key] = r
 
         result.duration_s = round(time.monotonic() - start, 3)
         generated = len(result.resolved) - result.skipped
@@ -172,3 +195,10 @@ def _rewrite(scene: dict, element_path: str, kind: str, path: str) -> None:
     i = int(match.group(1))
     if i < len(elements):
         elements[i]["source"] = path
+        if kind == "render" and elements[i].get("animated"):
+            elements[i]["_still_png"] = path  # o worker gera o vídeo; o preview usa isto
+        elif kind == "render":
+            # html/icon viram PNG comum: todo o resto do pipeline só vê `image`.
+            elements[i]["_rendered_from"] = elements[i].get("type")
+            elements[i]["type"] = "image"
+            elements[i]["_native_size"] = True

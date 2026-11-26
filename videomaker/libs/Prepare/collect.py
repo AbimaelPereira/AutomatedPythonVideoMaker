@@ -16,7 +16,7 @@ THUMBNAIL_INDEX = -1
 @dataclass(frozen=True)
 class AssetTask:
     asset_key: str
-    kind: str                 # "ai" | "download" | "remote_asset"
+    kind: str                 # "ai" | "download" | "remote_asset" | "render"
     provider: str | None
     spec: dict
     refs: tuple = ()          # ((scene_index, element_path), ...)
@@ -43,7 +43,7 @@ def thumbnail_resolution(thumb: dict, video_resolution: tuple) -> tuple:
 
 
 def _visual_tasks(visual: dict, scene_id: str, element_path: str, gs: dict,
-                  ai_resolution, ai_defaults, where: str) -> list:
+                  ai_resolution, ai_defaults, where: str, animated_stills: bool = True) -> list:
     """Tasks de um bloco visual (fundo ou elemento) — 0 ou 1 item."""
     from libs.Prepare import keys
 
@@ -69,6 +69,14 @@ def _visual_tasks(visual: dict, scene_id: str, element_path: str, gs: dict,
             "provider": provider,
         })]
 
+    # html animado: o vídeo depende da fala (worker, após o TTS); aqui sai só a
+    # pose final em PNG (`_still_png`) para o preview.
+    if vtype == "html" and visual.get("animated") and not animated_stills:
+        return []
+    if vtype in ("html", "icon"):
+        from libs.Graphics import render_key
+        return [(render_key(visual), "render", None, {"element": dict(visual)})]
+
     if vtype == "remote_asset" and isinstance(source, str) and source:
         key = keys.remote_asset_key(scene_id, element_path, source)
         return [(key, "remote_asset", None, {
@@ -82,7 +90,7 @@ def _visual_tasks(visual: dict, scene_id: str, element_path: str, gs: dict,
 
 
 def collect_tasks(ctx, scene_indexes=None, include_thumbnail: bool = False,
-                  thumbnail_cfg: dict | None = None) -> list:
+                  thumbnail_cfg: dict | None = None, animated_stills: bool = True) -> list:
     """`thumbnail_cfg` substitui o `youtube.thumbnail` do vídeo/canal."""
     from libs.AIProviders.params import validate_video_ai_blocks
 
@@ -116,7 +124,8 @@ def collect_tasks(ctx, scene_indexes=None, include_thumbnail: bool = False,
         for i, el in enumerate(scene.get("visual_elements") or []):
             path = f"visual_elements[{i}]"
             add(_visual_tasks(el, sid, path, gs, None, VE_AI_DEFAULTS,
-                              f"cena '{sid}' visual_elements.source"), idx, path)
+                              f"cena '{sid}' visual_elements.source",
+                              animated_stills=animated_stills), idx, path)
 
     if thumb is not None:
         gs = ctx.global_settings

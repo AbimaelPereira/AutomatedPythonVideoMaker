@@ -1,0 +1,46 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@1,700&family=Inter:wght@500&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; background: transparent; }
+  #__root { display: inline-block; padding: 60px; }
+  .card {
+    width: 900px;
+    padding: 70px 80px 60px;
+    box-sizing: border-box;
+    background: linear-gradient(145deg, rgba(20,20,20,.92), rgba(40,10,10,.92));
+    border: 2px solid rgba(255,60,60,.5);
+    border-radius: 28px;
+    box-shadow: 0 0 40px rgba(255,40,40,.35);
+    color: #fff;
+    position: relative;
+  }
+  .aspas {
+    position: absolute; top: -30px; left: 50px;
+    font: 700 180px/1 'Playfair Display', serif;
+    color: #ff3c3c;
+    text-shadow: 0 0 25px rgba(255,60,60,.7);
+  }
+  .texto {
+    font: italic 700 52px/1.3 'Playfair Display', serif;
+    margin: 0 0 40px;
+  }
+  .autor {
+    display: flex; align-items: center; gap: 18px;
+    font: 500 30px 'Inter', sans-serif; color: #ccc;
+  }
+  .autor::before {
+    content: ''; width: 60px; height: 3px; background: #ff3c3c;
+  }
+</style>
+</head>
+<body><div id="__root">
+  <div class="card">
+    <div class="aspas">“</div>
+    <p class="texto">{{ texto }}</p>
+    <div class="autor">{{ autor }}</div>
+  </div>
+</div></body>
+</html>
