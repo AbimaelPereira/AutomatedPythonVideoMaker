@@ -1,0 +1,4 @@
+# Copie para flyway.user.toml (não versionado)
+[environments.anonimo]
+user = "anonimo"
+password = ""

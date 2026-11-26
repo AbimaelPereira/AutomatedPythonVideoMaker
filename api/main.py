@@ -3,7 +3,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
 from config import settings
-from database import create_db_and_tables
 from auth.router import router as auth_router
 from admin.router import router as admin_router
 from assets.router import router as assets_router
@@ -16,13 +15,13 @@ from thumbnail_preview.router import router as thumbnail_preview_router
 from previews.router import router as previews_router
 from youtube.router import router as youtube_router
 from ai_generation.router import router as ai_generation_router
-import channels.models  # noqa: F401 — garante que a tabela é criada
-import videos.models  # noqa: F401 — garante que a tabela é criada
+import channels.models  # noqa: F401
+import videos.models  # noqa: F401
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    create_db_and_tables()
+    # Estrutura do banco é gerenciada pelo Flyway em database/
     yield
 
 

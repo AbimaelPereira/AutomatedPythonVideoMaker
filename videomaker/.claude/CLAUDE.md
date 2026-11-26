@@ -35,6 +35,21 @@ python tests/compare_ssim.py tests/baseline/ tests/atual/
 `tests/fixtures/assets/` e `tests/baseline/` são gerados localmente (dependem da
 versão do ffmpeg da máquina) e por isso não são versionados.
 
+## Setup e dependências
+
+- Sem `.venv`: usa o `python3` do sistema.
+- `bash setup.sh` instala ffmpeg, ImageMagick, PyTorch e as dependências (`pip install -r requirements.txt`).
+- `torch` não está no `requirements.txt`: o `setup.sh` instala conforme a versão de CUDA.
+- ImageMagick precisa da `policy.xml` liberada para `TextClip` (feito pelo `setup.sh`).
+- `moviepy==1.0.3` é incompatível com `numpy >= 2.0`: **não atualize o numpy**.
+
+## Arquivos por vídeo (prepare / preview)
+
+- `VideoContext` (`libs/VideoContext.py`): merge canal×vídeo, `output_dir`, `layout_params` e cenas achatadas, sem importar MoviePy/TTS.
+- `{output.dir}/{slug}/assets/` — assets resolvidos pelo `Prepare/` + `manifest.json` (apagar a pasta do vídeo limpa o cache).
+- `{output.dir}/{slug}/previews/` — PNG por cena (`PreviewEngine`) + `.cache.json` (cache por hash).
+- `python main.py x.json --prepare` / `--preview`; detalhes em `docs/PREVIEW.md`.
+
 ## Estrutura do JSON
 
 Cada objeto de vídeo possui:

@@ -1,0 +1,13 @@
+databaseType = "MySql"
+name = "anonimo"
+
+[environments.anonimo]
+displayName = "Local - anonimo"
+url = "jdbc:mysql://127.0.0.1:3306/anonimo?allowPublicKeyRetrieval=true&useSSL=false"
+schemas = [ "anonimo" ]
+
+[flyway]
+environment = "anonimo"
+locations = [ "filesystem:migrations" ]
+validateMigrationNaming = true
+cleanDisabled = true

@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "deny": [
+      "Edit(./api/.env)",
+      "Edit(./videomaker/.env)",
+      "Read(./videomaker/tokens/**)",
+      "Read(./api/tokens/**)"
+    ]
+  }
+}

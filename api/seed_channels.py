@@ -13,9 +13,6 @@ from sqlmodel import Session, select
 from channels.models import Channel
 import channels.models  # noqa: F401
 
-from sqlmodel import SQLModel
-SQLModel.metadata.create_all(engine)
-
 sys.path.insert(0, str(Path(__file__).parent.parent / "videomaker"))
 from libs.utils import channel_config_files  # noqa: E402
 
