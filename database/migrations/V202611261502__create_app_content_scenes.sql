@@ -1,0 +1,20 @@
+CREATE TABLE `app_content_scenes` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `content_id` int NOT NULL,
+  `chapter_id` int DEFAULT NULL,
+  `position` int NOT NULL,
+  `spec` json NOT NULL,
+  `spec_hash` char(64) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `resolved` json DEFAULT NULL,
+  `status` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'pending',
+  `preview_key` varchar(512) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `video_key` varchar(512) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `error` text COLLATE utf8mb4_unicode_ci,
+  `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  `updated_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `app_content_scenes_content_position_key` (`content_id`, `position`),
+  KEY `app_content_scenes_chapter_id_idx` (`chapter_id`),
+  CONSTRAINT `app_content_scenes_content_id_fkey` FOREIGN KEY (`content_id`) REFERENCES `app_contents` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `app_content_scenes_chapter_id_fkey` FOREIGN KEY (`chapter_id`) REFERENCES `app_content_chapters` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
