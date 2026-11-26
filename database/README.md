@@ -40,7 +40,6 @@ cp database/flyway.user.toml.example database/flyway.user.toml   # preencher a s
    ./database/flyway.sh validate
    bash database/test-from-zero.sh
    ```
-3. Atualizar o `models.py` correspondente na `api/`.
 
 ## Corrigir migration da feature
 
