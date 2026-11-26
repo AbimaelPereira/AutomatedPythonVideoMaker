@@ -1,7 +1,7 @@
 """`output.type: "image"`: cada cena vira um PNG (motor do preview) e é publicada no Instagram e/ou R2.
 
 1 cena → post/story simples; 2–20 cenas → carrossel no feed (story: um por imagem).
-Pula TTS, legenda, transições, concat e áudio. YouTube/TikTok são ignorados.
+Pula TTS, legenda, transições, concat e áudio. YouTube é ignorado.
 Limpeza igual ao vídeo: tudo OK → apaga a pasta; falha → mantém só os PNGs finais.
 """
 import os
@@ -30,7 +30,7 @@ class ImagePostEngine:
         self.r2_config = self.uploads.get("r2")
 
     def _warn_ignored(self):
-        for k in ("youtube", "tiktok"):
+        for k in ("youtube",):
             if k in self.uploads:
                 print(f"[ImagePost] Aviso: '{k}' ignorado no modo imagem")
         for i, scene in enumerate(self.ctx.scenes):

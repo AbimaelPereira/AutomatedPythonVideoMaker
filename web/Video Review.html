@@ -278,10 +278,6 @@
   .menu-popup button.danger { color: var(--red); }
   .menu-popup .sep { height: 1px; background: var(--border); margin: 4px 2px; }
 
-  /* TikTok collapse */
-  .tiktok-extra { max-height: 0; overflow: hidden; transition: max-height .35s ease; }
-  .panel-card.tt-on .tiktok-extra { max-height: 1000px; }
-  .tiktok-extra-inner { padding-top: 16px; margin-top: 16px; border-top: 1px dashed var(--border); }
 
   /* Disabled state */
   .field.disabled, .field-row.disabled { opacity: 0.45; pointer-events: none; }
@@ -925,60 +921,6 @@
       </div>
     </div>
 
-    <!-- TikTok -->
-    <div class="panel-card" id="tiktokCard">
-      <div class="panel-head">
-        <div class="panel-title">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--muted)"><path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5"></path></svg>
-          TikTok <span class="panel-sub" style="margin-left:4px">(opcional)</span>
-        </div>
-        <label class="switch"><input type="checkbox" id="tiktokToggle" onchange="toggleTiktok(this)"><span class="track"></span><span class="thumb"></span></label>
-      </div>
-      <div class="panel-body" style="padding-top:0">
-        <div class="toggle-row" style="padding-top:14px">
-          <div class="toggle-text">
-            <span class="toggle-label">Também enviar para o TikTok</span>
-            <span class="toggle-desc">Faz upload com a mesma data do agendamento</span>
-          </div>
-        </div>
-        <div class="tiktok-extra">
-          <div class="tiktok-extra-inner">
-            <div class="field">
-              <label class="field-label">Legenda</label>
-              <textarea rows="3" placeholder="Digite a legenda do TikTok...">🙏 Deus não esqueceu de você. Compartilhe se sentiu no coração 🤍 #fé #devocional #palavradedeus #foryou #fyp</textarea>
-            </div>
-            <div class="field">
-              <label class="field-label">Privacidade</label>
-              <select>
-                <option>SELF_ONLY</option>
-                <option>PUBLIC</option>
-                <option>FRIENDS</option>
-              </select>
-            </div>
-            <div class="toggle-row">
-              <div class="toggle-text"><span class="toggle-label">Desativar dueto</span></div>
-              <label class="switch"><input type="checkbox" checked><span class="track"></span><span class="thumb"></span></label>
-            </div>
-            <div class="toggle-row">
-              <div class="toggle-text"><span class="toggle-label">Desativar comentários</span></div>
-              <label class="switch"><input type="checkbox"><span class="track"></span><span class="thumb"></span></label>
-            </div>
-            <div class="toggle-row">
-              <div class="toggle-text"><span class="toggle-label">Desativar stitch</span></div>
-              <label class="switch"><input type="checkbox" checked><span class="track"></span><span class="thumb"></span></label>
-            </div>
-            <div class="field" style="margin-top:6px">
-              <label class="field-label">Token file</label>
-              <select>
-                <option>tiktok_devocional.json</option>
-                <option>tiktok_mensagens.json</option>
-              </select>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
   </aside>
 </div>
 
@@ -1146,11 +1088,6 @@
     }
   }
   function removeTag(el, ev) { ev.stopPropagation(); el.closest('.tag-chip').remove(); }
-
-  /* ====== TikTok ====== */
-  function toggleTiktok(input) {
-    document.getElementById('tiktokCard').classList.toggle('tt-on', input.checked);
-  }
 
   /* ====== Add scene ====== */
   function addScene() {

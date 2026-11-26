@@ -34,11 +34,6 @@ def test_vazio_so_vale_para_r2():
     assert resolve_uploads({}, {"uploads": {"youtube": {}, "r2": True}}) == {"r2": {}}
 
 
-def test_tiktok_legado_em_global_settings():
-    r = resolve_uploads({}, {}, {"tiktok": {"a": 1}})
-    assert r == {"tiktok": {"a": 1}}
-
-
 def test_upload_config_ignora_enabled():
     cfg = upload_config("youtube", {}, {"uploads": {"youtube": {"enabled": False, "thumbnail": {"x": 1}}}})
     assert cfg["thumbnail"] == {"x": 1}

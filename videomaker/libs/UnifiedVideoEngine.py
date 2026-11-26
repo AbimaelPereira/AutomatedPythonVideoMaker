@@ -26,7 +26,6 @@ from libs.Subtitle.SubtitleEngine import SubtitleEngine
 from libs.MediaDownloader import MediaDownloader
 from libs.LayoutEngine import LayoutEngine
 from libs.YouTube import YouTube
-from libs.TikTok import TikTok
 from libs.Instagram import Instagram
 from libs.Background.BackgroundEngine import BackgroundEngine
 from libs.Audio.NarrationEngine import NarrationEngine
@@ -1031,7 +1030,6 @@ class UnifiedVideoEngine:
         self.uploads = resolve_uploads(channel_config, video_data, self.global_settings)
         self.youtube_config = self.uploads.get("youtube") or {}
         self.instagram_config = self.uploads.get("instagram")
-        self.tiktok_config = self.uploads.get("tiktok")
         self.r2_config = self.uploads.get("r2")
         # Metadados do YouTube (título/thumbnail) mesmo com upload desligado.
         self.youtube_meta = upload_config("youtube", channel_config, video_data)
@@ -2301,21 +2299,6 @@ class UnifiedVideoEngine:
             except Exception as e:
                 print(f"[UVE] Upload R2 falhou: {e}")
 
-        # 12c. Upload TikTok
-        tiktok_ok = True
-        tiktok_config = self.tiktok_config
-        if tiktok_config and self.video_data.get("debug") is not True:
-            tiktok_ok = False
-            try:
-                print("[UVE] Iniciando upload para o TikTok...")
-                tiktok_params = tiktok_config.copy()
-                tiktok_params["video_path"] = final_path
-                tiktok_uploader = TikTok(params=tiktok_params)
-                tiktok_uploader.upload()
-                tiktok_ok = True
-            except Exception as e:
-                print(f"[UVE] Upload TikTok falhou: {e}")
-
         if video_id or instagram_media or r2_files:
             self._save_video_record(video_id, thumbnail_path, scenes, instagram_media, r2_files)
 
@@ -2349,7 +2332,7 @@ class UnifiedVideoEngine:
             # re-renderizar.
             # Só apaga tudo se TODOS os destinos configurados deram certo.
             has_dest = bool(self.uploads)
-            all_ok = (has_dest and instagram_ok and tiktok_ok and r2_ok
+            all_ok = (has_dest and instagram_ok and r2_ok
                       and (upload_ok or not self.youtube_config))
             if all_ok:
                 try:

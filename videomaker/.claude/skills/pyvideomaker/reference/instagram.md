@@ -26,5 +26,5 @@ em `{output}/{slug}/{slug}[_NN].png`, publicado via R2. Sem TTS/legenda/áudio/t
 - 1 cena → post (feed) / story. 2–20 cenas → **carrossel** no feed; no story, um story por imagem, em ordem.
 - Caption só no feed. > 20 cenas com `feed` → erro antes do render.
 - Tudo OK → apaga a pasta. Falha → mantém só os PNGs finais.
-Texto: `visual_elements` `text_box`. `youtube`/`tiktok` ignorados.
+Texto: `visual_elements` `text_box`. `youtube` ignorado.
 Exemplo: `examples/teste_instagram.json`.

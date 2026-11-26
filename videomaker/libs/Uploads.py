@@ -1,4 +1,4 @@
-"""Bloco `uploads`: um destino por chave (youtube, instagram, tiktok, r2).
+"""Bloco `uploads`: um destino por chave (youtube, instagram, r2).
 
     "uploads": {
       "youtube":   {...},
@@ -9,7 +9,7 @@
 - Canal (`channels_config`) e vídeo são mesclados com `deep_merge`; o vídeo vence.
 - `"enabled": false` (ou `false` direto) desliga um destino herdado do canal.
 - `"r2": true` / `"r2": {}` liga com os defaults.
-- Legado: `youtube`/`instagram`/`tiktok`/`r2` na raiz continuam valendo; se a
+- Legado: `youtube`/`instagram`/`r2` na raiz continuam valendo; se a
   mesma chave existir em `uploads`, ela é mesclada por cima da raiz.
 """
 import os
@@ -17,7 +17,7 @@ from datetime import datetime
 
 from libs.utils import channel_slug, deep_merge
 
-DESTINATIONS = ("youtube", "instagram", "tiktok", "r2")
+DESTINATIONS = ("youtube", "instagram", "r2")
 R2_DEFAULT_PREFIX = "videos/{channel}/{slug}"
 _MISSING = object()
 
@@ -57,9 +57,6 @@ def resolve_uploads(channel_config: dict | None, video_data: dict | None,
     result = {}
     for name in DESTINATIONS:
         present = [r for r in (_raw(channel_config, name), _raw(video_data, name)) if r is not _MISSING]
-        # TikTok legado também podia vir em global_settings.tiktok.
-        if name == "tiktok" and not present and (global_settings or {}).get("tiktok"):
-            present = [global_settings["tiktok"]]
         if not present:
             continue
         cfg = {}
@@ -68,7 +65,7 @@ def resolve_uploads(channel_config: dict | None, video_data: dict | None,
         if cfg.get("enabled", True) is False:
             continue
         cfg.pop("enabled", None)
-        # youtube/instagram/tiktok vazios não têm o que publicar; r2 vazio = defaults.
+        # youtube/instagram vazios não têm o que publicar; r2 vazio = defaults.
         if not cfg and name != "r2":
             continue
         result[name] = cfg

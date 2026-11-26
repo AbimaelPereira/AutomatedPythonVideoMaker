@@ -3,7 +3,7 @@
 ## Decisões
 - Vídeo → upload resumable direto (sem R2).
 - Imagem → JPEG → R2 → `image_url` → apaga do R2.
-- Ordem dos uploads: Instagram → YouTube → TikTok.
+- Ordem dos uploads: Instagram → YouTube.
 - Bucket: prefixo `ig/` + Lifecycle Rule de 1 dia (painel R2).
 - Credenciais **nunca** no JSON; o JSON só referencia um arquivo de conta.
 - Token recomendado: System User (não expira).
@@ -73,7 +73,7 @@ Validado em 09/11/2026 na @lojaoprecocaido: reel no feed, story de vídeo
 - `"output": { "type": "image" }` (default `"video"`).
 - `ImagePostEngine`: Prepare → `PreviewEngine`/`render_frame` por cena →
   `{output}/{slug}/{slug}.png` → `Instagram.publish_image`.
-- Pula TTS, legenda, transições, concat, áudio. YouTube/TikTok ignorados com aviso.
+- Pula TTS, legenda, transições, concat, áudio. YouTube ignorado com aviso.
 - Texto via `text_box`/`visual_elements`; `subtitle`/`motion` → aviso.
 - Futuro: várias cenas → `CAROUSEL`.
 - Golden test de 1 JSON imagem.

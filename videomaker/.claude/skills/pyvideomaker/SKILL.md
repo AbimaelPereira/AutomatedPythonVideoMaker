@@ -28,7 +28,7 @@ e armadilhas conhecidas. Exemplos prontos e copiáveis ficam em `examples/`.
 | [reference/filters.md](reference/filters.md) | `light_leak`, `particles`, `brightness_pulse`, `light_sweep` — `overlay` vs `modifier`. |
 | [reference/transitions.md](reference/transitions.md) | Transições `zoom`/`fade`, áudio de transição, override por cena. |
 | [reference/output_quality.md](reference/output_quality.md) | `output.ratio`, `output.quality` (presets x264 e override fino), `output.dir` (pasta de saída). |
-| [reference/uploads.md](reference/uploads.md) | Bloco `uploads` (youtube/instagram/tiktok/r2 juntos), `enabled: false`, legado na raiz, Cloudflare R2 (`prefix`, `video`, `thumbnail`). |
+| [reference/uploads.md](reference/uploads.md) | Bloco `uploads` (youtube/instagram/r2 juntos), `enabled: false`, legado na raiz, Cloudflare R2 (`prefix`, `video`, `thumbnail`). |
 | [reference/youtube_upload.md](reference/youtube_upload.md) | Upload: `title`/`tags`/`privacy_status`/`publish_at`, thumbnail (file/directory/ai/scene — composta com background + visual_elements). |
 | [reference/instagram.md](reference/instagram.md) | Instagram: `account`, `targets` (feed/story), `caption`, `cover`; modo imagem (`output.type: "image"`, carrossel). |
 

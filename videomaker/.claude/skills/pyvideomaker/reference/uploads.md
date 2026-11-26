@@ -8,7 +8,6 @@ Cada chave de `uploads` é um destino. Os destinos presentes recebem o upload, e
 "uploads": {
   "youtube":   { "title": "...", "tags": [...], "thumbnail": {...} },   // ver youtube_upload.md
   "instagram": { "targets": ["feed", "story"], "caption": "..." },     // ver instagram.md
-  "tiktok":    { ... },
   "r2":        { "prefix": "videos/{channel}/{slug}" }
 }
 ```
@@ -18,8 +17,8 @@ Cada chave de `uploads` é um destino. Os destinos presentes recebem o upload, e
 - O `channels_config` e o vídeo podem ter `uploads`. Os dois são mesclados com `deep_merge`, e o vídeo vence.
 - Use `"enabled": false` (ou só `false`) para desligar um destino que vem do canal: `"uploads": {"youtube": false}`.
 - `"r2": true` ou `"r2": {}` liga o R2 com os defaults. Nos outros destinos, um bloco vazio é ignorado.
-- **Formato legado:** `youtube`, `instagram`, `tiktok` e `r2` direto na raiz continuam funcionando. Se a mesma chave existir também em `uploads`, ela é mesclada por cima.
-- Ordem de envio: Instagram → YouTube → R2 → TikTok.
+- **Formato legado:** `youtube`, `instagram` e `r2` direto na raiz continuam funcionando. Se a mesma chave existir também em `uploads`, ela é mesclada por cima.
+- Ordem de envio: Instagram → YouTube → R2.
 - A pasta de saída só é apagada se **todos** os destinos derem certo (ver [Limpeza da saída](#limpeza-da-saída)).
 - O registro em `app_videos` é salvo se pelo menos um destino publicou.
 - Em debug (`DEBUG=1` ou `"debug": true`), nenhum upload é feito.
