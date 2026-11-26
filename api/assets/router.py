@@ -4,12 +4,11 @@ from pydantic import BaseModel
 from typing import Optional
 
 from database import get_session
-from middleware.auth import get_current_user, require_service_token
-from auth.models import User
+from middleware.auth import require_service_token
 from assets.models import RemoteAssetMidia
 from assets import service
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_service_token)])
 
 
 # ---------------------------------------------------------------------------
@@ -83,22 +82,22 @@ class BulkMidiaCreate(BaseModel):
 
 
 @router.get("")
-def list_assets(session: Session = Depends(get_session), _: User = Depends(get_current_user)):
+def list_assets(session: Session = Depends(get_session)):
     return service.list_assets(session)
 
 @router.get("/{asset_id}")
-def get_asset(asset_id: int, session: Session = Depends(get_session), _: User = Depends(get_current_user)):
+def get_asset(asset_id: int, session: Session = Depends(get_session)):
     asset = service.get_asset(asset_id, session)
     if not asset:
         raise HTTPException(status_code=404, detail="Asset não encontrado")
     return asset
 
 @router.post("", status_code=201)
-def create_asset(body: AssetCreate, session: Session = Depends(get_session), _: User = Depends(get_current_user)):
+def create_asset(body: AssetCreate, session: Session = Depends(get_session)):
     return service.create_asset(body.model_dump(), session)
 
 @router.put("/{asset_id}")
-def update_asset(asset_id: int, body: AssetUpdate, session: Session = Depends(get_session), _: User = Depends(get_current_user)):
+def update_asset(asset_id: int, body: AssetUpdate, session: Session = Depends(get_session)):
     from assets.models import RemoteAsset
     asset = session.get(RemoteAsset, asset_id)
     if not asset:
@@ -106,7 +105,7 @@ def update_asset(asset_id: int, body: AssetUpdate, session: Session = Depends(ge
     return service.update_asset(asset, body.model_dump(exclude_none=True), session)
 
 @router.delete("/{asset_id}", status_code=204)
-def delete_asset(asset_id: int, session: Session = Depends(get_session), _: User = Depends(get_current_user)):
+def delete_asset(asset_id: int, session: Session = Depends(get_session)):
     from assets.models import RemoteAsset
     asset = session.get(RemoteAsset, asset_id)
     if not asset:
@@ -114,33 +113,33 @@ def delete_asset(asset_id: int, session: Session = Depends(get_session), _: User
     service.delete_asset(asset, session)
 
 @router.get("/{asset_id}/midia")
-def list_midias(asset_id: int, session: Session = Depends(get_session), _: User = Depends(get_current_user)):
+def list_midias(asset_id: int, session: Session = Depends(get_session)):
     return service.list_midias(asset_id, session)
 
 @router.post("/{asset_id}/midia", status_code=201)
-def create_midia(asset_id: int, body: MidiaCreate, session: Session = Depends(get_session), _: User = Depends(get_current_user)):
+def create_midia(asset_id: int, body: MidiaCreate, session: Session = Depends(get_session)):
     return service.create_midia(asset_id, body.model_dump(), session)
 
 @router.post("/{asset_id}/midia/bulk", status_code=201)
-def bulk_create_midias(asset_id: int, body: BulkMidiaCreate, session: Session = Depends(get_session), _: User = Depends(get_current_user)):
+def bulk_create_midias(asset_id: int, body: BulkMidiaCreate, session: Session = Depends(get_session)):
     return service.bulk_create_midias(asset_id, body.urls, session)
 
 @router.put("/midia/{midia_id}")
-def update_midia(midia_id: int, body: MidiaUpdate, session: Session = Depends(get_session), _: User = Depends(get_current_user)):
+def update_midia(midia_id: int, body: MidiaUpdate, session: Session = Depends(get_session)):
     midia = session.get(RemoteAssetMidia, midia_id)
     if not midia:
         raise HTTPException(status_code=404, detail="Mídia não encontrada")
     return service.update_midia(midia, body.model_dump(exclude_none=True), session)
 
 @router.delete("/midia/{midia_id}", status_code=204)
-def delete_midia(midia_id: int, session: Session = Depends(get_session), _: User = Depends(get_current_user)):
+def delete_midia(midia_id: int, session: Session = Depends(get_session)):
     midia = session.get(RemoteAssetMidia, midia_id)
     if not midia:
         raise HTTPException(status_code=404, detail="Mídia não encontrada")
     service.delete_midia(midia, session)
 
 @router.patch("/midia/{midia_id}/toggle-invalid")
-def toggle_invalid(midia_id: int, session: Session = Depends(get_session), _: User = Depends(get_current_user)):
+def toggle_invalid(midia_id: int, session: Session = Depends(get_session)):
     midia = session.get(RemoteAssetMidia, midia_id)
     if not midia:
         raise HTTPException(status_code=404, detail="Mídia não encontrada")

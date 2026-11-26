@@ -11,7 +11,6 @@ Passos:
 2. Para cada módulo tocado:
    - api: `cd api && .venv/bin/pytest`
    - videomaker: `cd videomaker && python3 -m pytest -m "not slow"`; render mexido → golden (`tests/golden_render.py`).
-   - web: `cd web && npm run build`
    - database:
      - `./database/flyway.sh validate` e `./database/flyway.sh info` (nada `Failed`/`Pending`).
      - `bash database/test-from-zero.sh` (migrations do zero = estrutura do `anonimo`).

@@ -1,19 +1,16 @@
 # CLAUDE.md
 
-Monorepo com quatro módulos independentes. Cada um tem seu CLAUDE.md com comandos e regras — **leia o do módulo antes de mexer nele**.
+Monorepo com três módulos independentes. Cada um tem seu CLAUDE.md com comandos e regras — **leia o do módulo antes de mexer nele**.
 
 | Módulo | O que é | Instruções |
 |---|---|---|
-| `api/` | Backend FastAPI + SQLModel + MySQL (canais, vídeos, jobs, auth) | `api/CLAUDE.md` |
-| `videomaker/` | Motor de geração de vídeos (CLI ou via fila de jobs da api) | `videomaker/.claude/CLAUDE.md` |
-| `web/` | Painel React + TypeScript + Vite + Tailwind | `web/CLAUDE.md` |
+| `api/` | Backend FastAPI + SQLModel + MySQL (remote assets) | `api/CLAUDE.md` |
+| `videomaker/` | Motor de geração de vídeos (CLI) | `videomaker/.claude/CLAUDE.md` |
 | `database/` | Migrations Flyway do MySQL (dono da estrutura do banco) | `database/CLAUDE.md` |
 
 ## Como os módulos conversam
 
-- `web` → `api` (HTTP, proxy `/api` do Vite).
 - `api` → MySQL (só dados; a estrutura é do `database/`).
-- `api/jobs/worker.py` → `videomaker` (subprocesso).
 - `videomaker` → `api` (remote assets, header `X-Service-Token`).
 
 ## Banco
@@ -23,9 +20,9 @@ Monorepo com quatro módulos independentes. Cada um tem seu CLAUDE.md com comand
 
 ## Agentes e fluxo de feature
 
-- `/feature <descrição>`: `planner` → `db-migration` → `api-dev` / `videomaker-dev` / `web-dev` (worktrees, em paralelo) → `qa`. Ver `.claude/skills/feature/SKILL.md`.
+- `/feature <descrição>`: `planner` → `db-migration` → `api-dev` / `videomaker-dev` (worktrees, em paralelo) → `qa`. Ver `.claude/skills/feature/SKILL.md`.
 - Agentes em `.claude/agents/`; contratos entre módulos em `docs/contracts/`.
-- Em worktree: `bash .claude/scripts/worktree-setup.sh` (liga venvs, `.env`, `node_modules`, assets do repo principal).
+- Em worktree: `bash .claude/scripts/worktree-setup.sh` (liga venvs, `.env`, assets do repo principal).
 - `.claude/settings.json`: bloqueia edição dos `.env` e leitura de `tokens/`.
 
 ## Segredos (não commitar)

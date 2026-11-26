@@ -1759,54 +1759,6 @@ class UnifiedVideoEngine:
         return final_path
 
     # ------------------------------------------------------------------
-    # VIDEO RECORD
-    # ------------------------------------------------------------------
-
-    def _save_video_record(self, youtube_id: str | None, thumbnail_path: str | None, scenes: list,
-                           instagram_media: list | None = None, r2_files: list | None = None):
-        """Salva o registro do vídeo chamando a API via HTTP."""
-        try:
-            import requests
-
-            api_url = os.getenv("API_URL", "http://localhost:8000")
-
-            transcript = "\n".join(
-                scene.get("narration", {}).get("text", "")
-                for scene in scenes
-                if scene.get("narration", {}).get("text")
-            ) or None
-
-            yt = self.youtube_config or self.youtube_meta or {}
-            tags = yt.get("tags") or []
-            if isinstance(tags, str):
-                tags = [t.strip() for t in tags.split(",")]
-
-            payload = {
-                "youtube_id": youtube_id,
-                "title": yt.get("title", ""),
-                "description": yt.get("description"),
-                "tags": tags,
-                "category_id": str(yt.get("category_id", "")) or None,
-                "slug": self.video_data.get("slug"),
-                "channel_slug": channel_slug(self.video_data.get("channel_name")),
-                "privacy_status": yt.get("privacy_status"),
-                "thumbnail_path": thumbnail_path,
-                "transcript": transcript,
-                "instagram_media": instagram_media or None,
-                "r2_files": r2_files or None,
-            }
-
-            # A rota exige X-Service-Token (chamada de processo, não de usuário).
-            headers = {"X-Service-Token": os.getenv("SERVICE_TOKEN", "dev-service-token")}
-            response = requests.post(f"{api_url}/videos/", json=payload,
-                                     headers=headers, timeout=10)
-            response.raise_for_status()
-            video = response.json()
-            print(f"[UVE] Registro do vídeo salvo no banco (id={video['id']}, youtube_id={youtube_id})")
-        except Exception as e:
-            print(f"[UVE] Aviso: falha ao salvar registro do vídeo no banco: {e}")
-
-    # ------------------------------------------------------------------
     # RUN
     # ------------------------------------------------------------------
 
@@ -2298,9 +2250,6 @@ class UnifiedVideoEngine:
                 r2_ok = True
             except Exception as e:
                 print(f"[UVE] Upload R2 falhou: {e}")
-
-        if video_id or instagram_media or r2_files:
-            self._save_video_record(video_id, thumbnail_path, scenes, instagram_media, r2_files)
 
         # 13. Abrir vídeo (debug)
         if self.video_data.get("debug") is True:

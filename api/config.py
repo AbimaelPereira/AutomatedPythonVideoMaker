@@ -10,10 +10,6 @@ class Settings(BaseSettings):
     MYSQL_PASS: str
     MYSQL_DBNAME: str
 
-    JWT_SECRET: str
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
-    REFRESH_TOKEN_EXPIRE_DAYS: int = 30
-    FRONTEND_URL: str = "http://localhost:5173"
     ENVIRONMENT: str = "development"
 
     # Token de serviço para chamadas internas (ex: videomaker -> API de remote assets)
@@ -26,6 +22,7 @@ class Settings(BaseSettings):
 
     class Config:
         env_file = ".env"
+        extra = "ignore"
 
 
 settings = Settings()

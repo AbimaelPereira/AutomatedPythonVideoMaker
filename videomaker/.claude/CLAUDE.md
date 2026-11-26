@@ -64,7 +64,7 @@ Cada objeto de vídeo possui:
 - `uploads` — destinos de upload: `{ "youtube", "instagram", "r2" }` (resolvidos em `libs/Uploads.py`).
   Canal < vídeo via `deep_merge`; `"enabled": false` desliga um destino herdado; `youtube`/`instagram`/`r2`
   na raiz (legado) continuam aceitos. R2: `{ "prefix": "videos/{channel}/{slug}", "video": true, "thumbnail": true }`
-  sobe MP4/thumbnail (ou os PNGs no modo imagem); URLs em `app_videos.r2_files`. Ver `.claude/skills/pyvideomaker/reference/uploads.md`.
+  sobe MP4/thumbnail (ou os PNGs no modo imagem). Ver `.claude/skills/pyvideomaker/reference/uploads.md`.
 - `uploads.instagram` — publicação no Instagram (ver abaixo)
 
 ### Instagram (`instagram`) e modo imagem
