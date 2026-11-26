@@ -15,7 +15,7 @@ Monorepo com três módulos independentes. Cada um tem seu CLAUDE.md com comando
 
 ## Banco
 
-- Banco único `anonimo` (MySQL local). Agentes têm acesso livre: dados pelo MCP `mysql`, estrutura só por migration em `database/migrations/` (nada de `create_all`).
+- Um banco por branch (MySQL local): `main` → `anonimo`, `reestruturacao` → `anonimo_reestruturacao` (ver `database/flyway.toml`). Agentes têm acesso livre: dados pelo MCP `mysql`, estrutura só por migration em `database/migrations/` (nada de `create_all`).
 - Todo `./database/flyway.sh migrate` faz backup antes em `database/backups/`.
 
 ## Agentes e fluxo de feature

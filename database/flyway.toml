@@ -1,13 +1,13 @@
 databaseType = "MySql"
-name = "anonimo"
+name = "anonimo_reestruturacao"
 
-[environments.anonimo]
-displayName = "Local - anonimo"
-url = "jdbc:mysql://127.0.0.1:3306/anonimo?allowPublicKeyRetrieval=true&useSSL=false"
-schemas = [ "anonimo" ]
+[environments.reestruturacao]
+displayName = "Local - anonimo_reestruturacao (branch reestruturacao)"
+url = "jdbc:mysql://127.0.0.1:3306/anonimo_reestruturacao?allowPublicKeyRetrieval=true&useSSL=false"
+schemas = [ "anonimo_reestruturacao" ]
 
 [flyway]
-environment = "anonimo"
+environment = "reestruturacao"
 locations = [ "filesystem:migrations" ]
 validateMigrationNaming = true
 cleanDisabled = true

@@ -14,13 +14,13 @@ database/
 ├── flyway.user.toml         # credencial (NÃO versionado)
 ├── flyway.user.toml.example
 ├── flyway.sh                # wrapper do Flyway via Docker
-└── test-from-zero.sh        # aplica tudo num banco vazio (anonimo_qa) e compara com o anonimo
+└── test-from-zero.sh        # aplica tudo num banco vazio (anonimo_qa) e compara com o banco da branch
 ```
 
 ## Banco
 
-- Um só: `anonimo` (MySQL local, `127.0.0.1:3306`).
-- Usuário MySQL `anonimo`: tudo em `anonimo` e `anonimo_qa`, nada nos outros bancos do servidor.
+- Um por branch (MySQL local, `127.0.0.1:3306`): `main` → `anonimo`; `reestruturacao` → `anonimo_reestruturacao`. O banco da branch vem do `flyway.toml`.
+- Usuário MySQL `anonimo`: tudo em `anonimo`, `anonimo_reestruturacao` e `anonimo_qa`, nada nos outros bancos do servidor.
 - Usado pela `api/.env`, pelo Flyway e pelo MCP `mysql` dos agentes.
 
 ## Setup
@@ -45,7 +45,7 @@ cp database/flyway.user.toml.example database/flyway.user.toml   # preencher a s
 
 Vale só para migration que **ainda não está na `main`**:
 
-1. Desfazer no `anonimo` o que ela aplicou (SQL inverso, ex.: `DROP COLUMN`).
+1. Desfazer no banco da branch o que ela aplicou (SQL inverso, ex.: `DROP COLUMN`).
 2. Apagar o registro dela: `DELETE FROM flyway_schema_history WHERE version = '<versão>';`
 3. Editar o arquivo e rodar `./database/flyway.sh migrate` de novo.
 
@@ -54,7 +54,7 @@ Migration já na `main`: **nunca editar**; criar uma nova que corrige.
 ## Restaurar um backup
 
 ```bash
-zcat database/backups/anonimo_<data>.sql.gz | mysql -uanonimo -p -h127.0.0.1 anonimo
+zcat database/backups/<banco>_<data>.sql.gz | mysql -uanonimo -p -h127.0.0.1 <banco>
 ```
 
 ## Regras
