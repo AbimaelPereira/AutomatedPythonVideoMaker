@@ -12,8 +12,16 @@ Separar responsabilidades que hoje estão misturadas no `videomaker`:
 
 ## Ordem de trabalho
 
-1. **Banco primeiro**: definir todas as tabelas (migrations em `database/migrations/`).
-2. **Depois a API nova**, já sobre a estrutura do banco definida.
+Meta: o pedido entra na API e sai o MP4 (ou PNG) final. O resto vem depois.
+
+1. **Banco mínimo** já criado (marcas, conteúdos, capítulos, cenas).
+2. **Fluxo de ponta a ponta** (fatia vertical mínima):
+   1. contrato dos JSONs (`request` e `resolved`);
+   2. esqueleto da API nova: `POST /contents` grava conteúdo e cenas;
+   3. prepare mínimo (1 provedor de imagem, 1 de TTS, storage local);
+   4. videomaker lê o `resolved` e gera MP4 por cena e o final;
+   5. status a cada etapa + `GET /contents/{uid}`.
+3. **Depois**: publicações, registro de IA, demais pendências.
 
 ## Como um conteúdo é produzido (visão aprovada pelo usuário)
 
@@ -60,10 +68,14 @@ Separar responsabilidades que hoje estão misturadas no `videomaker`:
 - `id`, `uid` (ULID, único, identificador público usado na API), `brand_id`, `title`, `type` (video | image), `status`, `request` (JSON: pedido original inteiro), `settings` (JSON: padrões da marca + pedido, congelados), `output_key` (chave do arquivo final no storage), `error`, `created_at`, `updated_at`
 
 **`app_content_chapters`**: capítulos opcionais do conteúdo.
-- `id`, `content_id`, `position` (único por conteúdo), `title`, `settings` (JSON), `status` (pending | rendering | rendered | failed), `error`, `created_at`, `updated_at`
+- `id`, `content_id`, `position` (único por conteúdo), `title`, `settings` (JSON), `status` (pending | rendering | rendered | failed), `error`, `render_ms`, `created_at`, `updated_at`
 
 **`app_content_scenes`**: cenas do conteúdo.
-- `id`, `content_id`, `chapter_id` (NULL quando não há capítulos), `position` (ordem global no conteúdo, única), `request` (JSON: cena como chegou no pedido), `request_hash`, `resolved` (JSON: cena com arquivos já gerados, entrada do videomaker), `status`, `preview_key`, `video_key`, `error`, `created_at`, `updated_at`
+- `id`, `content_id`, `chapter_id` (NULL quando não há capítulos), `position` (ordem global no conteúdo, única), `request` (JSON: cena como chegou no pedido), `request_hash`, `resolved` (JSON: cena com arquivos já gerados, entrada do videomaker), `status`, `preview_key`, `video_key`, `preview_ms`, `render_ms` (tempo em ms de cada etapa), `error`, `created_at`, `updated_at`
+
+**`app_jobs`**: fila de tarefas lida pelo worker (processo Python rodando em loop, separado da API).
+- `id`, `content_id`, `scene_id` (NULL = conteúdo inteiro), `type` (prepare | render | render_scene), `status` (pending | running | done | failed), `attempts`, `error`, `started_at`, `finished_at`, `created_at`, `updated_at`
+- Fluxo: API grava o pedido e cria job `prepare` → worker executa → cria job `render` → worker chama o videomaker → MP4 final.
 
 ### Decisões de modelagem
 - Padrão de nome `app_brand_account_{integração}`: uma tabela por plataforma.
