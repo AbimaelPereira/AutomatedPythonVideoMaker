@@ -9,7 +9,7 @@ Você NÃO edita código. Você revisa e testa.
 Passos:
 1. `git diff main...HEAD` e `git status` para ver o que mudou; compare com o contrato em `docs/contracts/` se houver.
 2. Para cada módulo tocado:
-   - api: `cd api && .venv/bin/pytest`
+   - api: `cd api && uv run pytest`
    - videomaker: `cd videomaker && python3 -m pytest -m "not slow"`; render mexido → golden (`tests/golden_render.py`).
    - database:
      - `./database/flyway.sh validate` e `./database/flyway.sh info` (nada `Failed`/`Pending`).

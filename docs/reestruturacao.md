@@ -17,7 +17,7 @@ Meta: o pedido entra na API e sai o MP4 (ou PNG) final. O resto vem depois.
 1. **Banco mínimo** já criado (marcas, conteúdos, capítulos, cenas).
 2. **Fluxo de ponta a ponta** (fatia vertical mínima):
    1. contrato dos JSONs (`request` e `resolved`);
-   2. esqueleto da API nova: `POST /contents` grava conteúdo e cenas;
+   2. esqueleto da API nova: `POST /contents` grava conteúdo e cenas (**base pronta**: config, db, models, auth por token, `/health`, `/me`; falta o `POST`, que depende do contrato);
    3. prepare mínimo (1 provedor de imagem, 1 de TTS, storage local);
    4. videomaker lê o `resolved` e gera MP4 por cena e o final;
    5. status a cada etapa + `GET /contents/{uid}`.
@@ -38,6 +38,14 @@ Meta: o pedido entra na API e sai o MP4 (ou PNG) final. O resto vem depois.
 4. **Thumbnail** de modo cena é só mais uma imagem gerada pelo pipeline, salva com o conteúdo e depois enviada ao destino.
 
 ## Aprovado
+
+### API nova: base
+- `api/` antiga apagada na branch (continua na `main`); recriada do zero no mesmo lugar.
+- Python 3.12 via `uv`, FastAPI, **SQLAlchemy 2.0** (no lugar do SQLModel), pymysql síncrono. Models só mapeiam as tabelas do Flyway.
+- Estrutura por domínio: `app/core` (config, db, auth, security), `app/{brands,users,contents,jobs}`, `worker/`, `tests/`.
+- Auth: `Authorization: Bearer <token>` de `app_api_tokens` (sha256); token = 1 usuário + 1 marca. Criação via `uv run python -m app.cli create-token`.
+- Testes no banco da branch, dentro de transação desfeita no fim.
+- `api/.env` só com `MYSQL_*` e `ENVIRONMENT` (JWT e `FRONTEND_URL` removidos).
 
 ### Motor de vídeo: tudo via FFmpeg
 - O videomaker novo renderiza **tudo** por filtergraph do FFmpeg (`filter_complex`): fundo, zoom/pan, overlays, fade/transições, motion e áudio. Legendas em `.ass` (libass).
@@ -184,4 +192,4 @@ Meta: o pedido entra na API e sai o MP4 (ou PNG) final. O resto vem depois.
 - **Performance do render**: entender os gargalos (vídeos com capítulos ficam lentos) e acelerar sem perder qualidade.
 
 ### Ambiente
-- MCP `mysql` e `api/.env` apontam para `anonimo` (banco da `main`).
+- MCP `mysql` aponta para `anonimo` (banco da `main`); usar `anonimo_reestruturacao.<tabela>`. `api/.env` já aponta para `anonimo_reestruturacao`.

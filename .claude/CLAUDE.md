@@ -4,7 +4,7 @@ Monorepo com três módulos independentes. Cada um tem seu CLAUDE.md com comando
 
 | Módulo | O que é | Instruções |
 |---|---|---|
-| `api/` | Backend FastAPI + SQLModel + MySQL (remote assets) | `api/CLAUDE.md` |
+| `api/` | API nova: FastAPI + SQLAlchemy 2.0 + MySQL (conteúdos, jobs, IA, uploads) | `api/CLAUDE.md` |
 | `videomaker/` | Motor de geração de vídeos (CLI) | `videomaker/.claude/CLAUDE.md` |
 | `database/` | Migrations Flyway do MySQL (dono da estrutura do banco) | `database/CLAUDE.md` |
 
