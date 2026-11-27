@@ -10,6 +10,11 @@ Separar responsabilidades que hoje estão misturadas no `videomaker`:
 - **API nova**, criada do zero pelo usuário (não é adaptar a `api/` atual): tudo que é IA (imagem, vídeo, texto, TTS, transcrição), downloads, remote assets e uploads (YouTube, Instagram, R2, futuramente Pinterest).
 - **Banco** no lugar dos JSONs espalhados (channels_config, caches, manifest etc.).
 
+## Ordem de trabalho
+
+1. **Banco primeiro**: definir todas as tabelas (migrations em `database/migrations/`).
+2. **Depois a API nova**, já sobre a estrutura do banco definida.
+
 ## Como um conteúdo é produzido (visão aprovada pelo usuário)
 
 1. **Pedido chega na API** (vídeo ou imagem).
@@ -29,6 +34,7 @@ Separar responsabilidades que hoje estão misturadas no `videomaker`:
 ### Divisão de responsabilidades
 - TTS vai para a API como IA: endpoint tipo `/ai/tts`.
 - Whisper vai para a API com endpoint próprio de transcrição, e também como etapa opcional dentro do TTS (para provedores que não geram timestamps por palavra) e para narração já gravada.
+- Elementos `html/icon` (Chromium) e `SilenceRemover` ficam na API (parte do prepare); o videomaker recebe os arquivos já gerados.
 
 ### Limpezas já feitas (commit e push)
 - `videomaker/reelscutter/` removido, junto com `yt-dlp` e `youtube-transcript-api` do `requirements.txt`.
@@ -103,7 +109,6 @@ Separar responsabilidades que hoje estão misturadas no `videomaker`:
 - Estrutura de endpoints da API nova (a lista anterior foi parcialmente rejeitada).
 - Formato do JSON de pedido e do JSON resolvido (contrato entre API e videomaker).
 - Modo imagem: o usuário acha a implementação atual gambiarra; redesenhar dentro do fluxo único.
-- Se elementos `html/icon` (Chromium) e `SilenceRemover` ficam na API ou no videomaker.
 - **Performance do render**: entender os gargalos (vídeos com capítulos ficam lentos) e acelerar sem perder qualidade.
 
 ### Ambiente
