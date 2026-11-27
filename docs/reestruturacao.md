@@ -39,6 +39,21 @@ Meta: o pedido entra na API e sai o MP4 (ou PNG) final. O resto vem depois.
 
 ## Aprovado
 
+### Motor de vídeo: tudo via FFmpeg
+- O videomaker novo renderiza **tudo** por filtergraph do FFmpeg (`filter_complex`): fundo, zoom/pan, overlays, fade/transições, motion e áudio. Legendas em `.ass` (libass).
+- **Sem MoviePy** e sem composição frame a frame em Python/numpy. Elemento que o FFmpeg não faz direto é pré-renderizado (PNG ou vídeo com alpha) e entra como overlay.
+- Motivo (benchmark de 2026-11-27, cena de 18s em 1080p): render da cena levou ~27s pelo FFmpeg e ~155s pelo MoviePy.
+- Linguagem continua Python: o ganho vem do FFmpeg, não da linguagem.
+- **Um encode só**: cada cena já sai no formato final (codec, resolução, fps, preset) e o vídeo final é concatenado com `-c copy`, sem reencode. Hoje há dois encodes (cena em `ultrafast` crf12 + reencode final em `slow` crf18, ~25s a cada 18s de vídeo).
+
+### Motor de vídeo e motor de áudio separados
+1. **Timeline** primeiro: a duração de cada cena vem da narração; os dois motores leem os mesmos tempos.
+2. **Motor de vídeo**: MP4 de cada cena **sem áudio** → concat com `-c copy`.
+3. **Motor de áudio**: narração + música de fundo + SFX numa faixa só, com normalização de volume uma vez no vídeo inteiro.
+4. **Mux** final: `-c:v copy -c:a aac` (segundos).
+- Trocar música/volume refaz só áudio + mux; refazer uma cena refaz só ela + concat + mux. Os motores podem rodar em paralelo.
+- Cuidados: duração de cada cena em frames inteiros (ex.: 538 frames a 30fps) e o áudio seguindo a mesma duração, senão a legenda escorrega; narração mudou → vídeo da cena também é refeito; SFX ligados ao visual (ex.: whoosh na transição) são eventos da timeline; preview de cena com som = mux da cena com o trecho dela do áudio.
+
 ### Divisão de responsabilidades
 - TTS vai para a API como IA: endpoint tipo `/ai/tts`.
 - Whisper vai para a API com endpoint próprio de transcrição, e também como etapa opcional dentro do TTS (para provedores que não geram timestamps por palavra) e para narração já gravada.
@@ -65,17 +80,57 @@ Meta: o pedido entra na API e sai o MP4 (ou PNG) final. O resto vem depois.
 - `id`, `brand_id`, `ig_user_id` (único), `username`, `access_token`, `token_expires_at`, `is_active`, `created_at`, `updated_at`
 
 **`app_contents`**: um vídeo ou uma imagem da marca.
-- `id`, `uid` (ULID, único, identificador público usado na API), `brand_id`, `title`, `type` (video | image), `status`, `request` (JSON: pedido original inteiro), `settings` (JSON: padrões da marca + pedido, congelados), `output_key` (chave do arquivo final no storage), `error`, `created_at`, `updated_at`
+- `id`, `uid` (ULID, único, identificador público usado na API), `brand_id`, `title`, `type` (video | image), `status`, `request` (JSON: pedido original inteiro), `settings` (JSON: padrões da marca + pedido, congelados), `video_key` (cenas concatenadas sem áudio), `audio_key` (faixa final: narração + música + SFX), `output_key` (chave do arquivo final no storage; mux de vídeo + áudio), `error`, `created_at`, `updated_at`
 
 **`app_content_chapters`**: capítulos opcionais do conteúdo.
 - `id`, `content_id`, `position` (único por conteúdo), `title`, `settings` (JSON), `status` (pending | rendering | rendered | failed), `error`, `render_ms`, `created_at`, `updated_at`
 
 **`app_content_scenes`**: cenas do conteúdo.
-- `id`, `content_id`, `chapter_id` (NULL quando não há capítulos), `position` (ordem global no conteúdo, única), `request` (JSON: cena como chegou no pedido), `request_hash`, `resolved` (JSON: cena com arquivos já gerados, entrada do videomaker), `status`, `preview_key`, `video_key`, `preview_ms`, `render_ms` (tempo em ms de cada etapa), `error`, `created_at`, `updated_at`
+- `id`, `content_id`, `chapter_id` (NULL quando não há capítulos), `position` (ordem global no conteúdo, única), `request` (JSON: cena como chegou no pedido), `request_hash`, `resolved` (JSON: cena com arquivos já gerados, entrada do videomaker), `status`, `preview_key`, `output_key` (MP4 da cena sem áudio, ou PNG se imagem), `preview_ms`, `render_ms` (tempo em ms de cada etapa), `error`, `created_at`, `updated_at`
 
 **`app_jobs`**: fila de tarefas lida pelo worker (processo Python rodando em loop, separado da API).
-- `id`, `content_id`, `scene_id` (NULL = conteúdo inteiro), `type` (prepare | render | render_scene), `status` (pending | running | done | failed), `attempts`, `error`, `started_at`, `finished_at`, `created_at`, `updated_at`
-- Fluxo: API grava o pedido e cria job `prepare` → worker executa → cria job `render` → worker chama o videomaker → MP4 final.
+- `id`, `content_id`, `scene_id` (NULL = conteúdo inteiro), `type` (prepare | preview | render_video | render_audio | concat_video | mux | render_image), `status` (pending | running | done | failed), `attempts`, `error`, `started_at`, `finished_at`, `created_at`, `updated_at`
+- Fluxo: ver "Jobs do conteúdo" abaixo.
+
+### Jobs do conteúdo
+`type` diz a etapa; `scene_id` diz o escopo (cena ou conteúdo inteiro). Vídeo com 10 cenas:
+
+| Ordem | `type` | Escopo | Qtd | Pode começar quando |
+|---|---|---|---|---|
+| 1 | `prepare` | cena | 10 | o pedido chegar |
+| 2 | `preview` | cena | 10 | `prepare` da mesma cena terminar (só se o pedido pedir preview) |
+| 3 | `render_video` | cena | 10 | `prepare` da mesma cena terminar |
+| 4 | `render_audio` | conteúdo | 1 | todos os `prepare` terminarem (precisa das durações) |
+| 5 | `concat_video` | conteúdo | 1 | todos os `render_video` terminarem |
+| 6 | `mux` | conteúdo | 1 | `concat_video` e `render_audio` terminarem |
+
+- Imagem: `prepare` → `render_image`.
+- A API cria o plano inteiro como `pending` quando o pedido chega; o usuário vê tudo desde o início.
+- O worker só pega um job quando as dependências da coluna "Pode começar quando" terminaram. Regra no código, sem coluna nova.
+- Refazer a cena 5: recria `prepare`(5), `render_video`(5), `render_audio`, `concat_video`, `mux`. Mudou motion/SFX da cena: idem (áudio inteiro é remixado, custa segundos; sem `audio_key` na cena).
+- Status do conteúdo derivado da etapa atual: `queued` → `preparing` → `rendering` → `done` (ou `failed`).
+
+`GET /contents/{uid}` (etapas sempre na mesma ordem, com contagem):
+
+```json
+{
+  "uid": "01JD...",
+  "status": "rendering",
+  "progress": { "done": 17, "total": 33 },
+  "steps": [
+    { "step": "prepare",      "status": "done",    "done": 10, "total": 10 },
+    { "step": "render_video", "status": "running", "done": 4,  "total": 10 },
+    { "step": "render_audio", "status": "done",    "done": 1,  "total": 1 },
+    { "step": "concat_video", "status": "pending", "done": 0,  "total": 1 },
+    { "step": "mux",          "status": "pending", "done": 0,  "total": 1 }
+  ],
+  "scenes": [
+    { "position": 1, "prepare": "done", "render_video": "done",   "error": null },
+    { "position": 5, "prepare": "done", "render_video": "failed", "error": "..." }
+  ],
+  "output_key": null
+}
+```
 
 ### Decisões de modelagem
 - Padrão de nome `app_brand_account_{integração}`: uma tabela por plataforma.
