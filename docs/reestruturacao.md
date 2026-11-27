@@ -57,13 +57,13 @@ Separar responsabilidades que hoje estão misturadas no `videomaker`:
 - `id`, `brand_id`, `ig_user_id` (único), `username`, `access_token`, `token_expires_at`, `is_active`, `created_at`, `updated_at`
 
 **`app_contents`**: um vídeo ou uma imagem da marca.
-- `id`, `uid` (ULID, único, identificador público usado na API), `brand_id`, `title`, `type` (video | image), `status`, `request` (JSON: pedido original inteiro), `settings` (JSON: padrões da marca + pedido, congelados), `output_key` (chave do arquivo final no storage), `created_at`, `updated_at`
+- `id`, `uid` (ULID, único, identificador público usado na API), `brand_id`, `title`, `type` (video | image), `status`, `request` (JSON: pedido original inteiro), `settings` (JSON: padrões da marca + pedido, congelados), `output_key` (chave do arquivo final no storage), `error`, `created_at`, `updated_at`
 
 **`app_content_chapters`**: capítulos opcionais do conteúdo.
-- `id`, `content_id`, `position` (único por conteúdo), `title`, `settings` (JSON), `created_at`, `updated_at`
+- `id`, `content_id`, `position` (único por conteúdo), `title`, `settings` (JSON), `status` (pending | rendering | rendered | failed), `error`, `created_at`, `updated_at`
 
 **`app_content_scenes`**: cenas do conteúdo.
-- `id`, `content_id`, `chapter_id` (NULL quando não há capítulos), `position` (ordem global no conteúdo, única), `spec` (JSON: cena como pedida), `spec_hash`, `resolved` (JSON: cena com arquivos já gerados, entrada do videomaker), `status`, `preview_key`, `video_key`, `error`, `created_at`, `updated_at`
+- `id`, `content_id`, `chapter_id` (NULL quando não há capítulos), `position` (ordem global no conteúdo, única), `request` (JSON: cena como chegou no pedido), `request_hash`, `resolved` (JSON: cena com arquivos já gerados, entrada do videomaker), `status`, `preview_key`, `video_key`, `error`, `created_at`, `updated_at`
 
 ### Decisões de modelagem
 - Padrão de nome `app_brand_account_{integração}`: uma tabela por plataforma.
@@ -71,9 +71,12 @@ Separar responsabilidades que hoje estão misturadas no `videomaker`:
 - Nada de caminho absoluto no banco: só **chaves de storage** (`contents/{uid}/scenes/05/preview.png`). Um driver (`STORAGE=local|r2|s3`) resolve a chave; o videomaker trabalha numa pasta temporária, baixa insumos, renderiza e sobe o resultado.
 - `output_key` mantido como coluna (não derivado do `uid`).
 - Capítulos são opcionais: short só tem cenas; vídeo longo pode ter capítulos com cenas dentro. Sem mistura no mesmo conteúdo (a API valida).
-- Ordem de mesclagem: `brand.defaults` → `content.settings` → `chapter.settings` → `scene.spec`.
-- Refazer uma cena: muda o `spec` → muda o `spec_hash` → prepare e render só daquela cena → reconcatena.
+- Ordem de mesclagem: `brand.defaults` → `content.settings` → `chapter.settings` → `scene.request`.
+- Refazer uma cena: muda o `request` → muda o `request_hash` → prepare e render só daquela cena → reconcatena.
 - `status` e `type` como texto (sem enum); a API valida.
+- Marca não é apagada (FK sem cascade em `app_contents` bloqueia); desativar com `is_active = 0`.
+- Cena só aponta para capítulo do mesmo conteúdo: FK composta `(chapter_id, content_id)` garante no banco.
+- `position` da cena é fixo por enquanto (sem reordenação).
 - Timestamps por palavra ficam dentro do `resolved` da cena (sem tabela de transcrições).
 
 ## Rejeitado ou criticado pelo usuário
@@ -103,6 +106,8 @@ Separar responsabilidades que hoje estão misturadas no `videomaker`:
 - Caches que hoje são JSON no videomaker (`media_probe`, `directory_usage`, `remote_assets`): decidir se vão para o banco ou se o videomaker recebe tudo pronto e fica sem banco.
 - Valores de `status` de conteúdo e cena (proposta: cena `pending → preparing → prepared → previewed → rendered | failed`; conteúdo `draft → preparing → prepared → rendering → rendered → published`).
 - Destino das tabelas antigas (`app_remote_assets`, `app_remote_assets_midia`) na estrutura nova.
+
+- Thumbnail (ideia, não decidida): conteúdo `type=image` com `parent_id` apontando para o vídeo; precisa compartilhar os assets do prepare com o conteúdo pai.
 
 ### Arquitetura
 - O usuário vai explicar como devem funcionar **jobs** e **uploads**.
