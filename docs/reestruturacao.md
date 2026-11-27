@@ -80,13 +80,13 @@ Meta: o pedido entra na API e sai o MP4 (ou PNG) final. O resto vem depois.
 - `id`, `brand_id`, `ig_user_id` (único), `username`, `access_token`, `token_expires_at`, `is_active`, `created_at`, `updated_at`
 
 **`app_contents`**: um vídeo ou uma imagem da marca.
-- `id`, `uid` (ULID, único, identificador público usado na API), `brand_id`, `title`, `type` (video | image), `status`, `request` (JSON: pedido original inteiro), `settings` (JSON: padrões da marca + pedido, congelados), `video_key` (cenas concatenadas sem áudio), `audio_key` (faixa final: narração + música + SFX), `output_key` (chave do arquivo final no storage; mux de vídeo + áudio), `error`, `created_at`, `updated_at`
+- `id`, `uid` (ULID, único, identificador público usado na API), `brand_id`, `title`, `type` (video | image), `status` (queued | preparing | prepared | rendering | rendered | failed), `request` (JSON: pedido original inteiro), `settings` (JSON: padrões da marca + pedido, congelados), `video_key` (cenas concatenadas sem áudio), `audio_key` (faixa final: narração + música + SFX), `output_key` (chave do arquivo final no storage; mux de vídeo + áudio), `error`, `created_at`, `updated_at`
 
 **`app_content_chapters`**: capítulos opcionais do conteúdo.
-- `id`, `content_id`, `position` (único por conteúdo), `title`, `settings` (JSON), `status` (pending | rendering | rendered | failed), `error`, `render_ms`, `created_at`, `updated_at`
+- `id`, `content_id`, `position` (único por conteúdo), `title`, `settings` (JSON: ex.: música própria do capítulo), `created_at`, `updated_at`
 
 **`app_content_scenes`**: cenas do conteúdo.
-- `id`, `content_id`, `chapter_id` (NULL quando não há capítulos), `position` (ordem global no conteúdo, única), `request` (JSON: cena como chegou no pedido), `request_hash`, `resolved` (JSON: cena com arquivos já gerados, entrada do videomaker), `status`, `preview_key`, `output_key` (MP4 da cena sem áudio, ou PNG se imagem), `preview_ms`, `render_ms` (tempo em ms de cada etapa), `error`, `created_at`, `updated_at`
+- `id`, `content_id`, `chapter_id` (NULL quando não há capítulos), `position` (ordem global no conteúdo, única), `request` (JSON: cena como chegou no pedido), `request_hash`, `resolved` (JSON: cena com arquivos já gerados, entrada do videomaker), `status` (pending | preparing | prepared | previewed | rendering | rendered | failed), `preview_key` (PNG rápido de baixa qualidade, para revisar antes do render), `output_key` (MP4 da cena sem áudio, ou PNG se imagem), `preview_ms`, `render_ms` (tempo em ms de cada etapa), `error`, `created_at`, `updated_at`
 
 **`app_jobs`**: fila de tarefas lida pelo worker (processo Python rodando em loop, separado da API).
 - `id`, `content_id`, `scene_id` (NULL = conteúdo inteiro), `type` (prepare | preview | render_video | render_audio | concat_video | mux | render_image), `status` (pending | running | done | failed), `attempts`, `error`, `started_at`, `finished_at`, `created_at`, `updated_at`
@@ -108,7 +108,8 @@ Meta: o pedido entra na API e sai o MP4 (ou PNG) final. O resto vem depois.
 - A API cria o plano inteiro como `pending` quando o pedido chega; o usuário vê tudo desde o início.
 - O worker só pega um job quando as dependências da coluna "Pode começar quando" terminaram. Regra no código, sem coluna nova.
 - Refazer a cena 5: recria `prepare`(5), `render_video`(5), `render_audio`, `concat_video`, `mux`. Mudou motion/SFX da cena: idem (áudio inteiro é remixado, custa segundos; sem `audio_key` na cena).
-- Status do conteúdo derivado da etapa atual: `queued` → `preparing` → `rendering` → `done` (ou `failed`).
+- Status derivados dos jobs. Conteúdo: `queued` → `preparing` → `prepared` → `rendering` → `rendered` (ou `failed`). Cena: `pending` → `preparing` → `prepared` → `previewed` → `rendering` → `rendered` (ou `failed`). Publicação tem status próprio (tabela futura), não fica no conteúdo.
+- Capítulo é só agrupamento (título + `settings`, ex.: música própria); não tem status nem render. O `render_audio` lê o `settings` de cada capítulo.
 
 `GET /contents/{uid}` (etapas sempre na mesma ordem, com contagem):
 
@@ -171,7 +172,6 @@ Meta: o pedido entra na API e sai o MP4 (ou PNG) final. O resto vem depois.
 - Registro de **execuções de render** para medir gargalos: proposto como `app_render_runs`, não revisado.
 - `video_key` no capítulo (mp4 por capítulo com áudio de fundo mixado; final = concat dos capítulos).
 - Caches que hoje são JSON no videomaker (`media_probe`, `directory_usage`, `remote_assets`): decidir se vão para o banco ou se o videomaker recebe tudo pronto e fica sem banco.
-- Valores de `status` de conteúdo e cena (proposta: cena `pending → preparing → prepared → previewed → rendered | failed`; conteúdo `draft → preparing → prepared → rendering → rendered → published`).
 - Destino das tabelas antigas (`app_remote_assets`, `app_remote_assets_midia`) na estrutura nova.
 
 - Thumbnail (ideia, não decidida): conteúdo `type=image` com `parent_id` apontando para o vídeo; precisa compartilhar os assets do prepare com o conteúdo pai.
