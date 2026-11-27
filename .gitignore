@@ -49,3 +49,7 @@ videomaker/channels_config/
 # Flyway (credenciais)
 database/flyway.user.toml
 database/backups/
+
+# Object storage local (pasta versionada, conteúdo não)
+storage/*
+!storage/.gitkeep

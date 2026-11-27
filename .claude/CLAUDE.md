@@ -11,7 +11,11 @@ Monorepo com três módulos independentes. Cada um tem seu CLAUDE.md com comando
 ## Como os módulos conversam
 
 - `api` → MySQL (só dados; a estrutura é do `database/`).
-- `videomaker` → `api` (remote assets, header `X-Service-Token`).
+- `api` e `videomaker` sem ligação por enquanto (a API funciona sozinha).
+
+## Storage
+
+- `storage/` na raiz: object storage local (API e motores). Conteúdo fora do Git. Ver `docs/reestruturacao.md`.
 
 ## Banco
 

@@ -14,6 +14,8 @@ Separar responsabilidades que hoje estão misturadas no `videomaker`:
 
 Meta: o pedido entra na API e sai o MP4 (ou PNG) final. O resto vem depois.
 
+**Por enquanto a API funciona sozinha, sem ligação com o videomaker** (decisão de 2026-11-27).
+
 1. **Banco mínimo** já criado (marcas, conteúdos, capítulos, cenas).
 2. **Fluxo de ponta a ponta** (fatia vertical mínima):
    1. contrato dos JSONs (`request` e `resolved`);
@@ -140,6 +142,13 @@ Meta: o pedido entra na API e sai o MP4 (ou PNG) final. O resto vem depois.
   "output_key": null
 }
 ```
+
+### Object storage local
+- Pasta `storage/` na raiz do monorepo = object storage local, compartilhado por API e motores de render.
+- Todos os arquivos gerados (insumos do prepare, previews, MP4 de cena, áudio, final) ficam lá, organizados por chave: `storage/contents/{uid}/...`.
+- A pasta vai para o Git (`storage/.gitkeep`); o conteúdo não (`.gitignore`).
+- Banco guarda só a **chave** relativa (ex.: `contents/{uid}/scenes/05/output.mp4`), nunca caminho absoluto.
+- Futuro: object storage real (R2/S3) trocando só o driver (`STORAGE=local|r2|s3`), mesma chave. Interface mínima do driver: `put`, `get`/`download`, `exists`, `delete`, `url`. Pendente: como os motores acessam no modo remoto (baixar para pasta temporária e subir o resultado).
 
 ### Decisões de modelagem
 - Padrão de nome `app_brand_account_{integração}`: uma tabela por plataforma.
